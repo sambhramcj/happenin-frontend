@@ -1,11 +1,13 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { supabase } from "@/lib/supabase";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request, context: { params: Promise<{ eventId: string }> }) {
-  const { params } = context;
-  const resolvedParams = await params;
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
+  const { eventId } = await params;
   try {
     // Get session
     const session = await getServerSession(authOptions);
@@ -18,7 +20,6 @@ export async function GET(request: Request, context: { params: Promise<{ eventId
     }
 
     const organizerEmail = session.user.email;
-    const eventId = resolvedParams.eventId;
 
     if (!eventId) {
       return NextResponse.json(
