@@ -3,7 +3,10 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import DashboardHeader from "@/components/DashboardHeader";
+import { RegistrationsModal } from "@/components/RegistrationsModal";
 
 type EligibleMember = {
   name: string;
@@ -47,6 +50,17 @@ export default function OrganizerDashboard() {
   const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
+  // Registrations modal state
+  const [registrationsModal, setRegistrationsModal] = useState<{
+    isOpen: boolean;
+    eventId: string;
+    eventTitle: string;
+  }>({
+    isOpen: false,
+    eventId: "",
+    eventTitle: "",
+  });
+
   useEffect(() => {
     if (status === "loading") return;
 
@@ -73,24 +87,66 @@ export default function OrganizerDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
+    const isCSV = file.name.endsWith(".csv");
+
+    if (!isExcel && !isCSV) {
+      toast.error("Please upload a CSV or Excel file");
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
-      const text = reader.result as string;
-      const lines = text.split("\n").slice(1);
+      try {
+        let parsed: EligibleMember[] = [];
 
-      const parsed = lines
-        .map((line) => {
-          const [name, memberId] = line.split(",");
-          if (!name || !memberId) return null;
-          return { name: name.trim(), memberId: memberId.trim() };
-        })
-        .filter(Boolean) as EligibleMember[];
+        if (isExcel) {
+          // Parse Excel file
+          const data = new Uint8Array(reader.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
+          
+          parsed = rows
+            .slice(1)
+            .map((row) => {
+              const [name, memberId] = row;
+              if (!name || !memberId) return null;
+              return { name: String(name).trim(), memberId: String(memberId).trim() };
+            })
+            .filter(Boolean) as EligibleMember[];
+        } else {
+          // Parse CSV file
+          const text = reader.result as string;
+          const lines = text.split("\n").slice(1);
 
-      setEligibleMembers(parsed);
-      alert(`Uploaded ${parsed.length} eligible members`);
+          parsed = lines
+            .map((line) => {
+              const [name, memberId] = line.split(",");
+              if (!name || !memberId) return null;
+              return { name: name.trim(), memberId: memberId.trim() };
+            })
+            .filter(Boolean) as EligibleMember[];
+        }
+
+        if (parsed.length === 0) {
+          toast.error("No valid members found in file. Check the format.");
+          return;
+        }
+
+        setEligibleMembers(parsed);
+        toast.success(`Uploaded ${parsed.length} eligible members`);
+      } catch (error) {
+        console.error("Error parsing file:", error);
+        toast.error("Failed to parse file. Ensure it has columns: Name, Member ID");
+      }
     };
 
-    reader.readAsText(file);
+    if (isExcel) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
   }
 
   function handleBannerImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -99,13 +155,13 @@ export default function OrganizerDashboard() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
+      toast.error('Please upload an image file');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image size should be less than 5MB');
+      toast.error('Image size should be less than 5MB');
       return;
     }
 
@@ -141,7 +197,7 @@ export default function OrganizerDashboard() {
       return data.imageUrl;
     } catch (error: any) {
       console.error('Image upload error:', error);
-      alert(error.message || 'Failed to upload image');
+      toast.error(error.message || 'Failed to upload image');
       return null;
     } finally {
       setUploadingImage(false);
@@ -366,9 +422,9 @@ export default function OrganizerDashboard() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
                         <p className="mb-2 text-sm text-purple-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                        <p className="text-xs text-purple-500">CSV file only</p>
+                        <p className="text-xs text-purple-500">CSV or Excel (.xlsx) file</p>
                       </div>
-                      <input type="file" accept=".csv" onChange={handleCSVUpload} className="hidden" />
+                      <input type="file" accept=".csv,.xlsx,.xls" onChange={handleCSVUpload} className="hidden" />
                     </label>
                   </div>
 
@@ -475,10 +531,35 @@ export default function OrganizerDashboard() {
                   </p>
                 </div>
               )}
+
+              <div className="mt-4 pt-4 border-t border-purple-500/20">
+                <button
+                  onClick={() =>
+                    setRegistrationsModal({
+                      isOpen: true,
+                      eventId: event.id,
+                      eventTitle: event.title,
+                    })
+                  }
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 px-4 rounded-lg hover:from-purple-500 hover:to-pink-500 focus:ring-2 focus:ring-purple-400 focus:outline-none transition-all font-medium text-sm"
+                >
+                  👥 View Registrations
+                </button>
+              </div>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Registrations Modal */}
+        <RegistrationsModal
+          eventId={registrationsModal.eventId}
+          eventTitle={registrationsModal.eventTitle}
+          isOpen={registrationsModal.isOpen}
+          onClose={() =>
+            setRegistrationsModal((prev) => ({ ...prev, isOpen: false }))
+          }
+        />
       </div>
     </div>
   );

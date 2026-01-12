@@ -9,8 +9,10 @@ declare global {
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import DashboardHeader from "@/components/DashboardHeader";
+import { SkeletonCardList } from "@/components/Skeleton";
 
 type Membership = {
   club: string;
@@ -53,6 +55,12 @@ export default function StudentDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loadingEventId, setLoadingEventId] = useState<string | null>(null);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  // Event filters
+  const [filterClub, setFilterClub] = useState("");
+  const [filterPrice, setFilterPrice] = useState<"all" | "free" | "paid">("all");
+  const [filterDiscount, setFilterDiscount] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -117,7 +125,7 @@ export default function StudentDashboard() {
 
   async function addMembership() {
     if (!club || !memberId) {
-      alert("Please enter club and membership ID");
+      toast.error("Please enter club and membership ID");
       return;
     }
 
@@ -128,19 +136,28 @@ export default function StudentDashboard() {
     });
 
     if (error) {
-      alert("Membership already exists for this club");
+      toast.error("Membership already exists for this club");
       return;
     }
 
+    toast.success("Membership added successfully!");
     setClub("");
     setMemberId("");
     fetchMemberships();
   }
 
   async function fetchEvents() {
-    const res = await fetch("/api/events");
-    const data = await res.json();
-    setEvents(data);
+    try {
+      setEventsLoading(true);
+      const res = await fetch("/api/events");
+      const data = await res.json();
+      setEvents(data);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      toast.error("Failed to load events");
+    } finally {
+      setEventsLoading(false);
+    }
   }
 
   function isEligibleForDiscount(event: Event) {
@@ -167,13 +184,34 @@ export default function StudentDashboard() {
     return registrations.find((r) => r.eventId === eventId);
   }
 
+  function getFilteredEvents() {
+    return events.filter((event) => {
+      // Filter by club
+      if (filterClub && event.discount_club !== filterClub) {
+        return false;
+      }
+
+      // Filter by price
+      const price = Number(event.price);
+      if (filterPrice === "free" && price > 0) return false;
+      if (filterPrice === "paid" && price === 0) return false;
+
+      // Filter by discount availability
+      if (filterDiscount && !isEligibleForDiscount(event)) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
   async function handlePay(event: Event) {
     try {
       setLoadingEventId(event.id);
 
       const loaded = await loadRazorpayScript();
       if (!loaded) {
-        alert("Razorpay SDK failed to load");
+        toast.error("Razorpay SDK failed to load");
         setLoadingEventId(null);
         return;
       }
@@ -190,7 +228,7 @@ export default function StudentDashboard() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Failed to create order");
+        toast.error(data.error || "Failed to create order");
         setLoadingEventId(null);
         return;
       }
@@ -203,7 +241,7 @@ export default function StudentDashboard() {
         description: "Event Registration",
         order_id: data.orderId,
         handler: async () => {
-          alert("Payment successful!");
+          toast.success("Payment successful!");
           fetchRegistrations();
           setLoadingEventId(null);
         },
@@ -213,7 +251,7 @@ export default function StudentDashboard() {
 
       razorpay.open();
     } catch {
-      alert("Payment failed");
+      toast.error("Payment failed");
       setLoadingEventId(null);
     }
   }
@@ -239,25 +277,28 @@ export default function StudentDashboard() {
       <DashboardHeader />
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-purple-200 mb-2">Student Dashboard</h1>
-          <p className="text-purple-400">
-            Logged in as <span className="font-medium text-purple-300">{session.user.email}</span>
+        <div className="mb-10">
+          <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-200 to-pink-200 bg-clip-text text-transparent mb-3">
+            Student Dashboard
+          </h1>
+          <p className="text-purple-300 text-lg">
+            Welcome back, <span className="font-semibold text-purple-200">{session.user.email}</span>
           </p>
         </div>
 
         {/* MEMBERSHIPS */}
-        <div className="bg-[#2d1b4e] rounded-xl shadow-lg p-6 sm:p-8 mb-8 border border-purple-500/20">
-          <h2 className="text-2xl font-bold text-purple-200 mb-6 flex items-center gap-2">
-            <span className="text-2xl">🎫</span>
-            My Club Memberships
+        <div className="bg-[#2d1b4e] rounded-xl shadow-lg p-6 sm:p-8 mb-10 border border-purple-500/20 hover:border-purple-500/40 transition-colors">
+          <h2 className="text-2xl font-bold text-purple-200 mb-6 flex items-center gap-3">
+            <span className="text-3xl">🎫</span>
+            <span>My Club Memberships</span>
           </h2>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <select
               value={club}
               onChange={(e) => setClub(e.target.value)}
-              className="bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2.5 text-purple-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all outline-none"
+              aria-label="Select a club for membership"
+              className="bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2.5 text-purple-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all outline-none"
             >
               <option value="" className="bg-[#1a0b2e]">Select Club</option>
               <option value="IEEE" className="bg-[#1a0b2e]">IEEE</option>
@@ -269,12 +310,14 @@ export default function StudentDashboard() {
               placeholder="Membership ID"
               value={memberId}
               onChange={(e) => setMemberId(e.target.value)}
-              className="bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2.5 flex-1 text-purple-100 placeholder-purple-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all outline-none"
+              aria-label="Enter your membership ID"
+              className="bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2.5 flex-1 text-purple-100 placeholder-purple-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all outline-none"
             />
 
             <button
               onClick={addMembership}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2.5 rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all duration-200 font-medium shadow-lg hover:shadow-xl whitespace-nowrap"
+              aria-label="Add club membership"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2.5 rounded-lg hover:from-purple-500 hover:to-pink-500 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-[#0f0519] focus:outline-none transition-all duration-200 font-medium shadow-lg hover:shadow-xl whitespace-nowrap"
             >
               Add Membership
             </button>
@@ -285,38 +328,117 @@ export default function StudentDashboard() {
               {memberships.map((m, i) => (
                 <span 
                   key={i} 
-                  className="inline-flex items-center gap-2 bg-[#1a0b2e] px-4 py-2 rounded-full text-sm font-medium text-purple-200 border border-purple-500/30"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 px-4 py-2.5 rounded-full text-sm font-medium text-purple-200 border border-purple-500/40 hover:border-purple-500/60 hover:from-purple-600/30 hover:to-pink-600/30 transition-all"
                 >
-                  <span className="text-purple-400">🏛️</span>
+                  <span className="text-lg">🏛️</span>
                   <span className="font-semibold">{m.club}</span>
-                  <span className="text-purple-500">·</span>
-                  <span>{m.memberId}</span>
+                  <span className="text-purple-400">•</span>
+                  <span className="text-purple-300">{m.memberId}</span>
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-purple-400 text-sm italic">No memberships added yet. Add a club membership above to unlock discounts!</p>
+            <p className="text-purple-400 text-center py-4">No memberships added yet. Add a club membership above to unlock discounts! ✨</p>
           )}
         </div>
 
         {/* EVENTS */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-purple-200 mb-2 flex items-center gap-2">
-            <span className="text-2xl">📅</span>
-            Available Events
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-purple-200 mb-3 flex items-center gap-3">
+            <span className="text-3xl">📅</span>
+            <span>Available Events</span>
           </h2>
-          <p className="text-purple-400 text-sm">Discover and register for upcoming events</p>
+          <p className="text-purple-300 text-base mb-6">Discover and register for upcoming events</p>
+
+          {/* Event Filters */}
+          <div className="bg-[#2d1b4e] rounded-lg p-5 border border-purple-500/20 mb-8 hover:border-purple-500/30 transition-colors">
+            <p className="text-purple-300 font-semibold mb-4 flex items-center gap-2">
+              <span>🔍</span>
+              Filter Events
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Club Filter */}
+              <select
+                value={filterClub}
+                onChange={(e) => setFilterClub(e.target.value)}
+                aria-label="Filter events by club"
+                className="bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-purple-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all outline-none"
+              >
+                <option value="">All Clubs</option>
+                {Array.from(new Set(events.map(e => e.discount_club).filter(Boolean))).map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+
+              {/* Price Filter */}
+              <select
+                value={filterPrice}
+                onChange={(e) => setFilterPrice(e.target.value as "all" | "free" | "paid")}
+                aria-label="Filter events by price"
+                className="bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-purple-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all outline-none"
+              >
+                <option value="all">All Prices</option>
+                <option value="free">Free Events</option>
+                <option value="paid">Paid Events</option>
+              </select>
+
+              {/* Discount Filter */}
+              <label className="flex items-center gap-2 bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 cursor-pointer hover:border-purple-500/50 focus-within:ring-2 focus-within:ring-purple-500 transition-all">
+                <input
+                  type="checkbox"
+                  checked={filterDiscount}
+                  onChange={(e) => setFilterDiscount(e.target.checked)}
+                  aria-label="Show only events with available discounts"
+                  className="w-4 h-4 accent-purple-500 focus:outline-none"
+                />
+                <span className="text-sm text-purple-100">Discounts Only</span>
+              </label>
+
+              {/* Clear Filters */}
+              {(filterClub || filterPrice !== "all" || filterDiscount) && (
+                <button
+                  onClick={() => {
+                    setFilterClub("");
+                    setFilterPrice("all");
+                    setFilterDiscount(false);
+                  }}
+                  className="text-xs text-purple-400 hover:text-purple-300 underline whitespace-nowrap self-center sm:self-auto"
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {events.length === 0 ? (
+          eventsLoading ? (
+            <SkeletonCardList count={3} />
+          ) : (
+            <div className="bg-[#2d1b4e] rounded-xl shadow-lg p-12 text-center border border-purple-500/20">
+              <div className="text-6xl mb-4">📭</div>
+              <p className="text-purple-300 text-lg">No events available at the moment.</p>
+              <p className="text-purple-500 text-sm mt-2">Check back later for new events!</p>
+            </div>
+          )
+        ) : getFilteredEvents().length === 0 ? (
           <div className="bg-[#2d1b4e] rounded-xl shadow-lg p-12 text-center border border-purple-500/20">
-            <div className="text-6xl mb-4">📭</div>
-            <p className="text-purple-300 text-lg">No events available at the moment.</p>
-            <p className="text-purple-500 text-sm mt-2">Check back later for new events!</p>
+            <div className="text-6xl mb-4">🔍</div>
+            <p className="text-purple-300 text-lg">No events match your filters.</p>
+            <button
+              onClick={() => {
+                setFilterClub("");
+                setFilterPrice("all");
+                setFilterDiscount(false);
+              }}
+              className="text-purple-400 hover:text-purple-300 underline mt-3 text-sm"
+            >
+              Clear filters to see all events
+            </button>
           </div>
         ) : (
           <div className="space-y-4">
-            {events.map((event) => {
+            {getFilteredEvents().map((event) => {
               const eligible = isEligibleForDiscount(event);
               const finalPrice = getFinalPrice(event);
               const reg = getRegistration(event.id);
@@ -324,7 +446,7 @@ export default function StudentDashboard() {
               return (
                 <div 
                   key={event.id} 
-                  className="bg-[#2d1b4e] border border-purple-500/20 rounded-xl overflow-hidden shadow-md hover:border-purple-500/40 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                  className="bg-[#2d1b4e] border border-purple-500/20 rounded-xl overflow-hidden shadow-md hover:border-purple-500/60 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group"
                 >
                   {event.banner_image && (
                     <div className="w-full h-48 overflow-hidden">
@@ -335,13 +457,13 @@ export default function StudentDashboard() {
                       />
                     </div>
                   )}
-                  <div className="p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="p-6 sm:p-8">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-purple-200 mb-2">{event.title}</h3>
-                        <p className="text-purple-400 mb-4">{event.description}</p>
+                        <h3 className="text-2xl font-bold text-purple-100 mb-3 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-purple-300 group-hover:to-pink-300 group-hover:bg-clip-text transition-all">{event.title}</h3>
+                        <p className="text-purple-300 mb-5 leading-relaxed">{event.description}</p>
 
-                        <div className="space-y-2 mb-4">
+                        <div className="space-y-3 mb-5">
                           <div className="flex items-center gap-2 text-sm">
                             <span className="text-purple-500">📆</span>
                             <span className="text-purple-300">{new Date(event.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
@@ -351,36 +473,38 @@ export default function StudentDashboard() {
                             <span className="text-purple-300">{event.location}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-purple-500">💰</span>
-                            <span className="text-purple-200 font-semibold">Base Price: ₹{event.price}</span>
+                            <span className="text-lg">💰</span>
+                            <span className="text-purple-200 font-semibold">₹{event.price}</span>
                           </div>
                         </div>
 
                         {eligible && (
-                          <div className="mb-4 p-3 bg-green-900/30 border border-green-500/30 rounded-lg">
-                            <p className="text-green-300 font-semibold flex items-center gap-2">
-                              <span>🎉</span>
-                              Discount Applied! Final Price: ₹{finalPrice}
+                          <div className="mb-6 p-4 bg-green-900/20 border border-green-500/40 rounded-lg hover:bg-green-900/30 transition-colors">
+                            <p className="text-green-300 font-semibold flex items-center gap-2 mb-1">
+                              <span className="text-lg">🎉</span>
+                              Discount Applied!
                             </p>
-                            <p className="text-green-400 text-xs mt-1">You saved ₹{Number(event.price) - finalPrice}!</p>
+                            <p className="text-green-400 text-sm">Final Price: <span className="font-bold">₹{finalPrice}</span> • Save ₹{Number(event.price) - finalPrice}</p>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex flex-col items-center sm:items-start gap-2">
+                      <div className="flex flex-col items-center sm:items-start gap-3">
                         {reg ? (
-                          <div className="flex flex-col items-center sm:items-start">
-                            <span className="inline-flex items-center gap-2 bg-purple-600/30 text-purple-200 px-4 py-2 rounded-lg text-sm font-semibold mb-2 border border-purple-500/30">
-                              <span>✓</span>
+                          <div className="flex flex-col items-center sm:items-start gap-2">
+                            <span className="inline-flex items-center gap-2 bg-purple-600/40 text-purple-200 px-5 py-2.5 rounded-lg text-sm font-semibold border border-purple-500/50 hover:bg-purple-600/50 transition-colors">
+                              <span className="text-lg">✓</span>
                               Registered
                             </span>
-                            <p className="text-xs text-purple-400">Paid: ₹{reg.finalPrice}</p>
+                            <p className="text-xs text-purple-400">Paid: <span className="font-semibold">₹{reg.finalPrice}</span></p>
                           </div>
                         ) : (
                           <button
                             onClick={() => handlePay(event)}
                             disabled={loadingEventId === event.id}
-                            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none whitespace-nowrap"
+                            aria-label={`Pay and register for ${event.title} event`}
+                            aria-busy={loadingEventId === event.id}
+                            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-7 py-3 rounded-lg hover:from-purple-500 hover:to-pink-500 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-[#0f0519] focus:outline-none transition-all duration-200 font-semibold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:focus:ring-0 whitespace-nowrap group-hover:scale-105"
                           >
                             {loadingEventId === event.id ? (
                               <span className="flex items-center gap-2">

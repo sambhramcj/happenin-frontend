@@ -39,3 +39,64 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+
+# ===============================
+# Dependencies
+# ===============================
+node_modules/
+
+# ===============================
+# Next.js build output
+# ===============================
+.next/
+out/
+dist/
+
+# ===============================
+# Environment variables (CRITICAL)
+# ===============================
+.env
+.env.local
+.env.production
+.env.development
+.env.*
+
+# ===============================
+# Logs
+# ===============================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===============================
+# OS / Editor junk
+# ===============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ===============================
+# Supabase local files
+# ===============================
+.supabase/
+
+# ===============================
+# Turbo / Cache
+# ===============================
+.turbo/
+.cache/
+
+# ===============================
+# Test coverage
+# ===============================
+coverage/
+
+# ===============================
+# Temporary files
+# ===============================
+*.log
+*.tmp
