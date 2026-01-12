@@ -11,7 +11,7 @@ export async function GET(request: Request, context: { params: Promise<{ eventId
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );

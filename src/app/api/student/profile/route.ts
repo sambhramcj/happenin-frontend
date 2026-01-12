@@ -27,7 +27,8 @@ export async function GET() {
         .select("*")
         .eq("student_email", studentEmail)
         .single();
-      if (error) {
+      // PGRST116 is normal when no profile exists yet (empty result)
+      if (error && error.code !== "PGRST116") {
         console.error("Supabase admin profile fetch error:", error);
       } else {
         profile = data;
@@ -38,8 +39,12 @@ export async function GET() {
         .select("*")
         .eq("student_email", studentEmail)
         .single();
-      if (error) console.error("Supabase profile fetch error:", error);
-      profile = data;
+      // PGRST116 is normal when no profile exists yet (empty result)
+      if (error && error.code !== "PGRST116") {
+        console.error("Supabase profile fetch error:", error);
+      } else {
+        profile = data;
+      }
     }
 
     return NextResponse.json({ profile: profile || null });
