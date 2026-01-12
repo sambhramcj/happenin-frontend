@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import DashboardHeader from "@/components/DashboardHeader";
 import { SkeletonCardList } from "@/components/Skeleton";
+import { uploadProfilePhoto } from "@/lib/profileStorage";
 
 type Membership = {
   club: string;
@@ -52,6 +53,11 @@ export default function StudentDashboard() {
   const [memberId, setMemberId] = useState("");
 
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loadingEventId, setLoadingEventId] = useState<string | null>(null);
@@ -71,9 +77,27 @@ export default function StudentDashboard() {
     }
 
     fetchMemberships();
+    fetchProfile();
     fetchEvents();
     fetchRegistrations();
   }, [session, status, router]);
+
+  async function fetchProfile() {
+    try {
+      setIsProfileLoading(true);
+      const res = await fetch("/api/student/profile");
+      const data = await res.json();
+      if (res.ok) {
+        setProfile(data.profile || null);
+      } else {
+        console.error("Failed fetching profile:", data);
+      }
+    } catch (err) {
+      console.error("Profile fetch error:", err);
+    } finally {
+      setIsProfileLoading(false);
+    }
+  }
 
   /* 🔑 LOAD RAZORPAY SCRIPT */
   function loadRazorpayScript(): Promise<boolean> {
@@ -144,6 +168,113 @@ export default function StudentDashboard() {
     setClub("");
     setMemberId("");
     fetchMemberships();
+  }
+
+  function isProfileComplete(p: any) {
+    if (!p) return false;
+    const required = ["full_name", "dob", "college_name", "college_email"];
+    return required.every((k) => p[k]);
+  }
+
+  async function handlePhotoChange(file?: File) {
+    if (!file) return;
+    if (!session?.user?.email) {
+      toast.error("Sign in to upload photo");
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      const { publicUrl, path } = await uploadProfilePhoto(file, session.user.email as string);
+      // Update profile with photo url
+      const res = await fetch("/api/student/profile", {
+        method: profile ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile_photo_url: publicUrl || path }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to upload photo");
+      } else {
+        setProfile(data.profile || profile);
+        toast.success("Photo uploaded and profile updated");
+      }
+    } catch (err: any) {
+      console.error("Photo upload error:", err);
+      toast.error(err?.message || "Photo upload failed");
+    } finally {
+      setUploadingPhoto(false);
+      setPhotoFile(null);
+    }
+  }
+
+  async function handleSaveProfile(e?: any) {
+    if (e) e.preventDefault();
+    if (!session?.user?.email) return toast.error("Sign in required");
+
+    // Gather fields from form inputs
+    const form = document.getElementById("student-profile-form") as HTMLFormElement | null;
+    if (!form) return;
+    const formData = new FormData(form);
+    const payload: any = {};
+    formData.forEach((v, k) => {
+      payload[k] = v;
+    });
+
+    // Validate required fields on create (first profile)
+    if (!profile) {
+      const required = ["full_name", "dob", "college_name", "college_email"];
+      const missing = required.filter((k) => !payload[k]?.trim?.());
+      if (missing.length > 0) {
+        toast.error(`Please fill in: ${missing.join(", ")}`);
+        return;
+      }
+    }
+
+    // Validate email format
+    if (payload.college_email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(payload.college_email)) {
+        toast.error("Invalid college email format");
+        return;
+      }
+    }
+    if (payload.personal_email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(payload.personal_email)) {
+        toast.error("Invalid personal email format");
+        return;
+      }
+    }
+
+    // Validate phone number (if provided)
+    if (payload.phone_number) {
+      const phoneRegex = /^[\d\s\+\-\(\)]{10,}$/;
+      if (!phoneRegex.test(payload.phone_number)) {
+        toast.error("Invalid phone number (must be at least 10 digits)");
+        return;
+      }
+    }
+
+    try {
+      const method = profile ? "PATCH" : "POST";
+      const res = await fetch("/api/student/profile", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to save profile");
+        return;
+      }
+      setProfile(data.profile || payload);
+      setEditingProfile(false);
+      toast.success("Profile saved successfully!");
+    } catch (err) {
+      console.error("Save profile error:", err);
+      toast.error("Failed to save profile");
+    }
   }
 
   async function fetchEvents() {
@@ -287,6 +418,209 @@ export default function StudentDashboard() {
         </div>
 
         {/* MEMBERSHIPS */}
+        {/* PROFILE */}
+        <div className="bg-[#2d1b4e] rounded-xl shadow-lg p-6 sm:p-8 mb-10 border border-purple-500/20 hover:border-purple-500/40 transition-colors">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-purple-200 flex items-center gap-3 mb-1">
+                <span className="text-3xl">👤</span>
+                <span>My Student Profile</span>
+              </h2>
+              {profile && (
+                <p className="text-xs text-purple-400">
+                  {isProfileComplete(profile) ? (
+                    <span className="text-green-400">✓ Profile complete - ready to register</span>
+                  ) : (
+                    <span className="text-yellow-400">⚠ Complete all required fields to register</span>
+                  )}
+                </p>
+              )}
+            </div>
+            {!editingProfile && (
+              <button
+                onClick={() => setEditingProfile(true)}
+                aria-label="Edit student profile"
+                className="text-sm text-purple-100 bg-[#1a0b2e] px-3 py-1.5 rounded-lg border border-purple-500/30 hover:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all"
+              >
+                Edit
+              </button>
+            )}
+          </div>
+
+          {isProfileLoading ? (
+            <div className="py-6"><SkeletonCardList count={1} /></div>
+          ) : (
+            <form id="student-profile-form" onSubmit={handleSaveProfile} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="full_name" className="text-sm text-purple-300 mb-1 block flex items-center gap-1">
+                  Full name
+                  {!profile?.full_name && <span className="text-red-400">*</span>}
+                </label>
+                <input 
+                  id="full_name"
+                  name="full_name" 
+                  defaultValue={profile?.full_name || ""} 
+                  disabled={!!profile?.full_name && !editingProfile}
+                  required={!profile}
+                  aria-required={!profile}
+                  aria-label="Enter your full name"
+                  placeholder="John Doe"
+                  className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 text-purple-100 placeholder-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all" 
+                />
+              </div>
+
+              <div>
+                <label htmlFor="dob" className="text-sm text-purple-300 mb-1 block flex items-center gap-1">
+                  Date of birth
+                  {!profile?.dob && <span className="text-red-400">*</span>}
+                </label>
+                <input 
+                  id="dob"
+                  name="dob" 
+                  type="date" 
+                  defaultValue={profile?.dob || ""} 
+                  disabled={!!profile?.dob && !editingProfile}
+                  required={!profile}
+                  aria-required={!profile}
+                  aria-label="Select your date of birth"
+                  className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 text-purple-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all" 
+                />
+              </div>
+
+              <div>
+                <label htmlFor="college_name" className="text-sm text-purple-300 mb-1 block flex items-center gap-1">
+                  College name
+                  {!profile?.college_name && <span className="text-red-400">*</span>}
+                </label>
+                <input 
+                  id="college_name"
+                  name="college_name" 
+                  defaultValue={profile?.college_name || ""} 
+                  disabled={!!profile?.college_name && !editingProfile}
+                  required={!profile}
+                  aria-required={!profile}
+                  aria-label="Enter your college name"
+                  placeholder="e.g., MIT"
+                  className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 text-purple-100 placeholder-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all" 
+                />
+              </div>
+
+              <div>
+                <label htmlFor="college_email" className="text-sm text-purple-300 mb-1 block flex items-center gap-1">
+                  College email
+                  {!profile?.college_email && <span className="text-red-400">*</span>}
+                </label>
+                <input 
+                  id="college_email"
+                  name="college_email" 
+                  type="email" 
+                  defaultValue={profile?.college_email || ""} 
+                  disabled={!!profile?.college_email && !editingProfile}
+                  required={!profile}
+                  aria-required={!profile}
+                  aria-label="Enter your college email"
+                  placeholder="student@college.edu"
+                  className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 text-purple-100 placeholder-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all" 
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phone_number" className="text-sm text-purple-300 mb-1 block">Phone number (optional)</label>
+                <input 
+                  id="phone_number"
+                  name="phone_number" 
+                  type="tel"
+                  defaultValue={profile?.phone_number || ""} 
+                  aria-label="Enter your phone number"
+                  placeholder="+91 98765 43210"
+                  className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 text-purple-100 placeholder-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all" 
+                />
+              </div>
+
+              <div>
+                <label htmlFor="personal_email" className="text-sm text-purple-300 mb-1 block">Personal email (optional)</label>
+                <input 
+                  id="personal_email"
+                  name="personal_email" 
+                  type="email" 
+                  defaultValue={profile?.personal_email || ""} 
+                  aria-label="Enter your personal email"
+                  placeholder="you@gmail.com"
+                  className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-3 py-2 text-purple-100 placeholder-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all" 
+                />
+              </div>
+
+              <div className="sm:col-span-2 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 bg-[#1a0b2e] rounded-full overflow-hidden flex items-center justify-center border-2 border-purple-500/50 shadow-lg">
+                    {profile?.profile_photo_url ? (
+                      <img src={profile.profile_photo_url} alt="Student profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center">
+                        <div className="text-3xl text-purple-400">📷</div>
+                        <div className="text-xs text-purple-400 mt-1">No photo</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <label htmlFor="photo-input" className="text-sm text-purple-300 mb-2 block font-medium">Profile Photo</label>
+                    <input
+                      id="photo-input"
+                      type="file"
+                      accept="image/*"
+                      aria-label="Upload profile photo"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        setPhotoFile(f);
+                        if (f) handlePhotoChange(f);
+                      }}
+                      className="text-xs text-purple-300 file:text-purple-200 file:bg-[#1a0b2e] file:border file:border-purple-500/30 file:rounded file:px-2 file:py-1 file:cursor-pointer file:hover:border-purple-500"
+                    />
+                    {uploadingPhoto && <div className="text-xs text-purple-400 mt-2 flex items-center gap-1">
+                      <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading photo...
+                    </div>}
+                  </div>
+                </div>
+
+                <div className="ml-auto">
+                  <div className="text-right text-sm">
+                    <div className="text-purple-300 mb-1">Profile Status</div>
+                    <div className={`font-semibold text-base px-3 py-1.5 rounded-lg ${isProfileComplete(profile) ? 'bg-green-900/30 text-green-300 border border-green-500/30' : 'bg-yellow-900/30 text-yellow-300 border border-yellow-500/30'}`}>
+                      {isProfileComplete(profile) ? '✓ Complete' : '⚠ Incomplete'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="sm:col-span-2 flex gap-3 justify-end mt-4">
+                {editingProfile && (
+                  <>
+                    <button 
+                      type="submit" 
+                      aria-label="Save profile changes"
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2.5 rounded-lg hover:from-purple-500 hover:to-pink-500 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-[#0f0519] transition-all font-medium shadow-lg"
+                    >
+                      Save Profile
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setEditingProfile(false)}
+                      aria-label="Cancel profile editing"
+                      className="text-sm text-purple-300 px-4 py-2.5 rounded-lg border border-purple-500/30 hover:border-purple-500 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-[#0f0519] transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+            </form>
+          )}
+        </div>
         <div className="bg-[#2d1b4e] rounded-xl shadow-lg p-6 sm:p-8 mb-10 border border-purple-500/20 hover:border-purple-500/40 transition-colors">
           <h2 className="text-2xl font-bold text-purple-200 mb-6 flex items-center gap-3">
             <span className="text-3xl">🎫</span>

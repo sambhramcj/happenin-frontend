@@ -1,11 +1,11 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { supabase } from "@/lib/supabase";
+import { NextResponse } from "next/server";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { eventId: string } }
-) {
+export async function GET(request: Request, context: { params: Promise<{ eventId: string }> }) {
+  const { params } = context;
+  const resolvedParams = await params;
   try {
     // Get session
     const session = await getServerSession(authOptions);
@@ -18,10 +18,10 @@ export async function GET(
     }
 
     const organizerEmail = session.user.email;
-    const eventId = params.eventId;
+    const eventId = resolvedParams.eventId;
 
     if (!eventId) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Event ID is required" },
         { status: 400 }
       );
@@ -35,7 +35,7 @@ export async function GET(
       .single();
 
     if (eventError || !event) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Event not found" },
         { status: 404 }
       );
@@ -43,7 +43,7 @@ export async function GET(
 
     // SECURITY: Check authorization - only organizer can view their registrations
     if (event.organizer_email !== organizerEmail) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Not authorized to view registrations for this event" },
         { status: 403 }
       );
@@ -58,13 +58,13 @@ export async function GET(
 
     if (registrationsError) {
       console.error("Error fetching registrations:", registrationsError);
-      return Response.json(
+      return NextResponse.json(
         { error: "Failed to fetch registrations" },
         { status: 500 }
       );
     }
 
-    return Response.json({
+    return NextResponse.json({
       eventId,
       eventName: event.id,
       registrations: registrations || [],
@@ -72,7 +72,7 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error in GET /api/organizer/events/[eventId]/registrations:", error);
-    return Response.json(
+    return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
