@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function POST(
   req: NextRequest,
   props: { params: Promise<{ eventId: string }> }
-) {
+): Promise<Response> {
   try {
     const { eventId } = await props.params;
 
@@ -102,7 +102,7 @@ export async function POST(
 export async function GET(
   req: NextRequest,
   props: { params: Promise<{ eventId: string }> }
-) {
+): Promise<Response> {
   try {
     const { eventId } = await props.params;
 
