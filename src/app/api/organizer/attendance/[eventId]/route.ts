@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 // POST: Record attendance from QR scan
 export async function POST(
   req: NextRequest,
-  props: { params: Promise<{ eventId: string }> }
-): Promise<Response> {
+  context: { params: Promise<{ eventId: string }> }
+) {
   try {
-    const { eventId } = await props.params;
+    const { eventId } = await context.params;
 
     // 1. Verify user is authenticated
     const session = await getServerSession(authOptions);
@@ -101,10 +101,10 @@ export async function POST(
 // GET: Fetch all attendance records for event
 export async function GET(
   req: NextRequest,
-  props: { params: Promise<{ eventId: string }> }
-): Promise<Response> {
+  context: { params: Promise<{ eventId: string }> }
+) {
   try {
-    const { eventId } = await props.params;
+    const { eventId } = await context.params;
 
     // 1. Verify user is authenticated
     const session = await getServerSession(authOptions);
