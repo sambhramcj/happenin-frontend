@@ -1,0 +1,148 @@
+:root {
+  /* Duration */
+  --motion-instant: 0ms;
+  --motion-fast: 120ms;
+  --motion-medium: 200ms;
+  --motion-slow: 320ms;
+
+  /* Easing */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-enter: cubic-bezier(0.0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Scale */
+  --scale-press: 0.98;
+  --scale-hover: 1.02;
+
+  /* Translate */
+  --translate-xs: 4px;
+  --translate-sm: 8px;
+  --translate-md: 16px;
+  --translate-lg: 24px;
+
+  /* Skeleton Loading */
+  --skeleton-base: #E5E7EB;
+  --skeleton-highlight: #F3F4F6;
+  --skeleton-duration: 1400ms;
+
+  /* Offline Banner */
+  --offline-banner-height: 32px;
+  --offline-banner-z: 50;
+  --offline-enter-y: -32px;
+  --offline-exit-y: -32px;
+}
+
+/* Toast / Alert Animations */
+@keyframes slideIn {
+  from {
+    transform: translateY(var(--translate-md));
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast-enter {
+  animation: slideIn var(--motion-medium) var(--ease-enter);
+}
+
+/* Page Entry Animations */
+.page-enter {
+  opacity: 0;
+  transform: translateY(var(--translate-sm));
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all var(--motion-medium) var(--ease-enter);
+}
+
+/* Skeleton Loading Animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base),
+    var(--skeleton-highlight),
+    var(--skeleton-base)
+  );
+  background-size: 200% 100%;
+  border-radius: 8px;
+  animation: shimmer var(--skeleton-duration) ease-in-out infinite;
+}
+
+/* Spinner Animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 900ms linear infinite;
+}
+
+/* Retry Pulse Animation */
+@keyframes retryPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.retry-indicator {
+  animation: retryPulse 900ms ease-in-out infinite;
+}
+
+/* Offline Banner */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--offline-banner-height);
+  z-index: var(--offline-banner-z);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.offline-banner-enter {
+  transform: translateY(var(--offline-enter-y));
+  opacity: 0;
+}
+
+.offline-banner-enter-active {
+  transform: translateY(0);
+  opacity: 0.95;
+  transition: all 180ms ease-out;
+}
+
+.offline-banner-exit {
+  transform: translateY(0);
+  opacity: 0.95;
+}
+
+.offline-banner-exit-active {
+  transform: translateY(var(--offline-exit-y));
+  opacity: 0;
+  transition: all 120ms ease-in;
+}

@@ -456,19 +456,19 @@ export default function StudentDashboard() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0f0519] via-[#1a0b2e] to-[#0f0519] flex items-center justify-center">
+      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
-          <p className="text-purple-300 text-lg">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <p className="text-text-secondary text-lg">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0519] via-[#1a0b2e] to-[#0f0519] pb-24">
+    <div className="min-h-screen bg-bg-muted pb-24">
       {/* Sticky Top Bar */}
-      <div className="sticky top-0 z-40 bg-[#1a0b2e]/95 backdrop-blur-md border-b border-purple-500/20">
+      <div className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -477,7 +477,7 @@ export default function StudentDashboard() {
           </div>
           <button
             onClick={() => toast.info("Notifications coming soon!")}
-            className="p-2 hover:bg-purple-500/10 rounded-lg transition-colors"
+            className="p-2 hover:bg-bg-muted rounded-lg transition-colors transition-all duration-fast ease-standard"
           >
             <span className="text-2xl">🔔</span>
           </button>
@@ -491,32 +491,32 @@ export default function StudentDashboard() {
           <div className="space-y-8">
             {/* Happening Today */}
             <section>
-              <h2 className="text-2xl font-bold text-purple-200 mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span>🔥</span> Happening Today
               </h2>
               {getTodayEvents().length === 0 ? (
-                <div className="bg-[#2d1b4e]/50 rounded-xl p-8 text-center border border-purple-500/20">
-                  <p className="text-purple-400">No events today</p>
+                <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
+                  <p className="text-text-muted">No events today</p>
                 </div>
               ) : (
                 <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
                   {getTodayEvents().map((event) => (
                     <div key={event.id} className="flex-shrink-0 w-80 snap-start">
-                      <div className="bg-[#2d1b4e] rounded-xl overflow-hidden border border-purple-500/30 hover:border-purple-500/60 transition-all group">
+                      <div className="bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all group transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
                         {event.banner_image && (
                           <img src={event.banner_image} alt={event.title} className="w-full h-48 object-cover" />
                         )}
                         <div className="p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-purple-600/30 text-purple-200 text-xs px-2 py-1 rounded-full">Today</span>
-                            <span className="text-purple-300 text-sm font-semibold">₹{event.price}</span>
+                            <span className="bg-primarySoft text-primary text-xs px-2 py-1 rounded-full">Today</span>
+                            <span className="text-text-secondary text-sm font-semibold">₹{event.price}</span>
                           </div>
-                          <h3 className="font-bold text-purple-100 mb-2">{event.title}</h3>
-                          <p className="text-sm text-purple-400 mb-3 line-clamp-2">{event.description}</p>
+                          <h3 className="font-bold text-text-primary mb-2">{event.title}</h3>
+                          <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
                           <button
                             onClick={() => handlePay(event)}
                             disabled={!!getRegistration(event.id)}
-                            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 rounded-lg font-semibold hover:from-purple-500 hover:to-pink-500 transition-all disabled:opacity-50"
+                            className="w-full bg-gradient-to-r from-primary to-primaryHover text-text-inverse py-2 rounded-lg font-semibold hover:from-primaryHover hover:to-primary transition-all disabled:opacity-50"
                           >
                             {getRegistration(event.id) ? "Registered ✓" : "Register Now"}
                           </button>
@@ -530,24 +530,24 @@ export default function StudentDashboard() {
 
             {/* Trending */}
             <section>
-              <h2 className="text-2xl font-bold text-purple-200 mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span>⚡</span> Trending in Your College
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {getThisWeekEvents().slice(0, 6).map((event) => (
-                  <div key={event.id} className="bg-[#2d1b4e] rounded-xl overflow-hidden border border-purple-500/30 hover:border-purple-500/60 transition-all">
+                  <div key={event.id} className="bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
                     {event.banner_image && (
                       <img src={event.banner_image} alt={event.title} className="w-full h-32 object-cover" />
                     )}
                     <div className="p-3">
-                      <h3 className="font-semibold text-purple-100 text-sm mb-1 line-clamp-1">{event.title}</h3>
-                      <p className="text-xs text-purple-400 mb-2">{new Date(event.date).toLocaleDateString()}</p>
+                      <h3 className="font-semibold text-text-primary text-sm mb-1 line-clamp-1">{event.title}</h3>
+                      <p className="text-xs text-text-muted mb-2">{new Date(event.date).toLocaleDateString()}</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-purple-300 font-semibold text-sm">₹{event.price}</span>
+                        <span className="text-text-secondary font-semibold text-sm">₹{event.price}</span>
                         <button
                           onClick={() => handlePay(event)}
                           disabled={!!getRegistration(event.id)}
-                          className="text-xs bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-500 transition-all disabled:opacity-50"
+                          className="text-xs bg-primary text-text-inverse px-3 py-1 rounded-lg hover:bg-primaryHover disabled:opacity-50 transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
                         >
                           {getRegistration(event.id) ? "✓" : "Register"}
                         </button>
@@ -564,13 +564,13 @@ export default function StudentDashboard() {
         {activeTab === "explore" && (
           <div className="space-y-6">
             {/* Search */}
-            <div className="sticky top-20 z-30 bg-[#1a0b2e]/95 backdrop-blur-md p-4 rounded-xl border border-purple-500/20">
+            <div className="sticky top-20 z-30 bg-bg-card/95 backdrop-blur-md p-4 rounded-xl border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
               <input
                 type="text"
                 placeholder="Search events, clubs, or fests..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0f0519] border border-purple-500/30 rounded-lg px-4 py-3 text-purple-100 placeholder-purple-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-3 text-text-primary placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary transition-all"
               />
             </div>
 
@@ -582,8 +582,8 @@ export default function StudentDashboard() {
                   onClick={() => setFilterCategory(cat as any)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                     filterCategory === cat
-                      ? "bg-purple-600 text-white"
-                      : "bg-[#2d1b4e] text-purple-300 hover:bg-purple-600/30"
+                      ? "bg-primary text-text-inverse"
+                      : "bg-bg-card text-text-secondary hover:bg-bg-muted"
                   }`}
                 >
                   {cat === "all" ? "All" : cat === "today" ? "Today" : "This Week"}
@@ -595,8 +595,8 @@ export default function StudentDashboard() {
                   onClick={() => setFilterPrice(filterPrice === price ? "all" : price as any)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                     filterPrice === price
-                      ? "bg-purple-600 text-white"
-                      : "bg-[#2d1b4e] text-purple-300 hover:bg-purple-600/30"
+                      ? "bg-primary text-text-inverse"
+                      : "bg-bg-card text-text-secondary hover:bg-bg-muted"
                   }`}
                 >
                   {price === "free" ? "Free" : "Paid"}
@@ -611,15 +611,15 @@ export default function StudentDashboard() {
                 const finalPrice = getFinalPrice(event);
 
                 return (
-                  <div key={event.id} className="bg-[#2d1b4e] rounded-xl overflow-hidden border border-purple-500/20 hover:border-purple-500/60 transition-all">
+                  <div key={event.id} className="bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all">
                     <div className="flex gap-4 p-4">
                       {event.banner_image && (
                         <img src={event.banner_image} alt={event.title} className="w-24 h-24 object-cover rounded-lg flex-shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-purple-100 mb-1">{event.title}</h3>
-                        <p className="text-sm text-purple-400 mb-2 line-clamp-2">{event.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-purple-300">
+                        <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
+                        <p className="text-sm text-text-muted mb-2 line-clamp-2">{event.description}</p>
+                        <div className="flex items-center gap-4 text-xs text-text-secondary">
                           <span>📅 {new Date(event.date).toLocaleDateString()}</span>
                           <span>💰 ₹{event.price}</span>
                         </div>
@@ -627,7 +627,7 @@ export default function StudentDashboard() {
                       <button
                         onClick={() => handlePay(event)}
                         disabled={!!reg || loadingEventId === event.id}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-all disabled:opacity-50 self-center whitespace-nowrap"
+                        className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover disabled:opacity-50 self-center whitespace-nowrap transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
                       >
                         {reg ? "✓ Registered" : "Register"}
                       </button>
@@ -642,26 +642,26 @@ export default function StudentDashboard() {
         {/* MY EVENTS TAB */}
         {activeTab === "my-events" && (
           <div className="space-y-6">
-            <div className="flex gap-2 border-b border-purple-500/20 pb-2">
-              <button className="px-4 py-2 text-sm font-medium text-purple-100 border-b-2 border-purple-500">
+            <div className="flex gap-2 border-b border-border-default pb-2">
+              <button className="px-4 py-2 text-sm font-medium text-text-primary border-b-2 border-primary">
                 Upcoming ({getUpcomingEvents().length})
               </button>
-              <button className="px-4 py-2 text-sm font-medium text-purple-400">
+              <button className="px-4 py-2 text-sm font-medium text-text-secondary">
                 Registered ({getRegisteredEvents().length})
               </button>
-              <button className="px-4 py-2 text-sm font-medium text-purple-400">
+              <button className="px-4 py-2 text-sm font-medium text-text-muted">
                 Past ({getPastEvents().length})
               </button>
             </div>
 
             {tickets.length === 0 ? (
-              <div className="bg-[#2d1b4e]/50 rounded-xl p-12 text-center border border-purple-500/20">
+              <div className="bg-bg-card rounded-lg p-12 text-center border border-border-default">
                 <div className="text-6xl mb-4">🎟️</div>
-                <p className="text-purple-300 text-lg mb-2">No tickets yet</p>
-                <p className="text-purple-500 text-sm">Register for events to get your tickets!</p>
+                <p className="text-text-secondary text-lg mb-2">No tickets yet</p>
+                <p className="text-text-muted text-sm">Register for events to get your tickets!</p>
                 <button
                   onClick={() => setActiveTab("explore")}
-                  className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-500 transition-all"
+                  className="mt-4 bg-primary text-text-inverse px-6 py-2 rounded-lg hover:bg-primaryHover transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
                 >
                   Explore Events
                 </button>
@@ -669,7 +669,7 @@ export default function StudentDashboard() {
             ) : (
               <div className="space-y-4">
                 {tickets.map((ticket) => (
-                  <div key={ticket.id} className="bg-[#2d1b4e] rounded-xl overflow-hidden border border-purple-500/30">
+                  <div key={ticket.id} className="bg-bg-card rounded-lg overflow-hidden border border-border-default">
                     <div className="p-6">
                       <TicketComponent
                         ticketId={ticket.id}
@@ -697,9 +697,9 @@ export default function StudentDashboard() {
         {activeTab === "profile" && (
           <div className="space-y-6">
             {/* Profile Header */}
-            <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20">
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-20 h-20 bg-[#1a0b2e] rounded-full overflow-hidden flex items-center justify-center border-2 border-purple-500/50">
+                <div className="w-20 h-20 bg-bg-muted rounded-full overflow-hidden flex items-center justify-center border-2 border-border-default">
                   {profile?.profile_photo_url ? (
                     <img src={profile.profile_photo_url} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
@@ -707,98 +707,98 @@ export default function StudentDashboard() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold text-purple-100">{profile?.full_name || "Complete your profile"}</h2>
-                  <p className="text-sm text-purple-400">{session?.user?.email}</p>
+                  <h2 className="text-xl font-bold text-text-primary">{profile?.full_name || "Complete your profile"}</h2>
+                  <p className="text-sm text-text-muted">{session?.user?.email}</p>
                 </div>
                 <button
                   onClick={() => setEditingProfile(!editingProfile)}
-                  className="px-4 py-2 bg-purple-600/30 text-purple-200 rounded-lg hover:bg-purple-600/50 transition-all"
+                  className="px-4 py-2 bg-primarySoft text-primary rounded-lg hover:bg-bg-muted transition-all transition-all duration-fast ease-standard"
                 >
                   {editingProfile ? "Cancel" : "Edit"}
                 </button>
               </div>
 
               {/* Completion Bar */}
-              <div className="bg-[#1a0b2e] rounded-lg p-4">
+              <div className="bg-bg-muted rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-purple-300">Profile Completion</span>
-                  <span className="text-sm font-semibold text-purple-200">{Math.round(profileCompletion)}%</span>
+                  <span className="text-sm text-text-secondary">Profile Completion</span>
+                  <span className="text-sm font-semibold text-text-primary">{Math.round(profileCompletion)}%</span>
                 </div>
-                <div className="w-full bg-purple-900/30 rounded-full h-2">
+                <div className="w-full bg-border-default rounded-full h-2">
                   <div
                     className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all"
                     style={{ width: `${profileCompletion}%` }}
                   />
                 </div>
                 {profileCompletion < 100 && (
-                  <p className="text-xs text-yellow-400 mt-2">Complete your profile to unlock registrations</p>
+                  <p className="text-xs text-warning mt-2">Complete your profile to unlock registrations</p>
                 )}
               </div>
             </div>
 
             {/* Profile Form */}
-            <form onSubmit={handleSaveProfile} className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20 space-y-4">
+            <form onSubmit={handleSaveProfile} className="bg-bg-card rounded-lg p-6 border border-border-default space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">Full Name *</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Full Name *</label>
                   <input
                     name="full_name"
                     defaultValue={profile?.full_name || ""}
                     disabled={!editingProfile}
                     required
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 disabled:opacity-60"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">Date of Birth *</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Date of Birth *</label>
                   <input
                     name="dob"
                     type="date"
                     defaultValue={profile?.dob || ""}
                     disabled={!editingProfile}
                     required
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 disabled:opacity-60"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">College Name *</label>
+                  <label className="text-sm text-text-secondary mb-2 block">College Name *</label>
                   <input
                     name="college_name"
                     defaultValue={profile?.college_name || ""}
                     disabled={!editingProfile}
                     required
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 disabled:opacity-60"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">College Email *</label>
+                  <label className="text-sm text-text-secondary mb-2 block">College Email *</label>
                   <input
                     name="college_email"
                     type="email"
                     defaultValue={profile?.college_email || ""}
                     disabled={!editingProfile}
                     required
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 disabled:opacity-60"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">Phone Number</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Phone Number</label>
                   <input
                     name="phone_number"
                     type="tel"
                     defaultValue={profile?.phone_number || ""}
                     disabled={!editingProfile}
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 disabled:opacity-60"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">Personal Email</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Personal Email</label>
                   <input
                     name="personal_email"
                     type="email"
                     defaultValue={profile?.personal_email || ""}
                     disabled={!editingProfile}
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 disabled:opacity-60"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
                   />
                 </div>
               </div>
@@ -806,7 +806,7 @@ export default function StudentDashboard() {
               {editingProfile && (
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all font-semibold"
+                  className="w-full bg-gradient-to-r from-primary to-primaryHover text-text-inverse py-3 rounded-lg hover:from-primaryHover hover:to-primary transition-all font-semibold"
                 >
                   Save Profile
                 </button>
@@ -814,13 +814,13 @@ export default function StudentDashboard() {
             </form>
 
             {/* Memberships */}
-            <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20">
-              <h3 className="text-lg font-bold text-purple-200 mb-4">Club Memberships</h3>
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+              <h3 className="text-lg font-bold text-text-primary mb-4">Club Memberships</h3>
               <div className="flex gap-2 mb-4">
                 <select
                   value={club}
                   onChange={(e) => setClub(e.target.value)}
-                  className="bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 flex-1"
+                  className="bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary flex-1"
                 >
                   <option value="">Select Club</option>
                   <option value="IEEE">IEEE</option>
@@ -831,11 +831,11 @@ export default function StudentDashboard() {
                   placeholder="Member ID"
                   value={memberId}
                   onChange={(e) => setMemberId(e.target.value)}
-                  className="bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 flex-1"
+                  className="bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary flex-1"
                 />
                 <button
                   onClick={addMembership}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-all"
+                  className="px-6 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover transition-all transition-all duration-fast ease-standard"
                 >
                   Add
                 </button>
@@ -843,27 +843,27 @@ export default function StudentDashboard() {
               {memberships.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {memberships.map((m, i) => (
-                    <span key={i} className="bg-purple-600/20 px-3 py-1 rounded-full text-sm text-purple-200 border border-purple-500/30">
+                    <span key={i} className="bg-primarySoft px-3 py-1 rounded-full text-sm text-primary border border-border-default">
                       {m.club} • {m.memberId}
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-purple-400 text-center py-4 text-sm">No memberships yet</p>
+                <p className="text-text-muted text-center py-4 text-sm">No memberships yet</p>
               )}
             </div>
 
             {/* Settings */}
-            <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20 space-y-3">
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default space-y-3">
               <button
                 onClick={() => toast.info("Notifications settings coming soon")}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-bg-muted transition-all transition-all duration-fast ease-standard"
               >
                 🔔 Notifications
               </button>
               <button
                 onClick={() => signOut()}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-red-400 hover:bg-red-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-error hover:bg-errorSoft transition-all transition-all duration-fast ease-standard"
               >
                 🚪 Logout
               </button>
@@ -874,34 +874,34 @@ export default function StudentDashboard() {
         {/* MORE TAB */}
         {activeTab === "more" && (
           <div className="space-y-4">
-            <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20 space-y-3">
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default space-y-3">
               <button
                 onClick={() => toast.info("About page coming soon")}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-bg-muted transition-all transition-all duration-fast ease-standard"
               >
                 ℹ️ About Happenin
               </button>
               <button
                 onClick={() => toast.info("FAQs coming soon")}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-primarySoft transition-all duration-fast ease-standard"
               >
                 ❓ FAQs
               </button>
               <button
                 onClick={() => toast.info("Support coming soon")}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-primarySoft transition-all duration-fast ease-standard"
               >
                 💬 Contact Support
               </button>
               <button
                 onClick={() => toast.info("Report coming soon")}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-primarySoft transition-all duration-fast ease-standard"
               >
                 🚨 Report an Issue
               </button>
               <button
                 onClick={() => router.push("/login")}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-primarySoft transition-all duration-fast ease-standard"
               >
                 🎯 Become an Organizer
               </button>
@@ -911,7 +911,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1a0b2e]/95 backdrop-blur-md border-t border-purple-500/20">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default">
         <div className="max-w-7xl mx-auto flex justify-around items-center py-3">
           {[
             { id: "home", icon: "🏠", label: "Home" },
@@ -925,8 +925,8 @@ export default function StudentDashboard() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
                 activeTab === tab.id
-                  ? "text-purple-300 bg-purple-600/20"
-                  : "text-purple-500 hover:text-purple-300"
+                  ? "text-primary bg-primarySoft"
+                  : "text-text-muted hover:text-text-primary"
               }`}
             >
               <span className="text-2xl">{tab.icon}</span>

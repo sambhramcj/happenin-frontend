@@ -1,0 +1,15 @@
+{
+  "motion": {
+    "reducedMultiplier": 0.3,
+    "disableParallax": true,
+    "disableAutoLoops": true
+  },
+
+  "contrast": {
+    "minimumRatio": 4.5
+  },
+
+  "tapTargets": {
+    "minSize": 44
+  }
+}

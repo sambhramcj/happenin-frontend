@@ -2,6 +2,8 @@
 
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
+import QueryProvider from "@/components/QueryProvider";
+import OfflineBanner from "@/components/OfflineBanner";
 
 export default function Providers({
   children,
@@ -10,12 +12,16 @@ export default function Providers({
 }) {
   return (
     <SessionProvider>
-      {children}
-      <Toaster 
-        position="top-right" 
-        theme="dark"
-        richColors
-      />
+      <QueryProvider>
+        <OfflineBanner />
+        {children}
+        <Toaster 
+          position="top-right" 
+          theme="light"
+          richColors
+          closeButton
+        />
+      </QueryProvider>
     </SessionProvider>
   );
 }

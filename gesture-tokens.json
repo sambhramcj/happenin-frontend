@@ -1,0 +1,35 @@
+{
+  "swipe": {
+    "threshold": {
+      "horizontal": 60,
+      "vertical": 80
+    },
+    "velocity": {
+      "min": 0.3,
+      "commit": 0.5
+    },
+    "directionLock": true
+  },
+
+  "drag": {
+    "elastic": {
+      "soft": 0.15,
+      "medium": 0.25,
+      "hard": 0.4
+    },
+    "constraints": {
+      "card": 12,
+      "sheet": 24
+    }
+  },
+
+  "pullToRefresh": {
+    "distance": 90,
+    "resistance": 0.6,
+    "trigger": 70
+  },
+
+  "longPress": {
+    "delay": 450
+  }
+}

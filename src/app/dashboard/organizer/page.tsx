@@ -320,10 +320,10 @@ export default function OrganizerDashboard() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0f0519] via-[#1a0b2e] to-[#0f0519] flex items-center justify-center">
+      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
-          <p className="text-purple-300 text-lg">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-brand mb-4"></div>
+          <p className="text-text-secondary text-lg">Loading...</p>
         </div>
       </div>
     );
@@ -334,17 +334,17 @@ export default function OrganizerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0519] via-[#1a0b2e] to-[#0f0519] pb-24">
+    <div className="min-h-screen bg-bg-muted pb-24">
       {/* Sticky Top Bar */}
-      <div className="sticky top-0 z-40 bg-[#1a0b2e]/95 backdrop-blur-md border-b border-purple-500/20">
+      <div className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-600/20 rounded-full flex items-center justify-center border border-purple-500/30">
+            <div className="w-10 h-10 bg-primarySoft rounded-full flex items-center justify-center border border-border-default">
               <span className="text-xl">🎯</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-purple-200">Organizer</h1>
-              <p className="text-xs text-purple-400">{session?.user?.email}</p>
+              <h1 className="text-lg font-bold text-text-primary">Organizer</h1>
+              <p className="text-xs text-text-muted">{session?.user?.email}</p>
             </div>
           </div>
         </div>
@@ -357,41 +357,41 @@ export default function OrganizerDashboard() {
           <div className="space-y-8">
             {/* Live Snapshot */}
             <section>
-              <h2 className="text-2xl font-bold text-purple-200 mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span>⚡</span> Live Snapshot
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
                   <div className="text-3xl mb-2">🟢</div>
-                  <div className="text-3xl font-bold text-purple-100">{getLiveEvents().length}</div>
-                  <div className="text-sm text-purple-400">Live Events</div>
+                  <div className="text-3xl font-bold text-text-primary">{getLiveEvents().length}</div>
+                  <div className="text-sm text-text-muted">Live Events</div>
                 </div>
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
                   <div className="text-3xl mb-2">🎟</div>
-                  <div className="text-3xl font-bold text-purple-100">{getTotalRegistrationsToday()}</div>
-                  <div className="text-sm text-purple-400">Today</div>
+                  <div className="text-3xl font-bold text-text-primary">{getTotalRegistrationsToday()}</div>
+                  <div className="text-sm text-text-muted">Today</div>
                 </div>
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
                   <div className="text-3xl mb-2">💰</div>
-                  <div className="text-3xl font-bold text-purple-100">₹{getTotalRevenue()}</div>
-                  <div className="text-sm text-purple-400">Collected</div>
+                  <div className="text-3xl font-bold text-text-primary">₹{getTotalRevenue()}</div>
+                  <div className="text-sm text-text-muted">Collected</div>
                 </div>
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
                   <div className="text-3xl mb-2">📅</div>
-                  <div className="text-3xl font-bold text-purple-100">{events.length}</div>
-                  <div className="text-sm text-purple-400">Total Events</div>
+                  <div className="text-3xl font-bold text-text-primary">{events.length}</div>
+                  <div className="text-sm text-text-muted">Total Events</div>
                 </div>
               </div>
             </section>
 
             {/* Today's Events */}
             <section>
-              <h2 className="text-2xl font-bold text-purple-200 mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span>🔥</span> Today's Events
               </h2>
               {getTodayEvents().length === 0 ? (
-                <div className="bg-[#2d1b4e]/50 rounded-xl p-8 text-center border border-purple-500/20">
-                  <p className="text-purple-400">No events today</p>
+                <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
+                  <p className="text-text-muted">No events today</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -400,24 +400,24 @@ export default function OrganizerDashboard() {
                     const isLive = new Date().toDateString() === new Date(event.date).toDateString();
                     
                     return (
-                      <div key={event.id} className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                      <div key={event.id} className="bg-bg-card rounded-xl p-6 border border-border-default">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold text-purple-100 mb-2">{event.title}</h3>
-                            <div className="flex items-center gap-4 text-sm text-purple-400">
+                            <h3 className="text-xl font-bold text-text-primary mb-2">{event.title}</h3>
+                            <div className="flex items-center gap-4 text-sm text-text-muted">
                               <span>📍 {event.location}</span>
                               <span>💰 ₹{event.price}</span>
                             </div>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            isLive ? "bg-green-900/30 text-green-300 border border-green-500/30" : "bg-yellow-900/30 text-yellow-300 border border-yellow-500/30"
+                            isLive ? "bg-green-900/30 text-success border border-success" : "bg-yellow-900/30 text-yellow-300 border border-yellow-500/30"
                           }`}>
                             {isLive ? "🟢 Live" : "🟡 Upcoming"}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mb-4">
-                          <div className="text-2xl font-bold text-purple-200">{regs.length}</div>
-                          <div className="text-sm text-purple-400">registrations</div>
+                          <div className="text-2xl font-bold text-text-primary">{regs.length}</div>
+                          <div className="text-sm text-text-muted">registrations</div>
                         </div>
                         <button
                           onClick={() =>
@@ -427,7 +427,7 @@ export default function OrganizerDashboard() {
                               eventTitle: event.title,
                             })
                           }
-                          className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-500 transition-all font-medium"
+                          className="w-full bg-primary text-text-inverse py-2 rounded-lg hover:bg-primaryHover transition-all font-medium transition-all duration-fast ease-standard"
                         >
                           View Registrations
                         </button>
@@ -444,37 +444,37 @@ export default function OrganizerDashboard() {
         {activeTab === "events" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-purple-200 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
                 <span>📅</span> My Events ({events.length})
               </h2>
               <button
                 onClick={() => setShowCreateForm(!showCreateForm)}
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all font-medium"
+                className="px-4 py-2 bg-gradient-to-r from-brand to-pink-600 text-text-inverse rounded-lg hover:from-violet-800 hover:to-pink-500 transition-all font-medium"
               >
                 {showCreateForm ? "Cancel" : "+ Create Event"}
               </button>
             </div>
 
             {showCreateForm && (
-              <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20 space-y-4">
-                <h3 className="text-lg font-bold text-purple-200 mb-4">Create New Event</h3>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default space-y-4">
+                <h3 className="text-lg font-bold text-text-primary mb-4">Create New Event</h3>
                 
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">Event Title</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Event Title</label>
                   <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
                     placeholder="Enter event title"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">Description</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Description</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100 resize-none"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary resize-none"
                     rows={3}
                     placeholder="Describe your event"
                   />
@@ -482,32 +482,32 @@ export default function OrganizerDashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-purple-300 mb-2 block">Date</label>
+                    <label className="text-sm text-text-secondary mb-2 block">Date</label>
                     <input
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100"
+                      className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-purple-300 mb-2 block">Location</label>
+                    <label className="text-sm text-text-secondary mb-2 block">Location</label>
                     <input
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100"
+                      className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
                       placeholder="Event location"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm text-purple-300 mb-2 block">Price (₹)</label>
+                  <label className="text-sm text-text-secondary mb-2 block">Price (₹)</label>
                   <input
                     type="number"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100"
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
                     placeholder="Enter price"
                   />
                 </div>
@@ -518,42 +518,42 @@ export default function OrganizerDashboard() {
                       type="checkbox"
                       checked={discountEnabled}
                       onChange={(e) => setDiscountEnabled(e.target.checked)}
-                      className="w-4 h-4 accent-purple-500"
+                      className="w-4 h-4 accent-brand"
                     />
-                    <span className="text-sm text-purple-300">Enable Club Discount</span>
+                    <span className="text-sm text-text-secondary">Enable Club Discount</span>
                   </label>
                 </div>
 
                 {discountEnabled && (
-                  <div className="bg-[#1a0b2e]/50 rounded-lg p-4 space-y-3">
+                  <div className="bg-bg-muted rounded-lg p-4 space-y-3">
                     <div>
-                      <label className="text-sm text-purple-300 mb-2 block">Club Name</label>
+                      <label className="text-sm text-text-secondary mb-2 block">Club Name</label>
                       <input
                         value={discountClub}
                         onChange={(e) => setDiscountClub(e.target.value)}
-                        className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100"
+                        className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
                         placeholder="e.g., IEEE, ACM"
                       />
                     </div>
                     <div>
-                      <label className="text-sm text-purple-300 mb-2 block">Discount Amount (₹)</label>
+                      <label className="text-sm text-text-secondary mb-2 block">Discount Amount (₹)</label>
                       <input
                         type="number"
                         value={discountAmount}
                         onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                        className="w-full bg-[#1a0b2e] border border-purple-500/30 rounded-lg px-4 py-2 text-purple-100"
+                        className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
                       />
                     </div>
                     <div>
-                      <label className="text-sm text-purple-300 mb-2 block">Eligible Members (CSV/Excel)</label>
+                      <label className="text-sm text-text-secondary mb-2 block">Eligible Members (CSV/Excel)</label>
                       <input
                         type="file"
                         accept=".csv,.xlsx,.xls"
                         onChange={handleCSVUpload}
-                        className="w-full text-sm text-purple-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-600 file:text-white hover:file:bg-purple-500"
+                        className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-text-inverse hover:file:bg-violet-800 transition-all duration-fast ease-standard"
                       />
                       {eligibleMembers.length > 0 && (
-                        <p className="text-xs text-green-400 mt-2">✓ {eligibleMembers.length} members uploaded</p>
+                        <p className="text-xs text-success mt-2">✓ {eligibleMembers.length} members uploaded</p>
                       )}
                     </div>
                   </div>
@@ -562,7 +562,7 @@ export default function OrganizerDashboard() {
                 <button
                   onClick={handleCreateEvent}
                   disabled={uploadingImage}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all font-semibold disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-brand to-pink-600 text-text-inverse py-3 rounded-lg hover:from-violet-800 hover:to-pink-500 transition-all font-semibold disabled:opacity-50"
                 >
                   {uploadingImage ? "Uploading..." : "Create Event"}
                 </button>
@@ -574,18 +574,18 @@ export default function OrganizerDashboard() {
               {events.map((event) => {
                 const regs = getEventRegistrations(event.id);
                 return (
-                  <div key={event.id} className="bg-[#2d1b4e] rounded-xl overflow-hidden border border-purple-500/30">
+                  <div key={event.id} className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
                     {event.banner_image && (
                       <img src={event.banner_image} alt={event.title} className="w-full h-40 object-cover" />
                     )}
                     <div className="p-4">
-                      <h3 className="font-bold text-purple-100 mb-2 line-clamp-1">{event.title}</h3>
-                      <p className="text-sm text-purple-400 mb-3 line-clamp-2">{event.description}</p>
-                      <div className="flex items-center justify-between text-xs text-purple-300 mb-3">
+                      <h3 className="font-bold text-text-primary mb-2 line-clamp-1">{event.title}</h3>
+                      <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
+                      <div className="flex items-center justify-between text-xs text-text-secondary mb-3">
                         <span>📅 {new Date(event.date).toLocaleDateString()}</span>
                         <span>💰 ₹{event.price}</span>
                       </div>
-                      <div className="text-sm text-purple-200 mb-3">
+                      <div className="text-sm text-text-primary mb-3">
                         <span className="font-semibold">{regs.length}</span> registrations
                       </div>
                       <div className="space-y-2">
@@ -597,7 +597,7 @@ export default function OrganizerDashboard() {
                               eventTitle: event.title,
                             })
                           }
-                          className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-500 transition-all text-sm font-medium"
+                          className="w-full bg-purple-600 text-text-inverse py-2 rounded-lg hover:bg-purple-500 transition-all text-sm font-medium transition-all duration-fast ease-standard"
                         >
                           View Registrations
                         </button>
@@ -609,7 +609,7 @@ export default function OrganizerDashboard() {
                               eventTitle: event.title,
                             })
                           }
-                          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-500 transition-all text-sm font-medium"
+                          className="w-full bg-blue-600 text-text-inverse py-2 rounded-lg hover:bg-blue-500 transition-all text-sm font-medium transition-all duration-fast ease-standard"
                         >
                           Scan Attendance
                         </button>
@@ -625,16 +625,16 @@ export default function OrganizerDashboard() {
         {/* REGISTRATIONS TAB */}
         {activeTab === "registrations" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-purple-200 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
               <span>👥</span> Registrations
             </h2>
 
             <div>
-              <label className="text-sm text-purple-300 mb-2 block">Select Event</label>
+              <label className="text-sm text-text-secondary mb-2 block">Select Event</label>
               <select
                 value={selectedEventForRegs}
                 onChange={(e) => setSelectedEventForRegs(e.target.value)}
-                className="w-full bg-[#2d1b4e] border border-purple-500/30 rounded-lg px-4 py-3 text-purple-100"
+                className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-3 text-text-primary"
               >
                 <option value="">All Events</option>
                 {events.map((event) => (
@@ -646,7 +646,7 @@ export default function OrganizerDashboard() {
             </div>
 
             {selectedEventForRegs && (
-              <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   {(() => {
                     const regs = getEventRegistrations(selectedEventForRegs);
@@ -660,7 +660,7 @@ export default function OrganizerDashboard() {
                           <div className="text-xs text-purple-400">Total</div>
                         </div>
                         <div>
-                          <div className="text-2xl font-bold text-green-300">{paid}</div>
+                          <div className="text-2xl font-bold text-success">{paid}</div>
                           <div className="text-xs text-purple-400">Paid</div>
                         </div>
                         <div>
@@ -679,7 +679,7 @@ export default function OrganizerDashboard() {
                                 });
                               }
                             }}
-                            className="text-sm bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-500 transition-all"
+                            className="text-sm bg-purple-600 text-text-inverse px-4 py-2 rounded-lg hover:bg-purple-500 transition-all transition-all duration-fast ease-standard"
                           >
                             View List
                           </button>
@@ -692,8 +692,8 @@ export default function OrganizerDashboard() {
             )}
 
             {!selectedEventForRegs && (
-              <div className="bg-[#2d1b4e]/50 rounded-xl p-8 text-center border border-purple-500/20">
-                <p className="text-purple-400">Select an event to view registrations</p>
+              <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
+                <p className="text-text-muted">Select an event to view registrations</p>
               </div>
             )}
           </div>
@@ -702,29 +702,29 @@ export default function OrganizerDashboard() {
         {/* PROFILE TAB */}
         {activeTab === "profile" && (
           <div className="space-y-6">
-            <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20">
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 bg-purple-600/20 rounded-full flex items-center justify-center border-2 border-purple-500/50">
+                <div className="w-16 h-16 bg-primarySoft rounded-full flex items-center justify-center border-2 border-border-default">
                   <span className="text-3xl">🎯</span>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-purple-100">Organizer Profile</h2>
-                  <p className="text-sm text-purple-400">{session?.user?.email}</p>
+                  <h2 className="text-xl font-bold text-text-primary">Organizer Profile</h2>
+                  <p className="text-sm text-text-muted">{session?.user?.email}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className="bg-[#1a0b2e] rounded-lg p-4">
-                  <div className="text-sm text-purple-400 mb-1">Role</div>
-                  <div className="text-purple-100 font-semibold">Event Organizer</div>
+                <div className="bg-bg-muted rounded-lg p-4">
+                  <div className="text-sm text-text-muted mb-1">Role</div>
+                  <div className="text-text-primary font-semibold">Event Organizer</div>
                 </div>
-                <div className="bg-[#1a0b2e] rounded-lg p-4">
-                  <div className="text-sm text-purple-400 mb-1">Total Events</div>
-                  <div className="text-purple-100 font-semibold">{events.length}</div>
+                <div className="bg-bg-muted rounded-lg p-4">
+                  <div className="text-sm text-text-muted mb-1">Total Events</div>
+                  <div className="text-text-primary font-semibold">{events.length}</div>
                 </div>
-                <div className="bg-[#1a0b2e] rounded-lg p-4">
-                  <div className="text-sm text-purple-400 mb-1">Total Registrations</div>
-                  <div className="text-purple-100 font-semibold">{allRegistrations.length}</div>
+                <div className="bg-bg-muted rounded-lg p-4">
+                  <div className="text-sm text-text-muted mb-1">Total Registrations</div>
+                  <div className="text-text-primary font-semibold">{allRegistrations.length}</div>
                 </div>
               </div>
             </div>
@@ -733,19 +733,19 @@ export default function OrganizerDashboard() {
               <h3 className="text-lg font-bold text-purple-200 mb-4">Settings</h3>
               <button
                 onClick={() => toast.info("Help & support coming soon")}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all transition-all duration-fast ease-standard"
               >
                 💬 Help & Support
               </button>
               <button
                 onClick={() => toast.info("Guidelines coming soon")}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-purple-200 hover:bg-purple-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-bg-muted transition-all transition-all duration-fast ease-standard"
               >
                 📋 Organizer Guidelines
               </button>
               <button
                 onClick={() => signOut()}
-                className="w-full text-left px-4 py-3 bg-[#1a0b2e] rounded-lg text-red-400 hover:bg-red-600/10 transition-all"
+                className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-error hover:bg-errorSoft transition-all transition-all duration-fast ease-standard"
               >
                 🚪 Logout
               </button>
@@ -755,7 +755,7 @@ export default function OrganizerDashboard() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1a0b2e]/95 backdrop-blur-md border-t border-purple-500/20">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default">
         <div className="max-w-7xl mx-auto flex justify-around items-center py-3">
           {[
             { id: "dashboard", icon: "🎯", label: "Dashboard" },
@@ -768,8 +768,8 @@ export default function OrganizerDashboard() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
                 activeTab === tab.id
-                  ? "text-purple-300 bg-purple-600/20"
-                  : "text-purple-500 hover:text-purple-300"
+                  ? "text-primary bg-primarySoft"
+                  : "text-text-muted hover:text-text-primary"
               }`}
             >
               <span className="text-2xl">{tab.icon}</span>

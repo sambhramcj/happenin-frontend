@@ -180,10 +180,10 @@ export default function AdminDashboard() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0f0519] via-[#1a0b2e] to-[#0f0519] flex items-center justify-center">
+      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
-          <p className="text-purple-300 text-lg">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-brand mb-4"></div>
+          <p className="text-text-secondary text-lg">Loading...</p>
         </div>
       </div>
     );
@@ -194,17 +194,17 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0519] via-[#1a0b2e] to-[#0f0519] pb-24">
+    <div className="min-h-screen bg-bg-muted pb-24">
       {/* Sticky Top Bar */}
-      <div className="sticky top-0 z-40 bg-[#1a0b2e]/95 backdrop-blur-md border-b border-purple-500/20">
+      <div className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-600/20 rounded-full flex items-center justify-center border border-red-500/30">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center border border-red-200">
               <span className="text-xl">🛡️</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-purple-200">Admin Control</h1>
-              <p className="text-xs text-purple-400">Platform Management</p>
+              <h1 className="text-lg font-bold text-text-primary">Admin Control</h1>
+              <p className="text-xs text-text-muted">Platform Management</p>
             </div>
           </div>
         </div>
@@ -217,59 +217,59 @@ export default function AdminDashboard() {
           <div className="space-y-8">
             {/* Global Snapshot */}
             <section>
-              <h2 className="text-2xl font-bold text-purple-200 mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span>📊</span> Global Snapshot
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                   <div className="text-3xl mb-2">🏫</div>
-                  <div className="text-3xl font-bold text-purple-100">{getTotalColleges()}</div>
-                  <div className="text-sm text-purple-400">Colleges Live</div>
+                  <div className="text-3xl font-bold text-text-primary">{getTotalColleges()}</div>
+                  <div className="text-sm text-text-muted">Colleges Live</div>
                 </div>
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                   <div className="text-3xl mb-2">📅</div>
-                  <div className="text-3xl font-bold text-purple-100">{getEventsToday().length}</div>
-                  <div className="text-sm text-purple-400">Events Today</div>
+                  <div className="text-3xl font-bold text-text-primary">{getEventsToday().length}</div>
+                  <div className="text-sm text-text-muted">Events Today</div>
                 </div>
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                   <div className="text-3xl mb-2">🎟</div>
-                  <div className="text-3xl font-bold text-purple-100">{getRegistrationsToday().length}</div>
-                  <div className="text-sm text-purple-400">Regs Today</div>
+                  <div className="text-3xl font-bold text-text-primary">{getRegistrationsToday().length}</div>
+                  <div className="text-sm text-text-muted">Regs Today</div>
                 </div>
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                   <div className="text-3xl mb-2">💰</div>
-                  <div className="text-3xl font-bold text-purple-100">₹{getRevenueToday()}</div>
-                  <div className="text-sm text-purple-400">Revenue Today</div>
+                  <div className="text-3xl font-bold text-text-primary">₹{getRevenueToday()}</div>
+                  <div className="text-sm text-text-muted">Revenue Today</div>
                 </div>
-                <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                   <div className="text-3xl mb-2">⚠️</div>
-                  <div className="text-3xl font-bold text-red-300">{getFailedPayments()}</div>
-                  <div className="text-sm text-purple-400">Failed Payments</div>
+                  <div className="text-3xl font-bold text-error">{getFailedPayments()}</div>
+                  <div className="text-sm text-text-muted">Failed Payments</div>
                 </div>
               </div>
             </section>
 
             {/* Activity Timeline */}
             <section>
-              <h2 className="text-2xl font-bold text-purple-200 mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span>📈</span> Recent Activity (24h)
               </h2>
-              <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                 <div className="space-y-3">
                   {events.slice(0, 5).map((event) => (
-                    <div key={event.id} className="flex items-center gap-3 p-3 bg-[#1a0b2e] rounded-lg">
+                    <div key={event.id} className="flex items-center gap-3 p-3 bg-bg-muted rounded-lg">
                       <span className="text-2xl">✨</span>
                       <div className="flex-1">
-                        <p className="text-purple-200 font-medium">{event.title}</p>
-                        <p className="text-xs text-purple-400">Created by {event.organizer_email}</p>
+                        <p className="text-text-primary font-medium">{event.title}</p>
+                        <p className="text-xs text-text-muted">Created by {event.organizer_email}</p>
                       </div>
-                      <span className="text-xs text-purple-500">
+                      <span className="text-xs text-text-muted">
                         {new Date(event.created_at).toLocaleDateString()}
                       </span>
                     </div>
                   ))}
                   {events.length === 0 && (
-                    <p className="text-purple-400 text-center py-8">No recent activity</p>
+                    <p className="text-text-muted text-center py-8">No recent activity</p>
                   )}
                 </div>
               </div>
@@ -277,13 +277,13 @@ export default function AdminDashboard() {
 
             {/* Alerts */}
             <section>
-              <h2 className="text-2xl font-bold text-purple-200 mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <span>🚨</span> Critical Alerts
               </h2>
-              <div className="bg-[#2d1b4e]/50 rounded-xl p-8 text-center border border-purple-500/20">
+              <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
                 <div className="text-5xl mb-3">✅</div>
-                <p className="text-purple-300">All systems operational</p>
-                <p className="text-sm text-purple-500 mt-2">No critical alerts at this time</p>
+                <p className="text-text-secondary">All systems operational</p>
+                <p className="text-sm text-text-muted mt-2">No critical alerts at this time</p>
               </div>
             </section>
           </div>
@@ -292,14 +292,14 @@ export default function AdminDashboard() {
         {/* COLLEGES TAB */}
         {activeTab === "colleges" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-purple-200 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
               <span>🏫</span> Colleges ({getTotalColleges()})
             </h2>
 
-            <div className="bg-[#2d1b4e]/50 rounded-xl p-8 text-center border border-purple-500/20">
-              <div className="text-5xl mb-3">🏗️</div>
-              <p className="text-purple-300">College management coming soon</p>
-              <p className="text-sm text-purple-500 mt-2">View and manage registered colleges</p>
+            <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
+              <div className="text-5xl mb-3">🏭</div>
+              <p className="text-text-secondary">College management coming soon</p>
+              <p className="text-sm text-text-muted mt-2">View and manage registered colleges</p>
             </div>
           </div>
         )}
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
         {activeTab === "events" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-purple-200 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
                 <span>📅</span> All Events ({events.length})
               </h2>
             </div>
@@ -321,8 +321,8 @@ export default function AdminDashboard() {
                   onClick={() => setEventFilter(filter as any)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                     eventFilter === filter
-                      ? "bg-purple-600 text-white"
-                      : "bg-[#2d1b4e] text-purple-300 hover:bg-purple-600/30"
+                      ? "bg-primary text-text-inverse"
+                      : "bg-bg-card text-text-secondary hover:bg-bg-muted"
                   }`}
                 >
                   {filter === "all" ? "All Events" : filter === "today" ? "Today" : "This Week"}
@@ -337,30 +337,30 @@ export default function AdminDashboard() {
                 const revenue = getEventRevenue(event.id);
 
                 return (
-                  <div key={event.id} className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20">
+                  <div key={event.id} className="bg-bg-card rounded-xl p-6 border border-border-default">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-purple-100 mb-2">{event.title}</h3>
-                        <p className="text-sm text-purple-400 mb-3 line-clamp-2">{event.description}</p>
-                        <div className="flex flex-wrap gap-4 text-sm text-purple-300">
+                        <h3 className="text-xl font-bold text-text-primary mb-2">{event.title}</h3>
+                        <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
+                        <div className="flex flex-wrap gap-4 text-sm text-text-secondary">
                           <span>👤 {event.organizer_email}</span>
                           <span>📅 {new Date(event.date).toLocaleDateString()}</span>
                           <span>📍 {event.location}</span>
                           <span>💰 ₹{event.price}</span>
                         </div>
                       </div>
-                      <span className="px-3 py-1 bg-green-900/30 text-green-300 rounded-full text-xs font-semibold border border-green-500/30">
+                      <span className="px-3 py-1 bg-green-900/30 text-success rounded-full text-xs font-semibold border border-success">
                         🟢 Active
                       </span>
                     </div>
-                    <div className="flex items-center gap-6 pt-4 border-t border-purple-500/20">
+                    <div className="flex items-center gap-6 pt-4 border-t border-border-default">
                       <div>
-                        <div className="text-2xl font-bold text-purple-200">{regCount}</div>
-                        <div className="text-xs text-purple-400">Registrations</div>
+                        <div className="text-2xl font-bold text-text-primary">{regCount}</div>
+                        <div className="text-xs text-text-muted">Registrations</div>
                       </div>
                       <div>
-                        <div className="text-2xl font-bold text-purple-200">₹{revenue}</div>
-                        <div className="text-xs text-purple-400">Revenue</div>
+                        <div className="text-2xl font-bold text-text-primary">₹{revenue}</div>
+                        <div className="text-xs text-text-muted">Revenue</div>
                       </div>
                     </div>
                   </div>
@@ -373,59 +373,59 @@ export default function AdminDashboard() {
         {/* PAYMENTS TAB */}
         {activeTab === "payments" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-purple-200 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
               <span>💰</span> Payments
             </h2>
 
             {/* Payment Overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
-                <div className="text-sm text-purple-400 mb-2">Total Revenue</div>
-                <div className="text-2xl font-bold text-purple-100">₹{getTotalRevenue()}</div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted mb-2">Total Revenue</div>
+                <div className="text-2xl font-bold text-text-primary">₹{getTotalRevenue()}</div>
               </div>
-              <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
-                <div className="text-sm text-purple-400 mb-2">Transactions</div>
-                <div className="text-2xl font-bold text-purple-100">{registrations.length}</div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted mb-2">Transactions</div>
+                <div className="text-2xl font-bold text-text-primary">{registrations.length}</div>
               </div>
-              <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
-                <div className="text-sm text-purple-400 mb-2">Today</div>
-                <div className="text-2xl font-bold text-purple-100">₹{getRevenueToday()}</div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted mb-2">Today</div>
+                <div className="text-2xl font-bold text-text-primary">₹{getRevenueToday()}</div>
               </div>
-              <div className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/30">
-                <div className="text-sm text-purple-400 mb-2">Failed</div>
-                <div className="text-2xl font-bold text-red-300">{getFailedPayments()}</div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted mb-2">Failed</div>
+                <div className="text-2xl font-bold text-error">{getFailedPayments()}</div>
               </div>
             </div>
 
             {/* Transaction Table */}
-            <div className="bg-[#2d1b4e] rounded-xl overflow-hidden border border-purple-500/20">
+            <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-[#1a0b2e]">
+                  <thead className="bg-bg-muted">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-purple-300 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                         Student
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-purple-300 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                         Event
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-purple-300 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                         Amount
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-purple-300 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                         Date
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-purple-500/20">
+                  <tbody className="divide-y divide-gray-200">
                     {registrations.slice(0, 10).map((reg) => {
                       const event = events.find(e => e.id === reg.event_id);
                       return (
-                        <tr key={reg.id} className="hover:bg-[#1a0b2e]/50">
-                          <td className="px-6 py-4 text-sm text-purple-200">{reg.student_email}</td>
-                          <td className="px-6 py-4 text-sm text-purple-300">{event?.title || 'Unknown'}</td>
-                          <td className="px-6 py-4 text-sm text-purple-100 font-semibold">₹{reg.final_price}</td>
-                          <td className="px-6 py-4 text-sm text-purple-400">
+                        <tr key={reg.id} className="hover:bg-bg-muted transition-all duration-fast ease-standard">
+                          <td className="px-6 py-4 text-sm text-text-primary">{reg.student_email}</td>
+                          <td className="px-6 py-4 text-sm text-text-secondary">{event?.title || 'Unknown'}</td>
+                          <td className="px-6 py-4 text-sm text-text-primary font-semibold">₹{reg.final_price}</td>
+                          <td className="px-6 py-4 text-sm text-text-muted">
                             {new Date(reg.created_at).toLocaleDateString()}
                           </td>
                         </tr>
@@ -441,7 +441,7 @@ export default function AdminDashboard() {
         {/* USERS TAB */}
         {activeTab === "users" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-purple-200 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
               <span>👥</span> Users
             </h2>
 
@@ -451,8 +451,8 @@ export default function AdminDashboard() {
                 onClick={() => setUsersSubTab("students")}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   usersSubTab === "students"
-                    ? "bg-purple-600 text-white"
-                    : "bg-[#2d1b4e] text-purple-300 hover:bg-purple-600/30"
+                    ? "bg-primary text-text-inverse"
+                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
                 }`}
               >
                 Students ({users.filter(u => u.role === "student").length})
@@ -461,8 +461,8 @@ export default function AdminDashboard() {
                 onClick={() => setUsersSubTab("organizers")}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   usersSubTab === "organizers"
-                    ? "bg-purple-600 text-white"
-                    : "bg-[#2d1b4e] text-purple-300 hover:bg-purple-600/30"
+                    ? "bg-primary text-text-inverse"
+                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
                 }`}
               >
                 Organizers ({users.filter(u => u.role === "organizer").length})
@@ -476,7 +476,7 @@ export default function AdminDashboard() {
                 placeholder="Search by email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#2d1b4e] border border-purple-500/30 rounded-lg px-4 py-3 text-purple-100 placeholder-purple-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-3 text-text-primary placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary transition-all"
               />
             </div>
 
@@ -490,12 +490,12 @@ export default function AdminDashboard() {
                   <div
                     key={user.email}
                     onClick={() => setSelectedUser(user)}
-                    className="bg-[#2d1b4e] rounded-xl p-6 border border-purple-500/20 hover:border-purple-500/60 cursor-pointer transition-all"
+                    className="bg-bg-card rounded-xl p-6 border border-border-default hover:border-violet-700 cursor-pointer transition-all"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-purple-100 mb-2">{user.email}</h3>
-                        <div className="flex gap-4 text-sm text-purple-400">
+                        <h3 className="text-lg font-bold text-text-primary mb-2">{user.email}</h3>
+                        <div className="flex gap-4 text-sm text-text-muted">
                           <span>📅 Joined {new Date(user.created_at).toLocaleDateString()}</span>
                           {usersSubTab === "students" && (
                             <span>🎟 {userRegs.length} registrations</span>
@@ -505,7 +505,7 @@ export default function AdminDashboard() {
                           )}
                         </div>
                       </div>
-                      <span className="px-3 py-1 bg-purple-600/30 text-purple-200 rounded-full text-xs font-semibold border border-purple-500/30">
+                      <span className="px-3 py-1 bg-primarySoft text-primary rounded-full text-xs font-semibold border border-border-default">
                         {user.role}
                       </span>
                     </div>
@@ -518,7 +518,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1a0b2e]/95 backdrop-blur-md border-t border-purple-500/20">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default">
         <div className="max-w-7xl mx-auto flex justify-around items-center py-3">
           {[
             { id: "overview", icon: "📊", label: "Overview" },
@@ -532,8 +532,8 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
                 activeTab === tab.id
-                  ? "text-purple-300 bg-purple-600/20"
-                  : "text-purple-500 hover:text-purple-300"
+                  ? "text-primary bg-primarySoft"
+                  : "text-text-muted hover:text-text-primary"
               }`}
             >
               <span className="text-2xl">{tab.icon}</span>
