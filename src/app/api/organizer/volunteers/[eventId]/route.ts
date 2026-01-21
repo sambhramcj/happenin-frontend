@@ -13,7 +13,7 @@ const supabase = createClient(
 // GET: Get volunteer applications for event
 export async function GET(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,7 +25,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { eventId } = params;
+    const { eventId } = await params;
     const organizerEmail = session.user.email;
 
     // Verify organizer owns this event
