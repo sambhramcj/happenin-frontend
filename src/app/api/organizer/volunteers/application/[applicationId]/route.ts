@@ -13,7 +13,7 @@ const supabase = createClient(
 // PATCH: Accept or reject volunteer application
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { applicationId: string } }
+  { params }: { params: Promise<{ applicationId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,7 +25,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { applicationId } = params;
+    const { applicationId } = await params;
     const { status } = await req.json();
 
     if (!["accepted", "rejected"].includes(status)) {
