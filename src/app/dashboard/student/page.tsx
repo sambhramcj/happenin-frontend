@@ -121,7 +121,7 @@ export default function StudentDashboard() {
       .eq("student_email", session?.user?.email);
 
     if (data) {
-      setMemberships(data.map((m) => ({ club: m.club, memberId: m.member_id })));
+      setMemberships(data.map((m: any) => ({ club: m.club, memberId: m.member_id })));
     }
   }
 
@@ -179,7 +179,7 @@ export default function StudentDashboard() {
 
     if (data) {
       setRegistrations(
-        data.map((r) => ({ eventId: r.event_id, finalPrice: r.final_price }))
+          data.map((r: any) => ({ eventId: r.event_id, finalPrice: r.final_price }))
       );
     }
   }
@@ -380,7 +380,7 @@ export default function StudentDashboard() {
 
               if (regsData) {
                 setRegistrations(
-                  regsData.map((r) => ({
+                    regsData.map((r: any) => ({
                     eventId: r.event_id,
                     finalPrice: r.final_price,
                   }))
