@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { RegistrationsModal } from "@/components/RegistrationsModal";
 import AttendanceModal from "@/components/AttendanceModal";
+import { Icons } from "@/components/icons";
 
 type EligibleMember = {
   name: string;
@@ -41,7 +42,7 @@ export default function OrganizerDashboard() {
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"dashboard" | "events" | "registrations" | "profile">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "events" | "registrations" | "sponsorships" | "profile">("dashboard");
 
   // Data states
   const [events, setEvents] = useState<Event[]>([]);
@@ -62,6 +63,17 @@ export default function OrganizerDashboard() {
   const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Sponsorship states
+  const [sponsorships, setSponsorships] = useState<any[]>([]);
+  const [creatingSponsorship, setCreatingSponsorship] = useState(false);
+  const [sponsorName, setSponsorName] = useState("");
+  const [sponsorLogoUrl, setSponsorLogoUrl] = useState("");
+  const [sponsorWebsiteUrl, setSponsorWebsiteUrl] = useState("");
+  const [sponsorContactEmail, setSponsorContactEmail] = useState("");
+  const [sponsorshipEventId, setSponsorshipEventId] = useState("");
+  const [sponsorshipTier, setSponsorshipTier] = useState<"title"|"gold"|"silver"|"partner">("gold");
+  const [sponsorshipAmount, setSponsorshipAmount] = useState<string>("");
 
   // Modal states
   const [registrationsModal, setRegistrationsModal] = useState<{
@@ -94,6 +106,7 @@ export default function OrganizerDashboard() {
 
     fetchEvents();
     fetchAllRegistrations();
+    fetchSponsorships();
   }, [session, status, router]);
 
   async function fetchEvents() {
@@ -103,6 +116,56 @@ export default function OrganizerDashboard() {
     setEvents(
       data.events ? data.events.filter((event: Event) => event.organizer_email === session?.user?.email) : []
     );
+  }
+
+  async function fetchSponsorships() {
+    try {
+      const res = await fetch("/api/organizer/sponsorships");
+      if (res.ok) {
+        const json = await res.json();
+        setSponsorships(json.sponsorships || []);
+      }
+    } catch (e) {
+      // noop
+    }
+  }
+
+  async function handleCreateSponsorship(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sponsorshipEventId || !sponsorshipTier || !sponsorName) {
+      toast.error("Please fill required fields");
+      return;
+    }
+    try {
+      setCreatingSponsorship(true);
+      const body: any = {
+        sponsorName,
+        sponsorLogoUrl: sponsorLogoUrl || null,
+        sponsorWebsiteUrl: sponsorWebsiteUrl || null,
+        sponsorContactEmail: sponsorContactEmail || null,
+        eventId: sponsorshipEventId,
+        tier: sponsorshipTier,
+        amount: sponsorshipAmount ? Number(sponsorshipAmount) : null,
+        assets: sponsorLogoUrl ? [{ asset_type: "logo", asset_url: sponsorLogoUrl, placement: "event_header" }] : [],
+      };
+      const res = await fetch("/api/sponsorships", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Failed to create sponsorship");
+      }
+      toast.success("Sponsorship submitted for approval");
+      setSponsorName(""); setSponsorLogoUrl(""); setSponsorWebsiteUrl(""); setSponsorContactEmail("");
+      setSponsorshipEventId(""); setSponsorshipTier("gold"); setSponsorshipAmount("");
+      fetchSponsorships();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create sponsorship");
+    } finally {
+      setCreatingSponsorship(false);
+    }
   }
 
   async function fetchAllRegistrations() {
@@ -340,7 +403,7 @@ export default function OrganizerDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primarySoft rounded-full flex items-center justify-center border border-border-default">
-              <span className="text-xl">🎯</span>
+              <Icons.Dashboard className="h-5 w-5 text-primary" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-text-primary">Organizer</h1>
@@ -352,32 +415,55 @@ export default function OrganizerDashboard() {
 
       {/* Content Area */}
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Nav */}
+        <div className="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-border-default">
+          {[
+            { id: "dashboard", label: "Dashboard", icon: "�" },
+            { id: "events", label: "Events", icon: "📋" },
+            { id: "registrations", label: "Registrations", icon: "🎫" },
+            { id: "sponsorships", label: "Sponsorships", icon: "💼" },
+            { id: "profile", label: "Profile", icon: "👥" },
+          ].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id as any)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-2 ${
+                activeTab === t.id
+                  ? "bg-primary text-text-inverse"
+                  : "bg-bg-card text-text-secondary hover:bg-bg-muted"
+              }`}
+            >
+              <span>{t.icon}</span>
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>
         {/* DASHBOARD TAB */}
         {activeTab === "dashboard" && (
           <div className="space-y-8">
             {/* Live Snapshot */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <span>⚡</span> Live Snapshot
+                <Icons.Gauge className="h-5 w-5 text-primary" /> Live Snapshot
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
-                  <div className="text-3xl mb-2">🟢</div>
+                  <Icons.Calendar className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-text-primary">{getLiveEvents().length}</div>
                   <div className="text-sm text-text-muted">Live Events</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
-                  <div className="text-3xl mb-2">🎟</div>
+                  <Icons.Ticket className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-text-primary">{getTotalRegistrationsToday()}</div>
                   <div className="text-sm text-text-muted">Today</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
-                  <div className="text-3xl mb-2">💰</div>
+                  <Icons.Rupee className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-text-primary">₹{getTotalRevenue()}</div>
                   <div className="text-sm text-text-muted">Collected</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
-                  <div className="text-3xl mb-2">📅</div>
+                  <Icons.Calendar className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-text-primary">{events.length}</div>
                   <div className="text-sm text-text-muted">Total Events</div>
                 </div>
@@ -387,7 +473,7 @@ export default function OrganizerDashboard() {
             {/* Today's Events */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <span>🔥</span> Today's Events
+                <Icons.Flame className="h-5 w-5 text-primary" /> Today's Events
               </h2>
               {getTodayEvents().length === 0 ? (
                 <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
@@ -406,7 +492,7 @@ export default function OrganizerDashboard() {
                             <h3 className="text-xl font-bold text-text-primary mb-2">{event.title}</h3>
                             <div className="flex items-center gap-4 text-sm text-text-muted">
                               <span>📍 {event.location}</span>
-                              <span>💰 ₹{event.price}</span>
+                              <span>� ₹{event.price}</span>
                             </div>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -445,7 +531,7 @@ export default function OrganizerDashboard() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-                <span>📅</span> My Events ({events.length})
+                <span>�</span> My Events ({events.length})
               </h2>
               <button
                 onClick={() => setShowCreateForm(!showCreateForm)}
@@ -582,8 +668,8 @@ export default function OrganizerDashboard() {
                       <h3 className="font-bold text-text-primary mb-2 line-clamp-1">{event.title}</h3>
                       <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
                       <div className="flex items-center justify-between text-xs text-text-secondary mb-3">
-                        <span>📅 {new Date(event.date).toLocaleDateString()}</span>
-                        <span>💰 ₹{event.price}</span>
+                        <span>� {new Date(event.date).toLocaleDateString()}</span>
+                        <span>💵 ₹{event.price}</span>
                       </div>
                       <div className="text-sm text-text-primary mb-3">
                         <span className="font-semibold">{regs.length}</span> registrations
@@ -699,13 +785,110 @@ export default function OrganizerDashboard() {
           </div>
         )}
 
+        {/* SPONSORSHIPS TAB */}
+        {activeTab === "sponsorships" && (
+          <div className="space-y-6">
+            {/* Create Form */}
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+              <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                <span>🧾</span> Create Sponsorship
+              </h2>
+              <form onSubmit={handleCreateSponsorship} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Event *</label>
+                  <select value={sponsorshipEventId} onChange={e=>setSponsorshipEventId(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2">
+                    <option value="">Select event</option>
+                    {events.map(e => (
+                      <option key={e.id} value={e.id}>{e.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Tier *</label>
+                  <select value={sponsorshipTier} onChange={e=>setSponsorshipTier(e.target.value as any)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2">
+                    <option value="title">Title</option>
+                    <option value="gold">Gold</option>
+                    <option value="silver">Silver</option>
+                    <option value="partner">Partner</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Sponsor Name *</label>
+                  <input value={sponsorName} onChange={e=>setSponsorName(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2" required/>
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Amount (₹)</label>
+                  <input type="number" value={sponsorshipAmount} onChange={e=>setSponsorshipAmount(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2" />
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Logo URL</label>
+                  <input value={sponsorLogoUrl} onChange={e=>setSponsorLogoUrl(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2" placeholder="https://..."/>
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Website URL</label>
+                  <input value={sponsorWebsiteUrl} onChange={e=>setSponsorWebsiteUrl(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2" placeholder="https://..."/>
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Contact Email</label>
+                  <input value={sponsorContactEmail} onChange={e=>setSponsorContactEmail(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2" placeholder="brand@example.com"/>
+                </div>
+                <div className="md:col-span-2">
+                  <button type="submit" disabled={creatingSponsorship} className="w-full bg-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-primaryHover disabled:opacity-50">
+                    {creatingSponsorship ? "Submitting..." : "Submit for Approval"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* List */}
+            <div className="bg-bg-card rounded-xl border border-border-default overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-text-secondary">
+                    <th className="px-4 py-3">Event</th>
+                    <th className="px-4 py-3">Sponsor</th>
+                    <th className="px-4 py-3">Tier</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Created At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sponsorships.map((s) => (
+                    <tr key={s.id} className="border-t border-border-default">
+                      <td className="px-4 py-3">{s.events?.title || s.event_id}</td>
+                      <td className="px-4 py-3 flex items-center gap-2">
+                        {s.sponsors?.logo_url && (
+                          <img src={s.sponsors.logo_url} alt={s.sponsors?.name} className="h-5" />
+                        )}
+                        <span>{s.sponsors?.name || "-"}</span>
+                      </td>
+                      <td className="px-4 py-3 capitalize">{s.tier || "-"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs border ${s.status === 'approved' ? 'bg-green-900/20 text-green-400 border-green-700/50' : s.status === 'pending' ? 'bg-yellow-900/20 text-yellow-400 border-yellow-700/50' : s.status === 'rejected' ? 'bg-red-900/20 text-red-400 border-red-700/50' : 'bg-gray-800 text-gray-300 border-gray-700'}`}>
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{new Date(s.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                  {sponsorships.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-text-muted">No sponsorships yet</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* PROFILE TAB */}
         {activeTab === "profile" && (
           <div className="space-y-6">
             <div className="bg-bg-card rounded-xl p-6 border border-border-default">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-16 h-16 bg-primarySoft rounded-full flex items-center justify-center border-2 border-border-default">
-                  <span className="text-3xl">🎯</span>
+                  <span className="text-3xl">�</span>
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-text-primary">Organizer Profile</h2>
@@ -758,8 +941,8 @@ export default function OrganizerDashboard() {
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default">
         <div className="max-w-7xl mx-auto flex justify-around items-center py-3">
           {[
-            { id: "dashboard", icon: "🎯", label: "Dashboard" },
-            { id: "events", icon: "📅", label: "Events" },
+            { id: "dashboard", icon: "�", label: "Dashboard" },
+            { id: "events", icon: "📋", label: "Events" },
             { id: "registrations", icon: "👥", label: "Registrations" },
             { id: "profile", icon: "⚙️", label: "Profile" },
           ].map((tab) => (

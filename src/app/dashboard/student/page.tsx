@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { uploadProfilePhoto } from "@/lib/profileStorage";
 import TicketComponent from "@/components/TicketComponent";
+import { Icons } from "@/components/icons";
 
 type Membership = {
   club: string;
@@ -70,6 +71,7 @@ export default function StudentDashboard() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
+  const [sponsorByEvent, setSponsorByEvent] = useState<Record<string, { name: string; logo_url?: string }>>({});
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(true);
@@ -129,12 +131,43 @@ export default function StudentDashboard() {
       const res = await fetch("/api/events");
       if (res.ok) {
         const data = await res.json();
-        setEvents(data.events || []);
+        const list = data.events || [];
+        setEvents(list);
+        // Fetch approved sponsorship for each event (logo-only display)
+        fetchSponsorsForEvents(list);
       }
     } catch (err) {
       console.error("Error fetching events:", err);
     } finally {
       setEventsLoading(false);
+    }
+  }
+
+  async function fetchSponsorsForEvents(list: Event[]) {
+    try {
+      const results = await Promise.all(
+        list.map(async (e) => {
+          try {
+            const r = await fetch(`/api/sponsorships?eventId=${e.id}`);
+            if (!r.ok) return [e.id, null] as const;
+            const json = await r.json();
+            const s = (json.sponsorships || [])[0];
+            if (!s) return [e.id, null] as const;
+            const sponsor = s.sponsors || {};
+            return [e.id, { name: sponsor.name, logo_url: sponsor.logo_url }] as const;
+          } catch {
+            return [e.id, null] as const;
+          }
+        })
+      );
+
+      const map: Record<string, { name: string; logo_url?: string }> = {};
+      for (const [eventId, sponsor] of results) {
+        if (sponsor) map[eventId] = sponsor;
+      }
+      setSponsorByEvent(map);
+    } catch (e) {
+      console.error("Error fetching sponsors:", e);
     }
   }
 
@@ -479,7 +512,7 @@ export default function StudentDashboard() {
             onClick={() => toast.info("Notifications coming soon!")}
             className="p-2 hover:bg-bg-muted rounded-lg transition-colors transition-all duration-fast ease-standard"
           >
-            <span className="text-2xl">🔔</span>
+            <Icons.Bell className="h-6 w-6 text-text-secondary" />
           </button>
         </div>
       </div>
@@ -492,7 +525,7 @@ export default function StudentDashboard() {
             {/* Happening Today */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <span>🔥</span> Happening Today
+                <Icons.Flame className="h-5 w-5 text-primary" /> Happening Today
               </h2>
               {getTodayEvents().length === 0 ? (
                 <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
@@ -511,7 +544,23 @@ export default function StudentDashboard() {
                             <span className="bg-primarySoft text-primary text-xs px-2 py-1 rounded-full">Today</span>
                             <span className="text-text-secondary text-sm font-semibold">₹{event.price}</span>
                           </div>
-                          <h3 className="font-bold text-text-primary mb-2">{event.title}</h3>
+                          <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
+                          {sponsorByEvent[event.id] && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-text-muted">Powered by</span>
+                              {sponsorByEvent[event.id].logo_url ? (
+                                <img
+                                  src={sponsorByEvent[event.id].logo_url}
+                                  alt={sponsorByEvent[event.id].name}
+                                  className="h-4 object-contain"
+                                />)
+                                : (
+                                  <span className="text-xs text-text-secondary font-medium">
+                                    {sponsorByEvent[event.id].name}
+                                  </span>
+                                )}
+                            </div>
+                          )}
                           <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
                           <button
                             onClick={() => handlePay(event)}
@@ -531,7 +580,7 @@ export default function StudentDashboard() {
             {/* Trending */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <span>⚡</span> Trending in Your College
+                <Icons.TrendingUp className="h-5 w-5 text-primary" /> Trending in Your College
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {getThisWeekEvents().slice(0, 6).map((event) => (
@@ -541,6 +590,22 @@ export default function StudentDashboard() {
                     )}
                     <div className="p-3">
                       <h3 className="font-semibold text-text-primary text-sm mb-1 line-clamp-1">{event.title}</h3>
+                      {sponsorByEvent[event.id] && (
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-[10px] text-text-muted">Powered by</span>
+                          {sponsorByEvent[event.id].logo_url ? (
+                            <img
+                              src={sponsorByEvent[event.id].logo_url}
+                              alt={sponsorByEvent[event.id].name}
+                              className="h-3 object-contain"
+                            />
+                          ) : (
+                            <span className="text-[10px] text-text-secondary font-medium">
+                              {sponsorByEvent[event.id].name}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <p className="text-xs text-text-muted mb-2">{new Date(event.date).toLocaleDateString()}</p>
                       <div className="flex items-center justify-between">
                         <span className="text-text-secondary font-semibold text-sm">₹{event.price}</span>
@@ -620,8 +685,8 @@ export default function StudentDashboard() {
                         <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
                         <p className="text-sm text-text-muted mb-2 line-clamp-2">{event.description}</p>
                         <div className="flex items-center gap-4 text-xs text-text-secondary">
-                          <span>📅 {new Date(event.date).toLocaleDateString()}</span>
-                          <span>💰 ₹{event.price}</span>
+                          <span>� {new Date(event.date).toLocaleDateString()}</span>
+                          <span>💵 ₹{event.price}</span>
                         </div>
                       </div>
                       <button
@@ -656,7 +721,7 @@ export default function StudentDashboard() {
 
             {tickets.length === 0 ? (
               <div className="bg-bg-card rounded-lg p-12 text-center border border-border-default">
-                <div className="text-6xl mb-4">🎟️</div>
+                <div className="text-6xl mb-4">�</div>
                 <p className="text-text-secondary text-lg mb-2">No tickets yet</p>
                 <p className="text-text-muted text-sm">Register for events to get your tickets!</p>
                 <button
@@ -684,6 +749,7 @@ export default function StudentDashboard() {
                         studentEmail={session?.user?.email || ""}
                         qrCodeData={ticket.qr_code_data}
                         design="modern"
+                        eventId={ticket.event_id}
                       />
                     </div>
                   </div>
@@ -703,7 +769,7 @@ export default function StudentDashboard() {
                   {profile?.profile_photo_url ? (
                     <img src={profile.profile_photo_url} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-3xl">👤</span>
+                    <span className="text-3xl">�</span>
                   )}
                 </div>
                 <div className="flex-1">
@@ -859,7 +925,7 @@ export default function StudentDashboard() {
                 onClick={() => toast.info("Notifications settings coming soon")}
                 className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-bg-muted transition-all transition-all duration-fast ease-standard"
               >
-                🔔 Notifications
+                � Notifications
               </button>
               <button
                 onClick={() => signOut()}
@@ -903,7 +969,7 @@ export default function StudentDashboard() {
                 onClick={() => router.push("/login")}
                 className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-primarySoft transition-all duration-fast ease-standard"
               >
-                🎯 Become an Organizer
+                📊 Create Events
               </button>
             </div>
           </div>
@@ -914,12 +980,12 @@ export default function StudentDashboard() {
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default">
         <div className="max-w-7xl mx-auto flex justify-around items-center py-3">
           {[
-            { id: "home", icon: "🏠", label: "Home" },
-            { id: "explore", icon: "🔍", label: "Explore" },
-            { id: "my-events", icon: "🎫", label: "My Events" },
-            { id: "profile", icon: "👤", label: "Profile" },
-            { id: "more", icon: "☰", label: "More" },
-          ].map((tab) => (
+            { id: "home", icon: <Icons.Home className="h-5 w-5" />, label: "Home" },
+            { id: "explore", icon: <Icons.Search className="h-5 w-5" />, label: "Explore" },
+            { id: "my-events", icon: <Icons.Ticket className="h-5 w-5" />, label: "My Events" },
+            { id: "profile", icon: <Icons.User className="h-5 w-5" />, label: "Profile" },
+            { id: "more", icon: <Icons.Dashboard className="h-5 w-5" />, label: "More" },
+          ].map((tab: any) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
@@ -938,3 +1004,4 @@ export default function StudentDashboard() {
     </div>
   );
 }
+

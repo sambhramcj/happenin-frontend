@@ -28,6 +28,11 @@ export async function POST(req: Request) {
 
       eligible_members: body.eligibleMembers || [],
 
+      // Volunteer fields (added)
+      needs_volunteers: Boolean(body.needsVolunteers) || false,
+      volunteer_roles: body.volunteerRoles || [],
+      volunteer_description: body.volunteerDescription || null,
+
       organizer_email: body.organizerEmail,
     };
 

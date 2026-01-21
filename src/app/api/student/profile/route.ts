@@ -20,8 +20,12 @@ export async function GET() {
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     let profile: any = null;
+    let userCollege: any = null;
+
     if (supabaseUrl && serviceRole) {
       const admin = createClient(supabaseUrl, serviceRole, { auth: { persistSession: false } });
+      
+      // Fetch student profile
       const { data, error } = await admin
         .from("student_profiles")
         .select("*")
@@ -32,6 +36,17 @@ export async function GET() {
         console.error("Supabase admin profile fetch error:", error);
       } else {
         profile = data;
+      }
+
+      // Fetch user's college info
+      const { data: userData, error: userError } = await admin
+        .from("users")
+        .select("college_id, colleges(name, domain, verified)")
+        .eq("email", studentEmail)
+        .single();
+      
+      if (!userError && userData?.colleges) {
+        userCollege = userData.colleges;
       }
     } else {
       const { data, error } = await supabase
@@ -47,7 +62,10 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ profile: profile || null });
+    return NextResponse.json({ 
+      profile: profile || null,
+      college: userCollege || null
+    });
   } catch (err) {
     console.error("GET /api/student/profile error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

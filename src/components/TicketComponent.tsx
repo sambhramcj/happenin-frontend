@@ -15,6 +15,7 @@ interface TicketComponentProps {
   studentEmail: string;
   qrCodeData: string;
   design?: TicketDesign;
+  eventId?: string;
 }
 
 export default function TicketComponent({
@@ -26,9 +27,30 @@ export default function TicketComponent({
   studentEmail,
   qrCodeData,
   design = "modern",
+  eventId,
 }: TicketComponentProps) {
   const [downloading, setDownloading] = useState(false);
+  const [sponsor, setSponsor] = useState<{ name: string; logo_url?: string } | null>(null);
   const qrRef = React.useRef<HTMLDivElement>(null);
+
+  // Fetch sponsor for the event (approved only)
+  React.useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (!eventId) return;
+      try {
+        const res = await fetch(`/api/sponsorships?eventId=${eventId}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const s = (json.sponsorships || [])[0];
+        if (!s) return;
+        const sp = s.sponsors || {};
+        if (!cancelled) setSponsor({ name: sp.name, logo_url: sp.logo_url });
+      } catch {}
+    }
+    run();
+    return () => { cancelled = true; };
+  }, [eventId]);
 
   // Download ticket as PNG
   const downloadTicket = async () => {
@@ -107,6 +129,16 @@ export default function TicketComponent({
             <p className="text-sm font-medium">👤 {studentName}</p>
             <p className="text-xs font-mono">{studentEmail}</p>
           </div>
+          {sponsor && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className={`${currentDesign.accent} text-[11px]`}>Supported by</span>
+              {sponsor.logo_url ? (
+                <img src={sponsor.logo_url} alt={sponsor.name} className="h-4 object-contain" />
+              ) : (
+                <span className={`${currentDesign.text} text-xs font-semibold`}>{sponsor.name}</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Middle: Divider */}

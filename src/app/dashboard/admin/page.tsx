@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { Icons } from "@/components/icons";
 
 type Event = {
   id: string;
@@ -37,13 +38,16 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"overview" | "colleges" | "events" | "payments" | "users">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "colleges" | "events" | "payments" | "users" | "sponsorships">("overview");
   const [usersSubTab, setUsersSubTab] = useState<"students" | "organizers">("students");
 
   // Data states
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [sponsorships, setSponsorships] = useState<any[]>([]);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [tierOverrides, setTierOverrides] = useState<Record<string, 'title' | 'gold' | 'silver' | 'partner'>>({});
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -66,6 +70,7 @@ export default function AdminDashboard() {
       fetchEvents(),
       fetchRegistrations(),
       fetchUsers(),
+      fetchSponsorships(),
     ]);
   }
 
@@ -94,6 +99,41 @@ export default function AdminDashboard() {
       .order("created_at", { ascending: false });
 
     setUsers(data || []);
+  }
+
+  async function fetchSponsorships() {
+    try {
+      const res = await fetch("/api/admin/sponsorships");
+      if (res.ok) {
+        const json = await res.json();
+        setSponsorships(json.sponsorships || []);
+      }
+    } catch (e) {
+      // noop
+    }
+  }
+
+  async function reviewSponsorship(id: string, action: 'approve' | 'reject') {
+    try {
+      setReviewingId(id);
+      const tier = tierOverrides[id];
+      const res = await fetch('/api/admin/sponsorships/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sponsorshipId: id, action, ...(tier ? { tier } : {}) }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json.error || 'Failed to update sponsorship');
+        return;
+      }
+      toast.success(action === 'approve' ? 'Sponsorship approved' : 'Sponsorship rejected');
+      await fetchSponsorships();
+    } catch (e) {
+      toast.error('Request failed');
+    } finally {
+      setReviewingId(null);
+    }
   }
 
   // Analytics
@@ -212,37 +252,140 @@ export default function AdminDashboard() {
 
       {/* Content Area */}
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Top Nav */}
+        <div className="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-border-default">
+          {[
+            { id: "overview", label: "Overview", icon: <Icons.Gauge className="h-4 w-4" /> },
+            { id: "events", label: "Events", icon: <Icons.Calendar className="h-4 w-4" /> },
+            { id: "payments", label: "Payments", icon: <Icons.Wallet className="h-4 w-4" /> },
+            { id: "users", label: "Users", icon: <Icons.Users className="h-4 w-4" /> },
+            { id: "sponsorships", label: "Sponsorships", icon: <Icons.Handshake className="h-4 w-4" /> },
+          ].map((t: any) => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id as any)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-2 ${
+                activeTab === t.id
+                  ? "bg-primary text-text-inverse"
+                  : "bg-bg-card text-text-secondary hover:bg-bg-muted"
+              }`}
+            >
+              <span>{t.icon}</span>
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>
+                {activeTab === "sponsorships" && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
+                        <span>🤝</span> Sponsorships ({sponsorships.length})
+                      </h2>
+                    </div>
+
+                    <div className="bg-bg-card rounded-xl border border-border-default overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-text-secondary">
+                            <th className="px-4 py-3">Event</th>
+                            <th className="px-4 py-3">Sponsor</th>
+                            <th className="px-4 py-3">Tier</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Created By</th>
+                            <th className="px-4 py-3">Created At</th>
+                            <th className="px-4 py-3">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sponsorships.map((s) => (
+                            <tr key={s.id} className="border-t border-border-default">
+                              <td className="px-4 py-3">{s.events?.title || s.event_id}</td>
+                              <td className="px-4 py-3 flex items-center gap-2">
+                                {s.sponsors?.logo_url && (
+                                  <img src={s.sponsors.logo_url} alt={s.sponsors?.name} className="h-5" />
+                                )}
+                                <span>{s.sponsors?.name || "-"}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <select
+                                  value={tierOverrides[s.id] ?? (s.tier || 'gold')}
+                                  onChange={(e) => setTierOverrides((prev) => ({ ...prev, [s.id]: e.target.value as any }))}
+                                  className="bg-bg-muted border border-border-default rounded-lg px-2 py-1 text-sm capitalize"
+                                >
+                                  <option value="title">title</option>
+                                  <option value="gold">gold</option>
+                                  <option value="silver">silver</option>
+                                  <option value="partner">partner</option>
+                                </select>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded-full text-xs border ${s.status === 'approved' ? 'bg-green-900/20 text-green-400 border-green-700/50' : s.status === 'pending' ? 'bg-yellow-900/20 text-yellow-400 border-yellow-700/50' : s.status === 'rejected' ? 'bg-red-900/20 text-red-400 border-red-700/50' : 'bg-gray-800 text-gray-300 border-gray-700'}`}>
+                                  {s.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">{s.created_by}</td>
+                              <td className="px-4 py-3">{new Date(s.created_at).toLocaleDateString()}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => reviewSponsorship(s.id, 'approve')}
+                                    disabled={reviewingId === s.id || s.status === 'approved'}
+                                    className="px-3 py-1 bg-green-600/20 text-green-300 border border-green-600/40 rounded hover:bg-green-600/30 disabled:opacity-50"
+                                  >
+                                    {reviewingId === s.id ? '...' : 'Approve'}
+                                  </button>
+                                  <button
+                                    onClick={() => reviewSponsorship(s.id, 'reject')}
+                                    disabled={reviewingId === s.id || s.status === 'rejected'}
+                                    className="px-3 py-1 bg-red-600/20 text-red-300 border border-red-600/40 rounded hover:bg-red-600/30 disabled:opacity-50"
+                                  >
+                                    {reviewingId === s.id ? '...' : 'Reject'}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>)
+                          )}
+                          {sponsorships.length === 0 && (
+                            <tr>
+                              <td colSpan={7} className="px-4 py-8 text-center text-text-muted">No sponsorships yet</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
         {/* OVERVIEW TAB */}
         {activeTab === "overview" && (
           <div className="space-y-8">
             {/* Global Snapshot */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <span>📊</span> Global Snapshot
+                <Icons.Gauge className="h-5 w-5 text-primary" /> Global Snapshot
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <div className="text-3xl mb-2">🏫</div>
+                  <Icons.Building2 className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-text-primary">{getTotalColleges()}</div>
                   <div className="text-sm text-text-muted">Colleges Live</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <div className="text-3xl mb-2">📅</div>
+                  <Icons.Calendar className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-text-primary">{getEventsToday().length}</div>
                   <div className="text-sm text-text-muted">Events Today</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <div className="text-3xl mb-2">🎟</div>
+                  <Icons.Ticket className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-text-primary">{getRegistrationsToday().length}</div>
                   <div className="text-sm text-text-muted">Regs Today</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <div className="text-3xl mb-2">💰</div>
+                  <Icons.Wallet className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-text-primary">₹{getRevenueToday()}</div>
                   <div className="text-sm text-text-muted">Revenue Today</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <div className="text-3xl mb-2">⚠️</div>
+                  <Icons.AlertTriangle className="h-6 w-6 mb-2 text-text-secondary" />
                   <div className="text-3xl font-bold text-error">{getFailedPayments()}</div>
                   <div className="text-sm text-text-muted">Failed Payments</div>
                 </div>
@@ -252,7 +395,7 @@ export default function AdminDashboard() {
             {/* Activity Timeline */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <span>📈</span> Recent Activity (24h)
+                <Icons.TrendingUp className="h-5 w-5 text-primary" /> Recent Activity (24h)
               </h2>
               <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                 <div className="space-y-3">
@@ -278,10 +421,10 @@ export default function AdminDashboard() {
             {/* Alerts */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <span>🚨</span> Critical Alerts
+                <Icons.AlertTriangle className="h-5 w-5 text-primary" /> Critical Alerts
               </h2>
               <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
-                <div className="text-5xl mb-3">✅</div>
+                <div className="text-5xl mb-3">✔️</div>
                 <p className="text-text-secondary">All systems operational</p>
                 <p className="text-sm text-text-muted mt-2">No critical alerts at this time</p>
               </div>
@@ -309,7 +452,7 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-                <span>📅</span> All Events ({events.length})
+                <span>�</span> All Events ({events.length})
               </h2>
             </div>
 
@@ -343,10 +486,10 @@ export default function AdminDashboard() {
                         <h3 className="text-xl font-bold text-text-primary mb-2">{event.title}</h3>
                         <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
                         <div className="flex flex-wrap gap-4 text-sm text-text-secondary">
-                          <span>👤 {event.organizer_email}</span>
-                          <span>📅 {new Date(event.date).toLocaleDateString()}</span>
+                          <span>� {event.organizer_email}</span>
+                          <span>📋 {new Date(event.date).toLocaleDateString()}</span>
                           <span>📍 {event.location}</span>
-                          <span>💰 ₹{event.price}</span>
+                          <span>💵 ₹{event.price}</span>
                         </div>
                       </div>
                       <span className="px-3 py-1 bg-green-900/30 text-success rounded-full text-xs font-semibold border border-success">

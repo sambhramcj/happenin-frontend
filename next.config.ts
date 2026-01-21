@@ -2,11 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // Disable Turbopack if you encounter resource issues
-  // Uncomment the line below if Turbopack keeps crashing:
-  // experimental: {
-  //   turbo: false,
-  // },
+  experimental: {
+    // Silence workspace root inference warning
+    turbopack: {
+      root: __dirname,
+    },
+    // Uncomment below if Turbopack keeps crashing:
+    // turbo: false,
+  },
 };
 
 export default nextConfig;
