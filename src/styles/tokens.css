@@ -51,3 +51,43 @@
   --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.12);
 }
+
+/* Dark Mode Theme */
+.dark {
+  /* Brand */
+  --color-primary: #8B5CF6;
+  --color-primary-hover: #A78BFA;
+  --color-primary-soft: #2E1065;
+
+  /* Backgrounds */
+  --bg-default: #111827;
+  --bg-muted: #0F172A;
+  --bg-card: #1E293B;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Text */
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-muted: #9CA3AF;
+  --text-inverse: #111827;
+
+  /* Borders */
+  --border-default: #374151;
+  --border-muted: #1F2937;
+  --border-focus: #8B5CF6;
+
+  /* States */
+  --success: #22C55E;
+  --success-soft: #052E16;
+  --warning: #FBBF24;
+  --warning-soft: #451A03;
+  --error: #EF4444;
+  --error-soft: #450A0A;
+  --info: #3B82F6;
+  --info-soft: #172554;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.5);
+}

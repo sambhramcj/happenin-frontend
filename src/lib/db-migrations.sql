@@ -1,4 +1,35 @@
--- Migration 0: Create users table if it doesn't exist
+-- Core Events System Tables
+-- Migration 0: Create events table
+CREATE TABLE IF NOT EXISTS events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  date TIMESTAMP NOT NULL,
+  venue TEXT NOT NULL,
+  price DECIMAL(10, 2) DEFAULT 0,
+  organizer_email TEXT NOT NULL,
+  needs_volunteers BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Migration 0.5: Create registrations table
+CREATE TABLE IF NOT EXISTS registrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_email TEXT NOT NULL,
+  registration_date TIMESTAMP DEFAULT NOW(),
+  status TEXT DEFAULT 'registered' CHECK (status IN ('registered', 'checked_in', 'cancelled')),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create indexes for events and registrations
+CREATE INDEX IF NOT EXISTS idx_events_organizer ON events(organizer_email);
+CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
+CREATE INDEX IF NOT EXISTS idx_registrations_event ON registrations(event_id);
+CREATE INDEX IF NOT EXISTS idx_registrations_user ON registrations(user_email);
+
+-- Migration 1: Create users table if it doesn't exist
 CREATE TABLE IF NOT EXISTS users (
   email TEXT PRIMARY KEY,
   password TEXT,
@@ -57,7 +88,7 @@ CREATE POLICY "Admin manage colleges" ON colleges
 INSERT INTO colleges (name, domain, verified) VALUES
   ('National Institute of Technology Karnataka', 'nitk.edu.in', true),
   ('Indian Institute of Technology Bombay', 'iitb.ac.in', true),
-  ('Institute of Technology Bombay', 'iitb.ac.in', true)
+  ('BMS College of Engineering', 'bmsce.ac.in', true)
 ON CONFLICT (domain) DO NOTHING;
 
 -- Migration 5: Update password_hash for existing test users (dev only)

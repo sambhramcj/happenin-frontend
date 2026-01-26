@@ -1,5 +1,8 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import AppleProvider from "next-auth/providers/apple";
+import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { createClient } from "@supabase/supabase-js";
 
@@ -13,6 +16,40 @@ const supabase = createClient(
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    }),
+    // Conditionally add Apple provider only if env is present
+    ...(process.env.APPLE_CLIENT_ID && process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID && process.env.APPLE_PRIVATE_KEY
+      ? [
+          AppleProvider({
+            clientId: process.env.APPLE_CLIENT_ID,
+            // Generate a JWT client secret for Apple (valid up to 6 months)
+            clientSecret: (() => {
+              const teamId = process.env.APPLE_TEAM_ID as string;
+              const keyId = process.env.APPLE_KEY_ID as string;
+              const privateKey = (process.env.APPLE_PRIVATE_KEY as string).replace(/\\n/g, "\n");
+              const clientId = process.env.APPLE_CLIENT_ID as string;
+              const now = Math.floor(Date.now() / 1000);
+              return jwt.sign(
+                {
+                  iss: teamId,
+                  iat: now,
+                  exp: now + 60 * 60 * 24 * 180, // 180 days
+                  aud: "https://appleid.apple.com",
+                  sub: clientId,
+                },
+                privateKey,
+                {
+                  algorithm: "ES256",
+                  keyid: keyId,
+                }
+              );
+            })(),
+          }),
+        ]
+      : []),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -60,17 +97,63 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account }) {
+      // For OAuth providers, auto-create user in DB if doesn't exist
+      if (account?.provider === "google" || account?.provider === "apple") {
+        if (!user.email) return false;
+
+        try {
+          const { data: existingUser } = await supabase
+            .from("users")
+            .select("email, role")
+            .eq("email", user.email)
+            .single();
+
+          if (!existingUser) {
+            // Create new user with default role "student"
+            const { error } = await supabase
+              .from("users")
+              .insert({
+                email: user.email,
+                role: "student",
+                password_hash: "", // OAuth users don't need password
+              });
+
+            if (error) {
+              console.error("Failed to create OAuth user:", error);
+              return false;
+            }
+          }
+        } catch (err) {
+          console.error("OAuth signIn error:", err);
+          return false;
+        }
+      }
+      return true;
+    },
+
+    async jwt({ token, user, account }) {
       if (user) {
-        token.email = user.email;        // ✅ FIX
-        token.role = (user as any).role; // ✅ FIX
+        token.email = user.email;
+        // Fetch role from database for OAuth users
+        if (account?.provider === "google" || account?.provider === "apple") {
+          const { data: dbUser } = await supabase
+            .from("users")
+            .select("role")
+            .eq("email", user.email!)
+            .single();
+          
+          token.role = dbUser?.role || "student";
+        } else {
+          token.role = (user as any).role;
+        }
       }
       return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.email = token.email as string; // ✅ FIX
+        session.user.email = token.email as string;
         session.user.role = token.role as
           | "student"
           | "organizer"
@@ -85,7 +168,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   pages: {
-    signIn: "/login",
+    signIn: "/auth",
   },
 
   secret: process.env.NEXTAUTH_SECRET,

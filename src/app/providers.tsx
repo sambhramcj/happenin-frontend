@@ -2,8 +2,22 @@
 
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
+import { ThemeProvider, useTheme } from "next-themes";
 import QueryProvider from "@/components/QueryProvider";
 import OfflineBanner from "@/components/OfflineBanner";
+
+function ToasterWrapper() {
+  const { theme } = useTheme();
+  
+  return (
+    <Toaster 
+      position="top-right" 
+      theme={theme === "dark" ? "dark" : "light"}
+      richColors
+      closeButton
+    />
+  );
+}
 
 export default function Providers({
   children,
@@ -12,16 +26,13 @@ export default function Providers({
 }) {
   return (
     <SessionProvider>
-      <QueryProvider>
-        <OfflineBanner />
-        {children}
-        <Toaster 
-          position="top-right" 
-          theme="light"
-          richColors
-          closeButton
-        />
-      </QueryProvider>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <QueryProvider>
+          <OfflineBanner />
+          {children}
+          <ToasterWrapper />
+        </QueryProvider>
+      </ThemeProvider>
     </SessionProvider>
   );
 }

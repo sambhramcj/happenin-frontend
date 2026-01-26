@@ -26,6 +26,18 @@ import {
   Ban,
   Building2,
   BadgePercent,
+  MapPin,
+  Navigation,
+  Heart,
+  ExternalLink,
+  Sun,
+  Moon,
+  Camera,
+  Download,
+  X,
+  ChevronLeft,
+  Info,
+  Award,
 } from "lucide-react";
 
 export const Icons = {
@@ -56,6 +68,18 @@ export const Icons = {
   Ban,
   Building2,
   BadgePercent,
+  MapPin,
+  Navigation,
+  Heart,
+  ExternalLink,
+  Sun,
+  Moon,
+  Camera,
+  Download,
+  X,
+  ChevronLeft,
+  Info,
+  Award,
 };
 
 export type IconKey = keyof typeof Icons;

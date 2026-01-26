@@ -1,11 +1,27 @@
-"use client";
+﻿"use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, redirect } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Icons } from "@/components/icons";
+import { RevenueChart, UserGrowthChart } from "@/components/Charts";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import dynamic from "next/dynamic";
+
+// Dynamic import for GeographicHeatmap to avoid SSR issues
+const GeographicHeatmap = dynamic(
+  () => import('@/components/GeographicHeatmap').then(mod => mod.GeographicHeatmap),
+  { ssr: false }
+);
+
+interface DashboardMetrics {
+  totalRevenue: number;
+  totalTransactions: number;
+  totalUsers: number;
+  totalEvents: number;
+}
 
 type Event = {
   id: string;
@@ -38,10 +54,12 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"overview" | "colleges" | "events" | "payments" | "users" | "sponsorships">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "colleges" | "events" | "payments" | "users" | "sponsorships">("overview");
   const [usersSubTab, setUsersSubTab] = useState<"students" | "organizers">("students");
+  const [analyticsTab, setAnalyticsTab] = useState<"overview" | "revenue" | "users" | "events" | "logs" | "reports" | "disputes">("overview");
 
   // Data states
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -50,6 +68,18 @@ export default function AdminDashboard() {
   const [tierOverrides, setTierOverrides] = useState<Record<string, 'title' | 'gold' | 'silver' | 'partner'>>({});
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Analytics states
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [userGrowthData, setUserGrowthData] = useState<any[]>([]);
+  const [eventPerformance, setEventPerformance] = useState<any[]>([]);
+  const [adminLogs, setAdminLogs] = useState<any[]>([]);
+  const [reports, setReports] = useState<{ userReports: any[], eventReports: any[] }>({ userReports: [], eventReports: [] });
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [reportNotes, setReportNotes] = useState<Record<string, string>>({});
+  const [disputeNotes, setDisputeNotes] = useState<Record<string, string>>({});
+  const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
+  const [updatingDisputeId, setUpdatingDisputeId] = useState<string | null>(null);
 
   // Filters
   const [eventFilter, setEventFilter] = useState<"all" | "today" | "week" | "flagged">("all");
@@ -63,7 +93,44 @@ export default function AdminDashboard() {
     }
 
     fetchAllData();
+    fetchDashboardMetrics();
+    fetchAnalyticsData();
   }, [session, status, router]);
+
+  async function fetchDashboardMetrics() {
+    try {
+      const response = await fetch('/api/admin/dashboard');
+      const data = await response.json();
+      if (data.data) {
+        setMetrics(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard metrics:', error);
+      toast.error('Failed to load dashboard metrics');
+    }
+  }
+
+  async function fetchAnalyticsData() {
+    try {
+      const [revenue, userGrowth, eventPerf, logs, reportsData, disputesData] = await Promise.all([
+        fetch('/api/admin/analytics/revenue?days=30').then(r => r.json()),
+        fetch('/api/admin/analytics/users?days=30').then(r => r.json()),
+        fetch('/api/admin/analytics/events').then(r => r.json()),
+        fetch('/api/admin/logs?limit=20').then(r => r.json()),
+        fetch('/api/admin/reports').then(r => r.json()),
+        fetch('/api/admin/disputes?status=open').then(r => r.json()),
+      ]);
+
+      setRevenueData(revenue.data || []);
+      setUserGrowthData(userGrowth.data || []);
+      setEventPerformance(eventPerf.data || []);
+      setAdminLogs(logs.data || []);
+      setReports(reportsData.data || { userReports: [], eventReports: [] });
+      setDisputes(disputesData.data || []);
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+    }
+  }
 
   async function fetchAllData() {
     await Promise.all([
@@ -239,7 +306,7 @@ export default function AdminDashboard() {
       <div className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center border border-red-200">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center border border-red-200 dark:border-red-800">
               <span className="text-xl">🛡️</span>
             </div>
             <div>
@@ -247,6 +314,7 @@ export default function AdminDashboard() {
               <p className="text-xs text-text-muted">Platform Management</p>
             </div>
           </div>
+          <ThemeToggle />
         </div>
       </div>
 
@@ -256,6 +324,7 @@ export default function AdminDashboard() {
         <div className="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-border-default">
           {[
             { id: "overview", label: "Overview", icon: <Icons.Gauge className="h-4 w-4" /> },
+            { id: "analytics", label: "Analytics", icon: <Icons.TrendingUp className="h-4 w-4" /> },
             { id: "events", label: "Events", icon: <Icons.Calendar className="h-4 w-4" /> },
             { id: "payments", label: "Payments", icon: <Icons.Wallet className="h-4 w-4" /> },
             { id: "users", label: "Users", icon: <Icons.Users className="h-4 w-4" /> },
@@ -358,6 +427,37 @@ export default function AdminDashboard() {
         {/* OVERVIEW TAB */}
         {activeTab === "overview" && (
           <div className="space-y-8">
+            {/* Analytics Metrics */}
+            {metrics && (
+              <section>
+                <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <Icons.TrendingUp className="h-5 w-5 text-primary" /> Analytics Overview
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <Icons.Wallet className="h-6 w-6 mb-2 text-green-500" />
+                    <div className="text-3xl font-bold text-text-primary">₹{metrics.totalRevenue.toLocaleString()}</div>
+                    <div className="text-sm text-text-muted">Total Revenue</div>
+                  </div>
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <Icons.Ticket className="h-6 w-6 mb-2 text-blue-500" />
+                    <div className="text-3xl font-bold text-text-primary">{metrics.totalTransactions}</div>
+                    <div className="text-sm text-text-muted">Transactions</div>
+                  </div>
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <Icons.Users className="h-6 w-6 mb-2 text-purple-500" />
+                    <div className="text-3xl font-bold text-text-primary">{metrics.totalUsers}</div>
+                    <div className="text-sm text-text-muted">Total Users</div>
+                  </div>
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <Icons.Calendar className="h-6 w-6 mb-2 text-orange-500" />
+                    <div className="text-3xl font-bold text-text-primary">{metrics.totalEvents}</div>
+                    <div className="text-sm text-text-muted">Total Events</div>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Global Snapshot */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
@@ -429,6 +529,418 @@ export default function AdminDashboard() {
                 <p className="text-sm text-text-muted mt-2">No critical alerts at this time</p>
               </div>
             </section>
+          </div>
+        )}
+
+        {/* ANALYTICS TAB */}
+        {activeTab === "analytics" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
+              <Icons.TrendingUp className="h-5 w-5" /> Advanced Analytics
+            </h2>
+
+            {/* Analytics Sub-tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {[
+                { id: 'overview', label: 'Overview' },
+                { id: 'revenue', label: 'Revenue' },
+                { id: 'users', label: 'User Growth' },
+                { id: 'events', label: 'Event Performance' },
+                { id: 'logs', label: 'Admin Logs' },
+                { id: 'reports', label: 'Reports' },
+                { id: 'disputes', label: 'Disputes' },
+              ].map((tab: any) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setAnalyticsTab(tab.id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    analyticsTab === tab.id
+                      ? 'bg-primary text-white'
+                      : 'bg-bg-muted text-text-secondary hover:bg-bg-elevated'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Overview Sub-tab */}
+            {analyticsTab === 'overview' && metrics && (
+              <div className="space-y-6">
+                {/* Revenue Overview */}
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">Revenue Overview</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 bg-bg-muted rounded-lg">
+                      <div className="text-sm text-text-muted mb-1">Total Revenue</div>
+                      <div className="text-2xl font-bold text-text-primary">₹{metrics.totalRevenue.toLocaleString()}</div>
+                    </div>
+                    <div className="p-4 bg-bg-muted rounded-lg">
+                      <div className="text-sm text-text-muted mb-1">Total Transactions</div>
+                      <div className="text-2xl font-bold text-text-primary">{metrics.totalTransactions}</div>
+                    </div>
+                    <div className="p-4 bg-bg-muted rounded-lg">
+                      <div className="text-sm text-text-muted mb-1">Avg Transaction Value</div>
+                      <div className="text-2xl font-bold text-text-primary">
+                        ₹{metrics.totalTransactions > 0 ? Math.round(metrics.totalRevenue / metrics.totalTransactions).toLocaleString() : 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Platform Stats */}
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">Platform Statistics</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-bg-muted rounded-lg flex items-center gap-4">
+                      <Icons.Users className="h-8 w-8 text-purple-500" />
+                      <div>
+                        <div className="text-sm text-text-muted">Total Users</div>
+                        <div className="text-xl font-bold text-text-primary">{metrics.totalUsers}</div>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-bg-muted rounded-lg flex items-center gap-4">
+                      <Icons.Calendar className="h-8 w-8 text-orange-500" />
+                      <div>
+                        <div className="text-sm text-text-muted">Total Events</div>
+                        <div className="text-xl font-bold text-text-primary">{metrics.totalEvents}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <div className="text-sm text-text-muted mb-2">Pending Reports</div>
+                    <div className="text-3xl font-bold text-orange-500">
+                      {reports.userReports?.length + reports.eventReports?.length || 0}
+                    </div>
+                  </div>
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <div className="text-sm text-text-muted mb-2">Pending Disputes</div>
+                    <div className="text-3xl font-bold text-red-500">{disputes.length}</div>
+                  </div>
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <div className="text-sm text-text-muted mb-2">Recent Admin Actions</div>
+                    <div className="text-3xl font-bold text-blue-500">{adminLogs.length}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Revenue Sub-tab */}
+            {analyticsTab === 'revenue' && (
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Revenue Trend (Last 30 Days)</h3>
+                {revenueData.length > 0 ? (
+                  <RevenueChart data={revenueData} type="bar" />
+                ) : (
+                  <div className="text-center py-8 text-text-muted">No revenue data available</div>
+                )}
+              </div>
+            )}
+
+            {/* User Growth Sub-tab */}
+            {analyticsTab === 'users' && (
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">User Growth (Last 30 Days)</h3>
+                {userGrowthData.length > 0 ? (
+                  <UserGrowthChart data={userGrowthData} />
+                ) : (
+                  <div className="text-center py-8 text-text-muted">No user growth data available</div>
+                )}
+              </div>
+            )}
+
+            {/* Event Performance Sub-tab */}
+            {analyticsTab === 'events' && (
+              <div className="space-y-6">
+                {/* Event Performance Table */}
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">Top Performing Events</h3>
+                  {eventPerformance.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="border-b border-border-default">
+                          <tr className="text-left text-text-secondary">
+                            <th className="px-4 py-3">Event</th>
+                            <th className="px-4 py-3">Registrations</th>
+                            <th className="px-4 py-3">Fill Rate</th>
+                            <th className="px-4 py-3">Revenue</th>
+                            <th className="px-4 py-3">Avg/Reg</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {eventPerformance.slice(0, 10).map((event: any) => (
+                            <tr key={event.eventId} className="border-b border-border-default">
+                              <td className="px-4 py-3 text-text-primary">{event.eventTitle}</td>
+                              <td className="px-4 py-3">{event.registrations}/{event.maxRegistrations}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-20 h-2 bg-bg-muted rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-primary" 
+                                      style={{ width: `${event.registrationRate}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-text-secondary">{event.registrationRate}%</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 font-medium">₹{event.revenue.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-text-secondary">₹{Math.round(event.avgRevenuePerRegistration)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-text-muted">No event performance data available</div>
+                  )}
+                </div>
+
+                {/* Geographic Heatmap */}
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">Event Geographic Distribution</h3>
+                  <GeographicHeatmap 
+                    events={eventPerformance.map((e: any) => ({
+                      id: e.eventId,
+                      title: e.eventTitle,
+                      latitude: 20.5937 + (Math.random() * 15), // Replace with actual lat/lng
+                      longitude: 78.9629 + (Math.random() * 15),
+                      registrationCount: e.registrations,
+                    }))}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Admin Logs Sub-tab */}
+            {analyticsTab === 'logs' && (
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Recent Admin Actions</h3>
+                {adminLogs.length > 0 ? (
+                  <div className="space-y-3">
+                    {adminLogs.map((log: any) => (
+                      <div key={log.id} className="p-4 bg-bg-muted rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="font-medium text-text-primary">{log.action}</div>
+                            <div className="text-sm text-text-muted mt-1">
+                              By {log.admin_email} • {new Date(log.created_at).toLocaleString()}
+                            </div>
+                            {log.details && (
+                              <div className="text-xs text-text-secondary mt-2 font-mono">
+                                {JSON.stringify(log.details, null, 2)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-text-muted">No admin logs available</div>
+                )}
+              </div>
+            )}
+
+            {/* Reports Sub-tab */}
+            {analyticsTab === 'reports' && (
+              <div className="space-y-6">
+                {/* User Reports */}
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">User Reports</h3>
+                  {reports.userReports?.length > 0 ? (
+                    <div className="space-y-3">
+                      {reports.userReports.map((report: any) => (
+                        <div key={report.id} className="p-4 bg-bg-muted rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-text-primary">Reported User: {report.reported_user_email}</div>
+                              <div className="text-sm text-text-secondary mt-1">Reason: {report.reason}</div>
+                              <div className="text-xs text-text-muted mt-2">
+                                Reported by {report.reported_by_email} • {new Date(report.created_at).toLocaleString()}
+                              </div>
+                              {report.status !== 'pending' && (
+                                <div className="text-xs text-text-secondary mt-2 font-mono">
+                                  Status: {report.status} | Action: {report.action_taken || 'N/A'}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <select 
+                                value={report.status}
+                                onChange={async (e) => {
+                                  setUpdatingReportId(report.id);
+                                  try {
+                                    await fetch('/api/admin/reports', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        reportId: report.id,
+                                        type: 'user',
+                                        status: e.target.value,
+                                        actionTaken: reportNotes[report.id] || null
+                                      })
+                                    });
+                                    toast.success('Report updated');
+                                    fetchAnalyticsData();
+                                  } catch (error) {
+                                    toast.error('Failed to update report');
+                                  } finally {
+                                    setUpdatingReportId(null);
+                                  }
+                                }}
+                                disabled={updatingReportId === report.id}
+                                className="px-3 py-1 bg-bg-muted border border-border-default rounded-lg text-xs"
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="reviewed">Reviewed</option>
+                                <option value="dismissed">Dismissed</option>
+                                <option value="action_taken">Action Taken</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-text-muted">No pending user reports</div>
+                  )}
+                </div>
+
+                {/* Event Reports */}
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">Event Reports</h3>
+                  {reports.eventReports?.length > 0 ? (
+                    <div className="space-y-3">
+                      {reports.eventReports.map((report: any) => (
+                        <div key={report.id} className="p-4 bg-bg-muted rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-text-primary">Event ID: {report.event_id}</div>
+                              <div className="text-sm text-text-secondary mt-1">Reason: {report.reason}</div>
+                              <div className="text-xs text-text-muted mt-2">
+                                Reported by {report.reported_by_email} • {new Date(report.created_at).toLocaleString()}
+                              </div>
+                              {report.status !== 'pending' && (
+                                <div className="text-xs text-text-secondary mt-2 font-mono">
+                                  Status: {report.status} | Action: {report.action_taken || 'N/A'}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <select 
+                                value={report.status}
+                                onChange={async (e) => {
+                                  setUpdatingReportId(report.id);
+                                  try {
+                                    await fetch('/api/admin/reports', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        reportId: report.id,
+                                        type: 'event',
+                                        status: e.target.value,
+                                        actionTaken: reportNotes[report.id] || null
+                                      })
+                                    });
+                                    toast.success('Report updated');
+                                    fetchAnalyticsData();
+                                  } catch (error) {
+                                    toast.error('Failed to update report');
+                                  } finally {
+                                    setUpdatingReportId(null);
+                                  }
+                                }}
+                                disabled={updatingReportId === report.id}
+                                className="px-3 py-1 bg-bg-muted border border-border-default rounded-lg text-xs"
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="reviewed">Reviewed</option>
+                                <option value="dismissed">Dismissed</option>
+                                <option value="action_taken">Action Taken</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-text-muted">No pending event reports</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Disputes Sub-tab */}
+            {analyticsTab === 'disputes' && (
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Payment Disputes</h3>
+                {disputes.length > 0 ? (
+                  <div className="space-y-3">
+                    {disputes.map((dispute: any) => (
+                      <div key={dispute.id} className="p-4 bg-bg-muted rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium text-text-primary">Payment ID: {dispute.payment_id}</div>
+                            <div className="text-sm text-text-secondary mt-1">Reason: {dispute.reason}</div>
+                            <div className="text-sm text-text-secondary">Amount: ₹{dispute.amount}</div>
+                            <div className="text-xs text-text-muted mt-2">
+                              By {dispute.student_email} • {new Date(dispute.created_at).toLocaleString()}
+                            </div>
+                            <div className="mt-2 flex gap-1">
+                              <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${
+                                dispute.status === 'open' ? 'bg-yellow-900/20 text-yellow-400 border-yellow-700/50' :
+                                dispute.status === 'investigating' ? 'bg-blue-900/20 text-blue-400 border-blue-700/50' :
+                                dispute.status === 'resolved' ? 'bg-green-900/20 text-green-400 border-green-700/50' :
+                                dispute.status === 'refunded' ? 'bg-green-900/30 text-green-300 border-green-700/50' :
+                                'bg-gray-800 text-gray-300 border-gray-700'
+                              }`}>
+                                {dispute.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <select 
+                              value={dispute.status}
+                              onChange={async (e) => {
+                                setUpdatingDisputeId(dispute.id);
+                                try {
+                                  await fetch('/api/admin/disputes', {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      disputeId: dispute.id,
+                                      status: e.target.value,
+                                      adminNotes: disputeNotes[dispute.id] || null
+                                    })
+                                  });
+                                  toast.success(`Dispute updated to ${e.target.value}`);
+                                  fetchAnalyticsData();
+                                } catch (error) {
+                                  toast.error('Failed to update dispute');
+                                }
+                              }}
+                              disabled={updatingDisputeId === dispute.id}
+                              className="px-3 py-1 bg-bg-muted border border-border-default rounded-lg text-xs"
+                            >
+                              <option value="open">Open</option>
+                              <option value="investigating">Investigating</option>
+                              <option value="resolved">Resolved</option>
+                              <option value="refunded">Refunded</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-text-muted">No pending disputes</div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

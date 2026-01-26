@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import * as XLSX from "xlsx";
 import { RegistrationsModal } from "@/components/RegistrationsModal";
 import AttendanceModal from "@/components/AttendanceModal";
 import { Icons } from "@/components/icons";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type EligibleMember = {
   name: string;
@@ -42,7 +43,7 @@ export default function OrganizerDashboard() {
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"dashboard" | "events" | "registrations" | "sponsorships" | "profile">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "events" | "registrations" | "volunteers" | "sponsorships" | "certificates" | "profile">("dashboard");
 
   // Data states
   const [events, setEvents] = useState<Event[]>([]);
@@ -74,6 +75,19 @@ export default function OrganizerDashboard() {
   const [sponsorshipEventId, setSponsorshipEventId] = useState("");
   const [sponsorshipTier, setSponsorshipTier] = useState<"title"|"gold"|"silver"|"partner">("gold");
   const [sponsorshipAmount, setSponsorshipAmount] = useState<string>("");
+
+  // Certificate states
+  const [approvedVolunteers, setApprovedVolunteers] = useState<any[]>([]);
+  const [issuingCertificate, setIssuingCertificate] = useState(false);
+  const [certApplicationId, setCertApplicationId] = useState("");
+  const [certTitle, setCertTitle] = useState("Certificate of Appreciation");
+
+  // Volunteer states for tab
+  const [volunteerApplications, setVolunteerApplications] = useState<any[]>([]);
+  const [volunteersLoading, setVolunteersLoading] = useState(false);
+  const [selectedEventForVolunteers, setSelectedEventForVolunteers] = useState<string>("");
+  const [volunteerFilterStatus, setVolunteerFilterStatus] = useState<"all" | "pending" | "accepted" | "rejected">("all");
+  const [processingVolunteerId, setProcessingVolunteerId] = useState<string | null>(null);
 
   // Modal states
   const [registrationsModal, setRegistrationsModal] = useState<{
@@ -107,6 +121,7 @@ export default function OrganizerDashboard() {
     fetchEvents();
     fetchAllRegistrations();
     fetchSponsorships();
+    fetchApprovedVolunteers();
   }, [session, status, router]);
 
   async function fetchEvents() {
@@ -128,6 +143,66 @@ export default function OrganizerDashboard() {
     } catch (e) {
       // noop
     }
+  }
+
+  async function fetchVolunteersForEvent(eventId: string) {
+    if (!eventId) return;
+    try {
+      setVolunteersLoading(true);
+      const res = await fetch(`/api/organizer/volunteers/${eventId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVolunteerApplications(data.applications || []);
+      }
+    } catch (err) {
+      console.error("Error fetching volunteers:", err);
+      toast.error("Failed to fetch volunteer applications");
+    } finally {
+      setVolunteersLoading(false);
+    }
+  }
+
+  async function handleVolunteerResponse(applicationId: string, status: "accepted" | "rejected") {
+    try {
+      setProcessingVolunteerId(applicationId);
+      const res = await fetch(`/api/organizer/volunteers/application/${applicationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+
+      if (res.ok) {
+        toast.success(`Application ${status === "accepted" ? "approved! ✓" : "rejected"}`);
+        // Reload volunteers
+        if (selectedEventForVolunteers) {
+          fetchVolunteersForEvent(selectedEventForVolunteers);
+        }
+      } else {
+        const error = await res.json().catch(() => ({}));
+        toast.error(error.error || "Failed to update application");
+      }
+    } catch (err) {
+      console.error("Error updating application:", err);
+      toast.error("Error updating application");
+    } finally {
+      setProcessingVolunteerId(null);
+    }
+  }
+
+  function getFilteredVolunteers() {
+    if (volunteerFilterStatus === "all") {
+      return volunteerApplications;
+    }
+    return volunteerApplications.filter(app => app.status === volunteerFilterStatus);
+  }
+
+  function getVolunteerStats() {
+    return {
+      total: volunteerApplications.length,
+      pending: volunteerApplications.filter(app => app.status === "pending").length,
+      accepted: volunteerApplications.filter(app => app.status === "accepted").length,
+      rejected: volunteerApplications.filter(app => app.status === "rejected").length,
+    };
   }
 
   async function handleCreateSponsorship(e: React.FormEvent) {
@@ -165,6 +240,50 @@ export default function OrganizerDashboard() {
       toast.error(err.message || "Failed to create sponsorship");
     } finally {
       setCreatingSponsorship(false);
+    }
+  }
+
+  async function fetchApprovedVolunteers() {
+    try {
+      const res = await fetch("/api/organizer/volunteers");
+      if (res.ok) {
+        const data = await res.json();
+        // Filter for approved volunteers
+        const approved = (data.volunteers || []).filter((v: any) => v.status === "approved");
+        setApprovedVolunteers(approved);
+      }
+    } catch (err) {
+      console.error("Error fetching approved volunteers:", err);
+    }
+  }
+
+  async function handleIssueCertificate() {
+    if (!certApplicationId || !certTitle) {
+      toast.error("Please select volunteer and enter certificate title");
+      return;
+    }
+    try {
+      setIssuingCertificate(true);
+      const res = await fetch("/api/organizer/certificates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicationId: certApplicationId,
+          certificateTitle: certTitle,
+          issuedDate: new Date().toISOString().split("T")[0],
+        }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to issue certificate");
+      }
+      toast.success("Certificate issued successfully!");
+      setCertApplicationId("");
+      setCertTitle("Certificate of Appreciation");
+      fetchApprovedVolunteers();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to issue certificate");
+    } finally {
+      setIssuingCertificate(false);
     }
   }
 
@@ -410,6 +529,7 @@ export default function OrganizerDashboard() {
               <p className="text-xs text-text-muted">{session?.user?.email}</p>
             </div>
           </div>
+          <ThemeToggle />
         </div>
       </div>
 
@@ -421,6 +541,7 @@ export default function OrganizerDashboard() {
             { id: "dashboard", label: "Dashboard", icon: "�" },
             { id: "events", label: "Events", icon: "📋" },
             { id: "registrations", label: "Registrations", icon: "🎫" },
+            { id: "volunteers", label: "Volunteers", icon: "🤝" },
             { id: "sponsorships", label: "Sponsorships", icon: "💼" },
             { id: "profile", label: "Profile", icon: "👥" },
           ].map((t) => (
@@ -535,7 +656,7 @@ export default function OrganizerDashboard() {
               </h2>
               <button
                 onClick={() => setShowCreateForm(!showCreateForm)}
-                className="px-4 py-2 bg-gradient-to-r from-brand to-pink-600 text-text-inverse rounded-lg hover:from-violet-800 hover:to-pink-500 transition-all font-medium"
+                className="px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-all font-medium shadow-md"
               >
                 {showCreateForm ? "Cancel" : "+ Create Event"}
               </button>
@@ -878,6 +999,257 @@ export default function OrganizerDashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* VOLUNTEERS TAB */}
+        {activeTab === "volunteers" && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div>
+              <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2 mb-2">
+                <Icons.Award className="h-6 w-6" /> Volunteer Management
+              </h2>
+              <p className="text-sm text-text-secondary">Review and manage volunteer applications for your events</p>
+            </div>
+
+            {/* Event Filter */}
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+              <label className="text-sm font-medium text-text-secondary mb-3 block">Select Event</label>
+              <select
+                value={selectedEventForVolunteers}
+                onChange={(e) => {
+                  setSelectedEventForVolunteers(e.target.value);
+                  setVolunteerFilterStatus("all");
+                  // Load volunteers for this event
+                  if (e.target.value) {
+                    fetchVolunteersForEvent(e.target.value);
+                  } else {
+                    setVolunteerApplications([]);
+                  }
+                }}
+                className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                <option value="">Choose an event...</option>
+                {events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.title} • {new Date(event.date).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Stats Cards (when event selected) */}
+            {selectedEventForVolunteers && !volunteersLoading && volunteerApplications.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-bg-card rounded-lg p-4 border border-border-default">
+                  <div className="text-xs text-text-muted mb-1">Total</div>
+                  <div className="text-2xl font-bold text-text-primary">{getVolunteerStats().total}</div>
+                </div>
+                <div className="bg-bg-card rounded-lg p-4 border border-border-default">
+                  <div className="text-xs text-text-muted mb-1">Pending</div>
+                  <div className="text-2xl font-bold text-yellow-500">{getVolunteerStats().pending}</div>
+                </div>
+                <div className="bg-bg-card rounded-lg p-4 border border-border-default">
+                  <div className="text-xs text-text-muted mb-1">Approved</div>
+                  <div className="text-2xl font-bold text-green-500">{getVolunteerStats().accepted}</div>
+                </div>
+                <div className="bg-bg-card rounded-lg p-4 border border-border-default">
+                  <div className="text-xs text-text-muted mb-1">Rejected</div>
+                  <div className="text-2xl font-bold text-red-500">{getVolunteerStats().rejected}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Loading State */}
+            {volunteersLoading && (
+              <div className="bg-bg-card rounded-xl p-12 border border-border-default flex flex-col items-center justify-center">
+                <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-3"></div>
+                <p className="text-text-secondary">Loading volunteer applications...</p>
+              </div>
+            )}
+
+            {/* Empty State - No Event Selected */}
+            {!selectedEventForVolunteers && !volunteersLoading && (
+              <div className="bg-gradient-to-br from-bg-card to-bg-muted rounded-xl p-12 border-2 border-dashed border-border-default flex flex-col items-center justify-center">
+                <Icons.Award className="h-16 w-16 text-text-muted mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold text-text-primary mb-2">No Event Selected</h3>
+                <p className="text-text-secondary text-center max-w-md">
+                  Select an event above to see and manage volunteer applications. You'll be able to accept or reject applications here.
+                </p>
+              </div>
+            )}
+
+            {/* Empty State - No Applications */}
+            {selectedEventForVolunteers && !volunteersLoading && volunteerApplications.length === 0 && (
+              <div className="bg-gradient-to-br from-bg-card to-bg-muted rounded-xl p-12 border-2 border-dashed border-border-default flex flex-col items-center justify-center">
+                <Icons.Award className="h-16 w-16 text-text-muted mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold text-text-primary mb-2">No Applications Yet</h3>
+                <p className="text-text-secondary text-center max-w-md">
+                  This event doesn't have any volunteer applications yet. Check back soon!
+                </p>
+              </div>
+            )}
+
+            {/* Filter Tabs */}
+            {selectedEventForVolunteers && volunteerApplications.length > 0 && (
+              <div className="flex gap-2 border-b border-border-default">
+                {["all", "pending", "accepted", "rejected"].map((filter) => {
+                  const count = filter === "all" 
+                    ? getVolunteerStats().total
+                    : filter === "pending"
+                    ? getVolunteerStats().pending
+                    : filter === "accepted"
+                    ? getVolunteerStats().accepted
+                    : getVolunteerStats().rejected;
+
+                  return (
+                    <button
+                      key={filter}
+                      onClick={() => setVolunteerFilterStatus(filter as any)}
+                      className={`px-4 py-3 font-medium text-sm capitalize transition-all ${
+                        volunteerFilterStatus === filter
+                          ? "border-b-2 border-primary text-primary"
+                          : "text-text-secondary hover:text-text-primary"
+                      }`}
+                    >
+                      {filter} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Volunteer Applications List */}
+            {selectedEventForVolunteers && !volunteersLoading && getFilteredVolunteers().length > 0 && (
+              <div className="space-y-4">
+                {getFilteredVolunteers().map((app: any) => (
+                  <div key={app.id} className="bg-bg-card rounded-lg border border-border-default overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          {/* Applicant Info */}
+                          <div className="mb-3">
+                            <h3 className="font-semibold text-text-primary text-lg truncate">{app.student_email}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full">
+                                {app.role}
+                              </span>
+                              <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
+                                app.status === "accepted"
+                                  ? "bg-green-900/20 text-green-400 border-green-700/50"
+                                  : app.status === "rejected"
+                                  ? "bg-red-900/20 text-red-400 border-red-700/50"
+                                  : "bg-yellow-900/20 text-yellow-400 border-yellow-700/50"
+                              }`}>
+                                {app.status === "pending" ? "⏳ Pending" : app.status === "accepted" ? "✓ Approved" : "✕ Rejected"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Application Message */}
+                          {app.message && (
+                            <div className="mb-3">
+                              <p className="text-xs text-text-muted font-medium mb-1">Why they want to volunteer:</p>
+                              <p className="text-sm text-text-secondary line-clamp-2 bg-bg-muted p-2 rounded">{app.message}</p>
+                            </div>
+                          )}
+
+                          {/* Timestamp */}
+                          <p className="text-xs text-text-muted">
+                            Applied {new Date(app.created_at).toLocaleDateString()} at {new Date(app.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        {app.status === "pending" && (
+                          <div className="flex flex-col gap-2 md:flex-row">
+                            <button
+                              onClick={() => handleVolunteerResponse(app.id, "accepted")}
+                              disabled={processingVolunteerId === app.id}
+                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                              {processingVolunteerId === app.id ? "..." : "✓ Accept"}
+                            </button>
+                            <button
+                              onClick={() => handleVolunteerResponse(app.id, "rejected")}
+                              disabled={processingVolunteerId === app.id}
+                              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                              {processingVolunteerId === app.id ? "..." : "✕ Reject"}
+                            </button>
+                          </div>
+                        )}
+
+                        {app.status !== "pending" && (
+                          <span className="px-4 py-2 text-xs text-text-muted font-semibold text-right">
+                            {app.status === "accepted" ? "Approved" : "Rejected"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Empty Filtered State */}
+            {selectedEventForVolunteers && !volunteersLoading && volunteerApplications.length > 0 && getFilteredVolunteers().length === 0 && (
+              <div className="bg-gradient-to-br from-bg-card to-bg-muted rounded-xl p-12 border-2 border-dashed border-border-default flex flex-col items-center justify-center">
+                <p className="text-text-secondary text-center">No {volunteerFilterStatus === "all" ? "applications" : `${volunteerFilterStatus} applications`}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CERTIFICATES TAB */}
+        {activeTab === "certificates" && (
+          <div className="space-y-6">
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+              <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                <span>🎖️</span> Issue Certificate
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Approved Volunteer *</label>
+                  <select value={certApplicationId} onChange={e=>setCertApplicationId(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2">
+                    <option value="">Select volunteer</option>
+                    {approvedVolunteers.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.student_email} - {v.volunteer_roles?.title || "Volunteer"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-1 block">Certificate Title</label>
+                  <input value={certTitle} onChange={e=>setCertTitle(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2" placeholder="Certificate of Appreciation"/>
+                </div>
+                <div className="md:col-span-2">
+                  <button onClick={handleIssueCertificate} disabled={issuingCertificate} className="w-full bg-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-primaryHover disabled:opacity-50">
+                    {issuingCertificate ? "Issuing..." : "Issue Certificate"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+              <h3 className="text-lg font-bold text-text-primary mb-4">Approved Volunteers ({approvedVolunteers.length})</h3>
+              <div className="space-y-2">
+                {approvedVolunteers.map(v => (
+                  <div key={v.id} className="flex items-center justify-between p-3 bg-bg-muted rounded-lg border border-border-default">
+                    <div>
+                      <p className="font-medium text-text-primary">{v.student_email}</p>
+                      <p className="text-sm text-text-muted">{v.volunteer_roles?.title || "Volunteer"} • {v.events?.title}</p>
+                    </div>
+                    <span className="px-3 py-1 bg-green-900/20 text-green-400 border border-green-700/50 rounded-full text-xs">Approved</span>
+                  </div>
+                ))}
+                {approvedVolunteers.length === 0 && (
+                  <p className="text-center text-text-muted py-4">No approved volunteers yet</p>
+                )}
+              </div>
             </div>
           </div>
         )}
