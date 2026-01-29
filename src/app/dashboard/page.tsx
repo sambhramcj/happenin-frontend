@@ -30,10 +30,10 @@ export default function DashboardRedirect() {
   }, [session, status, router]);
 
   return (
-    <div className="min-h-screen bg-bg-muted flex items-center justify-center">
+    <div className="min-h-screen bg-[#0f0519] flex items-center justify-center">
       <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p className="text-text-secondary text-lg">Redirecting to your dashboard...</p>
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-purple-300 text-lg">Loading your dashboard...</p>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50 to-white">
       {/* Header */}
-      <header className="flex justify-between items-center px-6 py-5 max-w-6xl mx-auto border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+      <header className="w-full sticky top-0 z-50 flex justify-between items-center px-6 py-5 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
         <div className="text-2xl font-bold text-purple-600">
           Happenin
         </div>

@@ -38,6 +38,7 @@ import {
   ChevronLeft,
   Info,
   Award,
+  LogOut,
 } from "lucide-react";
 
 export const Icons = {
@@ -80,6 +81,7 @@ export const Icons = {
   ChevronLeft,
   Info,
   Award,
+  LogOut,
 };
 
 export type IconKey = keyof typeof Icons;

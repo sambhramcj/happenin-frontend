@@ -63,7 +63,9 @@ export default function StudentDashboard() {
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"home" | "explore" | "my-events" | "profile" | "volunteer" | "nearby" | "favorites">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "explore" | "my-events" | "profile" | "volunteer">("home");
+  const [exploreSubTab, setExploreSubTab] = useState<"events" | "nearby" | "favorites">("events");
+  const [myEventsTab, setMyEventsTab] = useState<"upcoming" | "registered" | "past">("upcoming");
 
   // Data states
   const [club, setClub] = useState("");
@@ -577,6 +579,15 @@ export default function StudentDashboard() {
     return registered.filter(e => new Date(e.date) < now);
   }
 
+  function getTicketsForTab() {
+    if (myEventsTab === "registered") return tickets;
+    const now = new Date();
+    return tickets.filter((t) => {
+      const eventDate = new Date(t.event_date);
+      return myEventsTab === "upcoming" ? eventDate >= now : eventDate < now;
+    });
+  }
+
   const profileCompletion = profile ? 
     (Object.keys({ full_name: 1, dob: 1, college_name: 1, college_email: 1 })
       .filter(k => profile[k]).length / 4) * 100 : 0;
@@ -614,15 +625,13 @@ export default function StudentDashboard() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="border-t border-border-default overflow-x-auto">
+        <div className="border-t border-border-default overflow-x-auto hidden md:block">
           <div className="max-w-7xl mx-auto px-4 flex gap-1 text-sm font-medium">
             {[
               { id: "home", label: "Home", icon: Icons.Home },
               { id: "explore", label: "Explore", icon: Icons.Search },
               { id: "my-events", label: "My Events", icon: Icons.Calendar },
               { id: "volunteer", label: "Volunteer", icon: Icons.Handshake },
-              { id: "nearby", label: "Nearby", icon: Icons.MapPin },
-              { id: "favorites", label: "Favorites", icon: Icons.Heart },
               { id: "profile", label: "Profile", icon: Icons.User },
             ].map(({ id, label, icon: Icon }: any) => (
               <button
@@ -753,7 +762,47 @@ export default function StudentDashboard() {
         {/* EXPLORE TAB */}
         {activeTab === "explore" && (
           <div className="space-y-6">
-            {/* Search */}
+            {/* Explore Subtabs */}
+            <div className="flex gap-2 border-b border-border-default pb-2">
+              <button
+                type="button"
+                onClick={() => setExploreSubTab("events")}
+                className={`px-4 py-2 text-sm font-medium transition-all ${
+                  exploreSubTab === "events"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-text-secondary border-b-2 border-transparent"
+                }`}
+              >
+                Events
+              </button>
+              <button
+                type="button"
+                onClick={() => setExploreSubTab("nearby")}
+                className={`px-4 py-2 text-sm font-medium transition-all ${
+                  exploreSubTab === "nearby"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-text-secondary border-b-2 border-transparent"
+                }`}
+              >
+                Nearby
+              </button>
+              <button
+                type="button"
+                onClick={() => setExploreSubTab("favorites")}
+                className={`px-4 py-2 text-sm font-medium transition-all ${
+                  exploreSubTab === "favorites"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-text-secondary border-b-2 border-transparent"
+                }`}
+              >
+                Favorites
+              </button>
+            </div>
+
+            {/* Events Subtab */}
+            {exploreSubTab === "events" && (
+              <div className="space-y-6">
+                {/* Search */}
             <div className="sticky top-20 z-30 bg-bg-card/95 backdrop-blur-md p-4 rounded-xl border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
               <input
                 type="text"
@@ -810,8 +859,8 @@ export default function StudentDashboard() {
                         <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
                         <p className="text-sm text-text-muted mb-2 line-clamp-2">{event.description}</p>
                         <div className="flex items-center gap-4 text-xs text-text-secondary">
-                          <span>� {new Date(event.date).toLocaleDateString()}</span>
-                          <span>💵 ₹{event.price}</span>
+                          <span className="flex items-center gap-1"><Icons.Calendar className="h-4 w-4" /> {new Date(event.date).toLocaleDateString()}</span>
+                          <span className="flex items-center gap-1"><Icons.Rupee className="h-4 w-4" /> ₹{event.price}</span>
                         </div>
                       </div>
                       <button
@@ -826,6 +875,92 @@ export default function StudentDashboard() {
                 );
               })}
             </div>
+              </div>
+            )}
+
+            {/* Nearby Subtab */}
+            {exploreSubTab === "nearby" && (
+              <div className="space-y-6">
+                <NearbyEvents />
+                <NearbyColleges />
+              </div>
+            )}
+
+            {/* Favorites Subtab */}
+            {exploreSubTab === "favorites" && (
+              <div className="space-y-6">
+                {/* Favorite Colleges */}
+                <section>
+                  <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <Icons.Heart className="h-5 w-5 text-error" /> Favorite Colleges
+                  </h2>
+                  {favoriteColleges.length === 0 ? (
+                    <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
+                      <p className="text-text-muted mb-3">No favorite colleges yet</p>
+                      <button
+                        onClick={() => setExploreSubTab("nearby")}
+                        className="bg-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-primaryHover"
+                      >
+                        Explore Nearby
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {favoriteColleges.map((fav: any) => {
+                        const college = fav.colleges || fav;
+                        return (
+                          <div key={college.id} className="bg-bg-card rounded-lg p-4 border border-border-default hover:border-primary transition-all">
+                            <h3 className="font-semibold text-text-primary mb-2">{college.name}</h3>
+                            <p className="text-xs text-text-muted mb-3 line-clamp-2">{college.location}</p>
+                            <button
+                              onClick={() => removeFavoriteCollege(college.id)}
+                              className="w-full bg-errorSoft text-error px-3 py-2 rounded-lg text-sm font-medium hover:bg-error hover:text-text-inverse transition-all"
+                            >
+                              Remove Favorite
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+
+                {/* Favorite Events */}
+                <section>
+                  <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <Icons.Heart className="h-5 w-5 text-error" /> Favorite Events
+                  </h2>
+                  {favoriteEvents.length === 0 ? (
+                    <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
+                      <p className="text-text-muted">No favorite events yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {favoriteEvents.map((fav: any) => {
+                        const event = fav.events || fav;
+                        return (
+                          <div key={event.id} className="bg-bg-card rounded-lg p-4 border border-border-default">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-text-primary">{event.title}</h3>
+                                <p className="text-sm text-text-secondary">₹{event.price}</p>
+                                <p className="text-xs text-text-muted mt-1">{new Date(event.date).toLocaleDateString()}</p>
+                              </div>
+                              <button
+                                onClick={() => removeFavoriteEvent(event.id)}
+                                className="bg-errorSoft text-error px-3 py-2 rounded-lg text-sm font-medium hover:bg-error hover:text-text-inverse"
+                              >
+                                <Icons.X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
           </div>
         )}
 
@@ -833,20 +968,46 @@ export default function StudentDashboard() {
         {activeTab === "my-events" && (
           <div className="space-y-6">
             <div className="flex gap-2 border-b border-border-default pb-2">
-              <button className="px-4 py-2 text-sm font-medium text-text-primary border-b-2 border-primary">
+              <button
+                type="button"
+                onClick={() => setMyEventsTab("upcoming")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+                  myEventsTab === "upcoming"
+                    ? "text-primary border-primary"
+                    : "text-text-secondary border-transparent"
+                }`}
+              >
                 Upcoming ({getUpcomingEvents().length})
               </button>
-              <button className="px-4 py-2 text-sm font-medium text-text-secondary">
+              <button
+                type="button"
+                onClick={() => setMyEventsTab("registered")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+                  myEventsTab === "registered"
+                    ? "text-primary border-primary"
+                    : "text-text-secondary border-transparent"
+                }`}
+              >
                 Registered ({getRegisteredEvents().length})
               </button>
-              <button className="px-4 py-2 text-sm font-medium text-text-muted">
+              <button
+                type="button"
+                onClick={() => setMyEventsTab("past")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+                  myEventsTab === "past"
+                    ? "text-primary border-primary"
+                    : "text-text-secondary border-transparent"
+                }`}
+              >
                 Past ({getPastEvents().length})
               </button>
             </div>
 
             {tickets.length === 0 ? (
               <div className="bg-bg-card rounded-lg p-12 text-center border border-border-default">
-                <div className="text-6xl mb-4">�</div>
+                <div className="flex justify-center mb-4">
+                  <Icons.Ticket className="h-16 w-16 text-text-secondary opacity-50" />
+                </div>
                 <p className="text-text-secondary text-lg mb-2">No tickets yet</p>
                 <p className="text-text-muted text-sm">Register for events to get your tickets!</p>
                 <button
@@ -858,7 +1019,7 @@ export default function StudentDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {tickets.map((ticket) => (
+                {getTicketsForTab().map((ticket) => (
                   <div key={ticket.id} className="bg-bg-card rounded-lg overflow-hidden border border-border-default">
                     <div className="p-6">
                       <TicketComponent
@@ -894,7 +1055,7 @@ export default function StudentDashboard() {
                   {profile?.profile_photo_url ? (
                     <img src={profile.profile_photo_url} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-3xl">�</span>
+                    <Icons.User className="h-10 w-10 text-text-muted" />
                   )}
                 </div>
                 <div className="flex-1">
@@ -1050,13 +1211,19 @@ export default function StudentDashboard() {
                 onClick={() => toast.info("Notifications settings coming soon")}
                 className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-text-primary hover:bg-bg-muted transition-all transition-all duration-fast ease-standard"
               >
-                � Notifications
+                <span className="flex items-center gap-2">
+                  <Icons.Bell className="h-4 w-4 text-text-secondary" />
+                  Notifications
+                </span>
               </button>
               <button
                 onClick={() => signOut()}
                 className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-error hover:bg-errorSoft transition-all transition-all duration-fast ease-standard"
               >
-                🚪 Logout
+                <span className="flex items-center gap-2">
+                  <Icons.LogOut className="h-4 w-4" />
+                  Logout
+                </span>
               </button>
             </div>
           </div>
@@ -1137,97 +1304,7 @@ export default function StudentDashboard() {
           </div>
         )}
 
-            {/* NEARBY TAB */}
-            {activeTab === "nearby" && (
-              <div className="space-y-6">
-                <div className="flex gap-2 border-b border-border-default pb-2">
-                  <button className="px-4 py-2 text-sm font-medium text-text-primary border-b-2 border-primary">
-                    Nearby Events
-                  </button>
-                  <button className="px-4 py-2 text-sm font-medium text-text-secondary">
-                    Nearby Colleges
-                  </button>
-                </div>
-                <NearbyEvents />
-                <NearbyColleges />
-              </div>
-            )}
 
-        {/* FAVORITES TAB */}
-        {activeTab === "favorites" && (
-          <div className="space-y-6">
-            {/* Favorite Colleges */}
-            <section>
-              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <Icons.Heart className="h-5 w-5 text-error" /> Favorite Colleges
-              </h2>
-              {favoriteColleges.length === 0 ? (
-                <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
-                  <p className="text-text-muted mb-3">No favorite colleges yet</p>
-                  <button
-                    onClick={() => setActiveTab("nearby")}
-                    className="bg-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-primaryHover"
-                  >
-                    Explore Nearby
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {favoriteColleges.map((fav: any) => {
-                    const college = fav.colleges || fav;
-                    return (
-                      <div key={college.id} className="bg-bg-card rounded-lg p-4 border border-border-default hover:border-primary transition-all">
-                        <h3 className="font-semibold text-text-primary mb-2">{college.name}</h3>
-                        <p className="text-xs text-text-muted mb-3 line-clamp-2">{college.location}</p>
-                        <button
-                          onClick={() => removeFavoriteCollege(college.id)}
-                          className="w-full bg-errorSoft text-error px-3 py-2 rounded-lg text-sm font-medium hover:bg-error hover:text-text-inverse transition-all"
-                        >
-                          Remove Favorite
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-
-            {/* Favorite Events */}
-            <section>
-              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <Icons.Heart className="h-5 w-5 text-error" /> Favorite Events
-              </h2>
-              {favoriteEvents.length === 0 ? (
-                <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
-                  <p className="text-text-muted">No favorite events yet</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {favoriteEvents.map((fav: any) => {
-                    const event = fav.events || fav;
-                    return (
-                      <div key={event.id} className="bg-bg-card rounded-lg p-4 border border-border-default">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-text-primary">{event.title}</h3>
-                            <p className="text-sm text-text-secondary">₹{event.price}</p>
-                            <p className="text-xs text-text-muted mt-1">{new Date(event.date).toLocaleDateString()}</p>
-                          </div>
-                          <button
-                            onClick={() => removeFavoriteEvent(event.id)}
-                            className="bg-errorSoft text-error px-3 py-2 rounded-lg text-sm font-medium hover:bg-error hover:text-text-inverse"
-                          >
-                            <Icons.X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
-        )}
 
       </div>
 
