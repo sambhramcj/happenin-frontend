@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS certificate_templates (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_certificate_templates_event_id ON certificate_templates(event_id);
-CREATE INDEX idx_certificate_templates_organizer ON certificate_templates(organizer_email);
+CREATE INDEX IF NOT EXISTS idx_certificate_templates_event_id ON certificate_templates(event_id);
+CREATE INDEX IF NOT EXISTS idx_certificate_templates_organizer ON certificate_templates(organizer_email);
 
 -- ============================================
 -- 2. CERTIFICATE RECIPIENTS TABLE
@@ -41,9 +41,9 @@ CREATE TABLE IF NOT EXISTS certificate_recipients (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_certificate_recipients_template ON certificate_recipients(template_id);
-CREATE INDEX idx_certificate_recipients_email ON certificate_recipients(student_email);
-CREATE INDEX idx_certificate_recipients_status ON certificate_recipients(generation_status);
+CREATE INDEX IF NOT EXISTS idx_certificate_recipients_template ON certificate_recipients(template_id);
+CREATE INDEX IF NOT EXISTS idx_certificate_recipients_email ON certificate_recipients(student_email);
+CREATE INDEX IF NOT EXISTS idx_certificate_recipients_status ON certificate_recipients(generation_status);
 
 -- ============================================
 -- 3. STUDENT CERTIFICATES TABLE (Display)
@@ -64,9 +64,9 @@ CREATE TABLE IF NOT EXISTS student_certificates (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_student_certificates_email ON student_certificates(student_email);
-CREATE INDEX idx_student_certificates_type ON student_certificates(certificate_type);
-CREATE INDEX idx_student_certificates_event ON student_certificates(event_id);
+CREATE INDEX IF NOT EXISTS idx_student_certificates_email ON student_certificates(student_email);
+CREATE INDEX IF NOT EXISTS idx_student_certificates_type ON student_certificates(certificate_type);
+CREATE INDEX IF NOT EXISTS idx_student_certificates_event ON student_certificates(event_id);
 
 -- ============================================
 -- 4. ACHIEVEMENT BADGES TABLE
@@ -82,8 +82,8 @@ CREATE TABLE IF NOT EXISTS achievement_badges (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_achievement_badges_email ON achievement_badges(student_email);
-CREATE INDEX idx_achievement_badges_type ON achievement_badges(badge_type);
+CREATE INDEX IF NOT EXISTS idx_achievement_badges_email ON achievement_badges(student_email);
+CREATE INDEX IF NOT EXISTS idx_achievement_badges_type ON achievement_badges(badge_type);
 
 -- ============================================
 -- 5. VOLUNTEER APPLICATIONS (Update with certificate tracking)
@@ -121,8 +121,8 @@ CREATE TABLE IF NOT EXISTS certificate_history (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_certificate_history_template ON certificate_history(template_id);
-CREATE INDEX idx_certificate_history_action ON certificate_history(action);
+CREATE INDEX IF NOT EXISTS idx_certificate_history_template ON certificate_history(template_id);
+CREATE INDEX IF NOT EXISTS idx_certificate_history_action ON certificate_history(action);
 
 -- ============================================
 -- RLS POLICIES (Row Level Security)
@@ -136,31 +136,81 @@ ALTER TABLE achievement_badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE certificate_history ENABLE ROW LEVEL SECURITY;
 
 -- Certificate Templates - Organizers can only see their own
-CREATE POLICY template_organizer_policy ON certificate_templates
-  FOR ALL USING (organizer_email = (auth.jwt() ->> 'email'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'certificate_templates'
+      AND policyname = 'template_organizer_policy'
+  ) THEN
+    CREATE POLICY template_organizer_policy ON certificate_templates
+      FOR ALL USING (organizer_email = (auth.jwt() ->> 'email'));
+  END IF;
+END$$;
 
 -- Certificate Recipients - Only visible to organizer of template
-CREATE POLICY recipient_organizer_policy ON certificate_recipients
-  FOR ALL USING (
-    template_id IN (
-      SELECT id FROM certificate_templates 
-      WHERE organizer_email = (auth.jwt() ->> 'email')
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'certificate_recipients'
+      AND policyname = 'recipient_organizer_policy'
+  ) THEN
+    CREATE POLICY recipient_organizer_policy ON certificate_recipients
+      FOR ALL USING (
+        template_id IN (
+          SELECT id FROM certificate_templates 
+          WHERE organizer_email = (auth.jwt() ->> 'email')
+        )
+      );
+  END IF;
+END$$;
 
 -- Student Certificates - Only student can see their own
-CREATE POLICY student_cert_policy ON student_certificates
-  FOR ALL USING (student_email = (auth.jwt() ->> 'email'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'student_certificates'
+      AND policyname = 'student_cert_policy'
+  ) THEN
+    CREATE POLICY student_cert_policy ON student_certificates
+      FOR ALL USING (student_email = (auth.jwt() ->> 'email'));
+  END IF;
+END$$;
 
 -- Achievement Badges - Only student can see their own
-CREATE POLICY badge_policy ON achievement_badges
-  FOR ALL USING (student_email = (auth.jwt() ->> 'email'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'achievement_badges'
+      AND policyname = 'badge_policy'
+  ) THEN
+    CREATE POLICY badge_policy ON achievement_badges
+      FOR ALL USING (student_email = (auth.jwt() ->> 'email'));
+  END IF;
+END$$;
 
 -- Certificate History - Only organizer can see
-CREATE POLICY history_organizer_policy ON certificate_history
-  FOR ALL USING (
-    actor_email = (auth.jwt() ->> 'email')
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'certificate_history'
+      AND policyname = 'history_organizer_policy'
+  ) THEN
+    CREATE POLICY history_organizer_policy ON certificate_history
+      FOR ALL USING (
+        actor_email = (auth.jwt() ->> 'email')
+      );
+  END IF;
+END$$;
 
 -- ============================================
 -- FUNCTIONS FOR AUTOMATIC BADGE AWARDING
@@ -231,10 +281,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_award_badges_on_certificate
-AFTER INSERT ON student_certificates
-FOR EACH ROW
-EXECUTE FUNCTION trigger_check_badges();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'trigger_award_badges_on_certificate'
+      AND tgrelid = 'public.student_certificates'::regclass
+  ) THEN
+    CREATE TRIGGER trigger_award_badges_on_certificate
+    AFTER INSERT ON student_certificates
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_check_badges();
+  END IF;
+END$$;
 
 -- ============================================
 -- FUNCTION TO TRACK CERTIFICATE HISTORY
