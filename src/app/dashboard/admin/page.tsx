@@ -88,7 +88,7 @@ export default function AdminDashboard() {
     if (status === "loading") return;
 
     if (!session?.user || (session.user as any).role !== "admin") {
-      router.replace("/login");
+      router.replace("/auth");
       return;
     }
 
@@ -1173,8 +1173,8 @@ export default function AdminDashboard() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default">
-        <div className="max-w-7xl mx-auto flex justify-around items-center py-3">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 px-2 py-2">
           {[
             { id: "overview", icon: "📊", label: "Overview" },
             { id: "colleges", icon: "🏫", label: "Colleges" },
@@ -1185,14 +1185,14 @@ export default function AdminDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
+              className={`flex flex-1 min-w-0 flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
                 activeTab === tab.id
                   ? "text-primary bg-primarySoft"
                   : "text-text-muted hover:text-text-primary"
               }`}
             >
               <span className="text-2xl">{tab.icon}</span>
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className="text-[11px] font-medium truncate">{tab.label}</span>
             </button>
           ))}
         </div>

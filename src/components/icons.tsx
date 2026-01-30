@@ -39,6 +39,12 @@ import {
   Info,
   Award,
   LogOut,
+  Mic,
+  Share2,
+  Loader2,
+  Check,
+  Tag,
+  AlertCircle,
 } from "lucide-react";
 
 export const Icons = {
@@ -82,6 +88,12 @@ export const Icons = {
   Info,
   Award,
   LogOut,
+  Mic,
+  Share2,
+  Loader2,
+  Check,
+  Tag,
+  AlertCircle,
 };
 
 export type IconKey = keyof typeof Icons;

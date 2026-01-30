@@ -12,7 +12,7 @@ export default function DashboardRedirect() {
     if (status === "loading") return;
 
     if (!session?.user) {
-      router.replace("/login");
+      router.replace("/auth");
       return;
     }
 
@@ -25,7 +25,7 @@ export default function DashboardRedirect() {
     } else if (role === "admin") {
       router.replace("/dashboard/admin");
     } else {
-      router.replace("/login");
+      router.replace("/auth");
     }
   }, [session, status, router]);
 

@@ -1,0 +1,55 @@
+{
+  "name": "Happenin - Event Discovery Platform",
+  "short_name": "Happenin",
+  "description": "Discover and attend amazing events near you. Connect with communities and create memories.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#7c3aed",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["lifestyle", "social"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Explore Events",
+      "short_name": "Explore",
+      "description": "Explore nearby events",
+      "url": "/dashboard/student?tab=explore",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "My Events",
+      "short_name": "My Events",
+      "description": "View your registered events",
+      "url": "/dashboard/student?tab=my-events",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}

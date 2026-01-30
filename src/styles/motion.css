@@ -32,6 +32,11 @@
   --offline-enter-y: -32px;
   --offline-exit-y: -32px;
 }
+/* Dark Mode Skeleton Colors */
+.dark {
+  --skeleton-base: #374151;
+  --skeleton-highlight: #4B5563;
+}
 
 /* Toast / Alert Animations */
 @keyframes slideIn {

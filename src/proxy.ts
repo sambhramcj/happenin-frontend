@@ -8,7 +8,7 @@ export default withAuth(
 
     // If no token, redirect to login
     if (!token) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.redirect(new URL("/auth", req.url));
     }
 
     const role = (token as any)?.role;
@@ -22,7 +22,7 @@ export default withAuth(
         } else if (role === "admin") {
           return NextResponse.redirect(new URL("/dashboard/admin", req.url));
         }
-        return NextResponse.redirect(new URL("/login", req.url));
+        return NextResponse.redirect(new URL("/auth", req.url));
       }
     } else if (path.startsWith("/dashboard/organizer")) {
       if (role !== "organizer") {
@@ -32,7 +32,7 @@ export default withAuth(
         } else if (role === "admin") {
           return NextResponse.redirect(new URL("/dashboard/admin", req.url));
         }
-        return NextResponse.redirect(new URL("/login", req.url));
+        return NextResponse.redirect(new URL("/auth", req.url));
       }
     } else if (path.startsWith("/dashboard/admin")) {
       if (role !== "admin") {
@@ -42,7 +42,7 @@ export default withAuth(
         } else if (role === "organizer") {
           return NextResponse.redirect(new URL("/dashboard/organizer", req.url));
         }
-        return NextResponse.redirect(new URL("/login", req.url));
+        return NextResponse.redirect(new URL("/auth", req.url));
       }
     }
 

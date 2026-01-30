@@ -32,7 +32,7 @@ export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session } = useSession();
-  const eventId = params.id as string;
+  const eventId = params.eventId as string;
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);

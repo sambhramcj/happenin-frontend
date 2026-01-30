@@ -10,7 +10,67 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// POST: Add certificate (volunteering, participation, or winning)
+// GET: Student views all their certificates and badges (NO DELETE)
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const filterType = searchParams.get("type"); // 'volunteer', 'participant', 'winning'
+
+    // Get certificates
+    let certificateQuery = supabase
+      .from("student_certificates")
+      .select("*")
+      .eq("student_email", session.user.email)
+      .order("sent_date", { ascending: false });
+
+    if (filterType) {
+      certificateQuery = certificateQuery.eq("certificate_type", filterType);
+    }
+
+    const { data: certificates, error: certError } = await certificateQuery;
+
+    if (certError) {
+      return NextResponse.json({ error: "Failed to fetch certificates" }, { status: 500 });
+    }
+
+    // Get badges
+    const { data: badges, error: badgeError } = await supabase
+      .from("achievement_badges")
+      .select("*")
+      .eq("student_email", session.user.email)
+      .order("earned_at", { ascending: false });
+
+    if (badgeError) {
+      return NextResponse.json({ error: "Failed to fetch badges" }, { status: 500 });
+    }
+
+    // Calculate stats
+    const stats = {
+      totalCertificates: certificates?.length || 0,
+      volunteer: certificates?.filter((c) => c.certificate_type === "volunteer").length || 0,
+      participant: certificates?.filter((c) => c.certificate_type === "participant").length || 0,
+      winning: certificates?.filter((c) => c.certificate_type === "winning").length || 0,
+      totalBadges: badges?.length || 0,
+    };
+
+    return NextResponse.json({
+      success: true,
+      certificates: certificates || [],
+      badges: badges || [],
+      stats,
+    });
+  } catch (error) {
+    console.error("Certificate fetch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// POST: DISABLED - Organizers issue certificates now
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -99,68 +159,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET: Get all student's certificates with filtering
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const studentEmail = searchParams.get("email") || session.user.email;
-    const typeFilter = searchParams.get("type"); // 'volunteering', 'participation', 'winning', or 'all'
-
-    // Students can only view their own, organizers can view applicants'
-    if ((session.user as any).role === "student") {
-      if (studentEmail !== session.user.email) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-    }
-
-    // Build query
-    let query = supabase
-      .from("volunteer_certificates")
-      .select("*")
-      .eq("student_email", studentEmail);
-
-    // Apply type filter if specified
-    if (typeFilter && typeFilter !== "all") {
-      query = query.eq("type", typeFilter);
-    }
-
-    const { data: certificates, error } = await query.order("date", {
-      ascending: false,
-    });
-
-    if (error) {
-      console.error("Error fetching certificates:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch certificates" },
-        { status: 500 }
-      );
-    }
-
-    // Group certificates by type for easy filtering
-    const grouped = {
-      all: certificates || [],
-      volunteering:
-        certificates?.filter((c) => c.type === "volunteering") || [],
-      participation:
-        certificates?.filter((c) => c.type === "participation") || [],
-      winning: certificates?.filter((c) => c.type === "winning") || [],
-    };
-
-    // Count by type
-    const counts = {
-      total: certificates?.length || 0,
-      volunteering: grouped.volunteering.length,
-      participation: grouped.participation.length,
-      winning: grouped.winning.length,
-    };
-
-    return NextResponse.json({
-      certificates: typeFilter ? grouped[typeFilter as keyof typeof grouped] || [] : grouped.all,
+// DELETE: NOT ALLOWED - Students cannot delete certificates
+export async function DELETE(req: NextRequest) {
+  return NextResponse.json(
+    { error: "Deleting certificates is not allowed." },
+    { status: 403 }
+  );
+}
       grouped,
       counts,
     });

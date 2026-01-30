@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { RegistrationsModal } from "@/components/RegistrationsModal";
 import AttendanceModal from "@/components/AttendanceModal";
+import EventSubmitToFest from "@/components/EventSubmitToFest";
 import { Icons } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -43,7 +44,7 @@ export default function OrganizerDashboard() {
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"dashboard" | "events" | "registrations" | "profile">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "events" | "analytics" | "profile">("dashboard");
 
   // Event detail view state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -114,11 +115,21 @@ export default function OrganizerDashboard() {
     eventTitle: "",
   });
 
+  const [festSubmissionModal, setFestSubmissionModal] = useState<{
+    isOpen: boolean;
+    eventId: string;
+    eventTitle: string;
+  }>({
+    isOpen: false,
+    eventId: "",
+    eventTitle: "",
+  });
+
   useEffect(() => {
     if (status === "loading") return;
 
     if (!session?.user || (session.user as any).role !== "organizer") {
-      router.replace("/login");
+      router.replace("/auth");
       return;
     }
 
@@ -790,6 +801,18 @@ export default function OrganizerDashboard() {
                         >
                           Manage Event
                         </button>
+                        <button
+                          onClick={() =>
+                            setFestSubmissionModal({
+                              isOpen: true,
+                              eventId: event.id,
+                              eventTitle: event.title,
+                            })
+                          }
+                          className="w-full bg-purple-600/20 text-purple-400 border border-purple-700/50 py-2 rounded-lg hover:bg-purple-600/30 transition-all text-sm font-medium"
+                        >
+                          Submit to Fest
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1226,79 +1249,237 @@ export default function OrganizerDashboard() {
         })()}
 
         {/* REGISTRATIONS TAB */}
-        {activeTab === "registrations" && (
-          <div className="space-y-6">
+        {activeTab === "analytics" && (
+          <div className="space-y-8">
             <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-              <span className="flex items-center gap-2"><Icons.Users className="h-4 w-4" /> Registrations</span>
+            <Icons.TrendingUp className="h-5 w-5 text-primary" /> Event Analytics
             </h2>
 
-            <div>
-              <label className="text-sm text-text-secondary mb-2 block">Select Event</label>
-              <select
-                value={selectedEventForRegs}
-                onChange={(e) => setSelectedEventForRegs(e.target.value)}
-                className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-3 text-text-primary"
-              >
-                <option value="">All Events</option>
-                {events.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {event.title}
-                  </option>
-                ))}
-              </select>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-xs text-text-muted mb-1">Total Events</p>
+                    <div className="text-3xl font-bold text-text-primary">{events.length}</div>
+                  </div>
+                  <Icons.Calendar className="h-8 w-8 text-primary/30" />
+                </div>
+              </div>
+
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-xs text-text-muted mb-1">Total Registrations</p>
+                    <div className="text-3xl font-bold text-text-primary">{allRegistrations.length}</div>
+                  </div>
+                  <Icons.Users className="h-8 w-8 text-primary/30" />
+                </div>
+              </div>
+
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-xs text-text-muted mb-1">Total Revenue</p>
+                    <div className="text-3xl font-bold text-text-primary">₹{getTotalRevenue()}</div>
+                  </div>
+                  <Icons.Rupee className="h-8 w-8 text-primary/30" />
+                </div>
+              </div>
+
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-xs text-text-muted mb-1">Avg Registration/Event</p>
+                    <div className="text-3xl font-bold text-text-primary">
+                      {events.length > 0 ? (allRegistrations.length / events.length).toFixed(1) : 0}
+                    </div>
+                  </div>
+                  <Icons.TrendingUp className="h-8 w-8 text-primary/30" />
+                </div>
+              </div>
             </div>
 
-            {selectedEventForRegs && (
+            {/* Event-wise Analytics */}
+            <div className="bg-bg-card rounded-xl border border-border-default overflow-hidden">
+              <div className="p-6 border-b border-border-default">
+                <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                  <Icons.TrendingUp className="h-5 w-5 text-primary" />
+                  Event-wise Analytics
+                </h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-text-secondary border-b border-border-default bg-bg-muted">
+                      <th className="px-4 py-3">Event Name</th>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Registrations</th>
+                      <th className="px-4 py-3">Revenue</th>
+                      <th className="px-4 py-3">Avg Price Paid</th>
+                      <th className="px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-text-muted">
+                          No events created yet
+                        </td>
+                      </tr>
+                    ) : (
+                      events.map((event) => {
+                        const regs = getEventRegistrations(event.id);
+                        const revenue = regs.reduce((sum, r) => sum + r.final_price, 0);
+                        const avgPrice = regs.length > 0 ? (revenue / regs.length).toFixed(2) : "0";
+                        const isLive = new Date().toDateString() === new Date(event.date).toDateString();
+                        const isPast = new Date() > new Date(event.date);
+
+                        return (
+                          <tr key={event.id} className="border-t border-border-default hover:bg-bg-muted/50 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {event.banner_image && (
+                                  <img src={event.banner_image} alt={event.title} className="h-8 w-8 rounded object-cover" />
+                                )}
+                                <span className="font-medium text-text-primary truncate">{event.title}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-text-secondary">
+                              {new Date(event.date).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="font-semibold text-text-primary">{regs.length}</span>
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-text-primary">₹{revenue}</td>
+                            <td className="px-4 py-3 text-text-secondary">₹{avgPrice}</td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                isLive
+                                  ? "bg-green-900/20 text-green-400 border-green-700/50"
+                                  : isPast
+                                  ? "bg-gray-900/20 text-gray-400 border-gray-700/50"
+                                  : "bg-blue-900/20 text-blue-400 border-blue-700/50"
+                              }`}>
+                                {isLive ? "Live" : isPast ? "Completed" : "Upcoming"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Monthly Revenue Trend (Simplified) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <Icons.TrendingUp className="h-5 w-5 text-primary" />
+                  Revenue by Month
+                </h3>
+                <div className="space-y-3">
                   {(() => {
-                    const regs = getEventRegistrations(selectedEventForRegs);
-                    const paid = regs.length;
-                    const revenue = regs.reduce((sum, r) => sum + r.final_price, 0);
+                    const monthlyRevenue: { [key: string]: number } = {};
+                    allRegistrations.forEach((reg) => {
+                      const month = new Date(reg.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+                      monthlyRevenue[month] = (monthlyRevenue[month] || 0) + reg.final_price;
+                    });
                     
-                    return (
-                      <>
-                        <div>
-                          <div className="text-2xl font-bold text-purple-100">{regs.length}</div>
-                          <div className="text-xs text-purple-400">Total</div>
+                    return Object.entries(monthlyRevenue)
+                      .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+                      .slice(-6)
+                      .map(([month, revenue]) => (
+                        <div key={month}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm text-text-secondary">{month}</span>
+                            <span className="font-semibold text-text-primary">₹{revenue}</span>
+                          </div>
+                          <div className="h-2 bg-bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-primary to-pink-500 rounded-full transition-all"
+                              style={{ width: `${Math.min((revenue / getTotalRevenue()) * 100 || 0, 100)}%` }}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-2xl font-bold text-success">{paid}</div>
-                          <div className="text-xs text-purple-400">Paid</div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-purple-100">₹{revenue}</div>
-                          <div className="text-xs text-purple-400">Revenue</div>
-                        </div>
-                        <div>
-                          <button
-                            onClick={() => {
-                              const event = events.find(e => e.id === selectedEventForRegs);
-                              if (event) {
-                                setRegistrationsModal({
-                                  isOpen: true,
-                                  eventId: event.id,
-                                  eventTitle: event.title,
-                                });
-                              }
-                            }}
-                            className="text-sm bg-purple-600 text-text-inverse px-4 py-2 rounded-lg hover:bg-purple-500 transition-all transition-all duration-fast ease-standard"
-                          >
-                            View List
-                          </button>
-                        </div>
-                      </>
-                    );
+                      ));
                   })()}
                 </div>
               </div>
-            )}
 
-            {!selectedEventForRegs && (
-              <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
-                <p className="text-text-muted">Select an event to view registrations</p>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <Icons.Users className="h-5 w-5 text-primary" />
+                  Registrations by Month
+                </h3>
+                <div className="space-y-3">
+                  {(() => {
+                    const monthlyRegs: { [key: string]: number } = {};
+                    allRegistrations.forEach((reg) => {
+                      const month = new Date(reg.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+                      monthlyRegs[month] = (monthlyRegs[month] || 0) + 1;
+                    });
+                    
+                    const maxRegs = Math.max(...Object.values(monthlyRegs), 1);
+                    return Object.entries(monthlyRegs)
+                      .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+                      .slice(-6)
+                      .map(([month, count]) => (
+                        <div key={month}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm text-text-secondary">{month}</span>
+                            <span className="font-semibold text-text-primary">{count}</span>
+                          </div>
+                          <div className="h-2 bg-bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all"
+                              style={{ width: `${(count / maxRegs) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ));
+                  })()}
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Top Performing Events */}
+            <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+              <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                <Icons.Award className="h-5 w-5 text-primary" />
+                Top Performing Events
+              </h3>
+              <div className="space-y-3">
+                {events
+                  .map((event) => {
+                    const regs = getEventRegistrations(event.id);
+                    const revenue = regs.reduce((sum, r) => sum + r.final_price, 0);
+                    return { event, regs: regs.length, revenue };
+                  })
+                  .sort((a, b) => b.revenue - a.revenue)
+                  .slice(0, 5)
+                  .map((item, idx) => (
+                    <div key={item.event.id} className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className="text-lg font-bold text-primary">#{idx + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-text-primary truncate">{item.event.title}</p>
+                          <p className="text-xs text-text-muted">{item.regs} registrations</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-text-primary">₹{item.revenue}</p>
+                      </div>
+                    </div>
+                  ))}
+                {events.length === 0 && (
+                  <p className="text-center text-text-muted py-4">No events yet</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1363,25 +1544,25 @@ export default function OrganizerDashboard() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default">
-        <div className="max-w-7xl mx-auto flex justify-around items-center py-3">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 px-2 py-2">
           {[
             { id: "dashboard", icon: Icons.Dashboard, label: "Dashboard" },
             { id: "events", icon: Icons.Clipboard, label: "Events" },
-            { id: "registrations", icon: Icons.Users, label: "Registrations" },
+            { id: "analytics", icon: Icons.TrendingUp, label: "Analytics" },
             { id: "profile", icon: Icons.User, label: "Profile" },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
+              className={`flex flex-1 min-w-0 flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
                 activeTab === tab.id
                   ? "text-primary bg-primarySoft"
                   : "text-text-muted hover:text-text-primary"
               }`}
             >
               <tab.icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className="text-[11px] font-medium truncate">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -1405,6 +1586,50 @@ export default function OrganizerDashboard() {
           setAttendanceModal((prev) => ({ ...prev, isOpen: false }))
         }
       />
+
+      {/* Fest Submission Modal */}
+      {festSubmissionModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-card rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-bg-card border-b border-border-default p-6 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-text-primary">
+                Submit "{festSubmissionModal.eventTitle}" to Fest
+              </h2>
+              <button
+                onClick={() =>
+                  setFestSubmissionModal({
+                    ...festSubmissionModal,
+                    isOpen: false,
+                  })
+                }
+                className="text-text-secondary hover:text-text-primary"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              <EventSubmitToFest
+                eventId={festSubmissionModal.eventId}
+                eventTitle={festSubmissionModal.eventTitle}
+                onSuccess={() => {
+                  setFestSubmissionModal({
+                    ...festSubmissionModal,
+                    isOpen: false,
+                  });
+                  toast.success("Event submitted to fest!");
+                  // Optionally refetch events
+                }}
+                onClose={() =>
+                  setFestSubmissionModal({
+                    ...festSubmissionModal,
+                    isOpen: false,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
