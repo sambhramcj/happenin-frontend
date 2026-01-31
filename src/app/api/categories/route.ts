@@ -8,17 +8,17 @@ const supabase = createClient(
 );
 
 // GET all categories or specific category
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { categoryId?: string } }
-) {
+export async function GET(req: NextRequest) {
   try {
-    if (params.categoryId) {
+    const { searchParams } = new URL(req.url);
+    const categoryId = searchParams.get("id");
+
+    if (categoryId) {
       // Get specific category with events
       const { data: category, error: categoryError } = await supabase
         .from("event_categories")
         .select("*")
-        .eq("id", params.categoryId)
+        .eq("id", categoryId)
         .single();
 
       if (categoryError || !category) {
@@ -32,7 +32,7 @@ export async function GET(
       const { data: events, error: eventsError } = await supabase
         .from("event_category_mapping")
         .select("events(*)")
-        .eq("category_id", params.categoryId);
+        .eq("category_id", categoryId);
 
       if (eventsError) throw eventsError;
 

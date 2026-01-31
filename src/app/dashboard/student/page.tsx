@@ -18,6 +18,16 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { NearbyEvents } from "@/components/NearbyEvents";
 import { NearbyColleges } from "@/components/NearbyColleges";
 import CertificateComponent from "@/components/CertificateComponent";
+import dynamic from "next/dynamic";
+import { HomeExploreSkeleton, TicketCardSkeleton, Skeleton } from "@/components/skeletons";
+import { PaymentLoading } from "@/components/PaymentLoading";
+import { LoadingButton } from "@/components/LoadingButton";
+
+// Dynamic import for map to avoid SSR issues
+const CollegeEventsMap = dynamic(
+  () => import("@/components/CollegeEventsMap").then(mod => mod.CollegeEventsMap),
+  { ssr: false }
+);
 
 type Membership = {
   club: string;
@@ -83,6 +93,7 @@ export default function StudentDashboard() {
   const [ticketsLoading, setTicketsLoading] = useState(true);
   const [loadingEventId, setLoadingEventId] = useState<string | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
+    const [paymentStage, setPaymentStage] = useState<"creating" | "confirming" | "pending" | "success" | null>(null);
 
   // Volunteer states
   const [volunteerApplications, setVolunteerApplications] = useState<any[]>([]);
@@ -99,6 +110,7 @@ export default function StudentDashboard() {
   const [filterClub, setFilterClub] = useState("");
   const [filterPrice, setFilterPrice] = useState<"all" | "free" | "paid">("all");
   const [filterCategory, setFilterCategory] = useState<"all" | "today" | "week">("all");
+  const [top10Events, setTop10Events] = useState<any[]>([]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -115,6 +127,9 @@ export default function StudentDashboard() {
     fetchTickets();
     fetchVolunteerData();
     fetchFavorites();
+    
+    // Fetch top 10 events
+    getTop10Events().then(setTop10Events);
   }, [session, status, router]);
 
   async function fetchVolunteerData() {
@@ -419,11 +434,13 @@ export default function StudentDashboard() {
 
     try {
       setLoadingEventId(event.id);
+      setPaymentStage("creating");
 
       const loaded = await loadRazorpayScript();
       if (!loaded) {
         toast.error("Razorpay SDK failed to load");
         setLoadingEventId(null);
+        setPaymentStage(null);
         return;
       }
 
@@ -440,8 +457,12 @@ export default function StudentDashboard() {
       if (!res.ok) {
         toast.error(data.error || "Failed to create order");
         setLoadingEventId(null);
+        setPaymentStage(null);
         return;
       }
+
+      // Close creating stage, Razorpay opens
+      setPaymentStage(null);
 
       const razorpay = new window.Razorpay({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -451,6 +472,7 @@ export default function StudentDashboard() {
         description: "Event Registration",
         order_id: data.orderId,
         handler: async (response: any) => {
+          setPaymentStage("confirming");
           try {
             const verifyRes = await fetch("/api/payments/verify", {
               method: "POST",
@@ -466,8 +488,7 @@ export default function StudentDashboard() {
             const verifyData = await verifyRes.json();
 
             if (verifyRes.ok) {
-              toast.success("Payment successful!");
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              await new Promise(resolve => setTimeout(resolve, 1000));
               
               const { data: regsData } = await supabase
                 .from("registrations")
@@ -485,16 +506,18 @@ export default function StudentDashboard() {
               
               await fetchTickets();
               setLoadingEventId(null);
+              setPaymentStage(null);
               toast.success("✓ Registration confirmed!");
               setActiveTab("my-events");
             } else {
-              toast.error(verifyData.error || "Payment verification failed");
+              console.error("Payment verification delayed:", verifyData);
               setLoadingEventId(null);
+              setPaymentStage("pending");
             }
           } catch (err) {
             console.error("Payment verification error:", err);
-            toast.error("Payment verification failed");
             setLoadingEventId(null);
+            setPaymentStage("pending");
           }
         },
         prefill: { email: session?.user?.email },
@@ -505,6 +528,7 @@ export default function StudentDashboard() {
     } catch {
       toast.error("Payment failed");
       setLoadingEventId(null);
+      setPaymentStage(null);
     }
   }
 
@@ -588,23 +612,93 @@ export default function StudentDashboard() {
     });
   }
 
+  // Get top 10 trending events (by registration count)
+  async function getTop10Events() {
+    try {
+      const { data: regCounts } = await supabase
+        .from("registrations")
+        .select("event_id");
+      
+      if (!regCounts) return events.slice(0, 10);
+
+      // Count registrations per event
+      const countMap = new Map<string, number>();
+      regCounts.forEach((reg: any) => {
+        countMap.set(reg.event_id, (countMap.get(reg.event_id) || 0) + 1);
+      });
+
+      // Sort events by registration count
+      const sortedEvents = events
+        .map(event => ({
+          ...event,
+          registrationCount: countMap.get(event.id) || 0,
+        }))
+        .sort((a, b) => b.registrationCount - a.registrationCount)
+        .slice(0, 10);
+
+      return sortedEvents;
+    } catch (error) {
+      console.error("Error fetching top 10 events:", error);
+      return events.slice(0, 10);
+    }
+  }
+
+  // Get event locations for map
+  function getEventLocations() {
+    return events
+      .filter(event => {
+        // Parse location for coordinates
+        const location = event.location || "";
+        // Check if location contains coordinates pattern (lat, long)
+        return location.includes(",") || event.location;
+      })
+      .map(event => {
+        // Mock coordinates based on college/location
+        // In production, you'd store actual lat/long in database
+        const locationHash = event.location.split("").reduce((a, b) => {
+          a = ((a << 5) - a) + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+        
+        // India coordinates range: lat 8-37, long 68-97
+        const latitude = 15 + (Math.abs(locationHash % 1000) / 1000) * 20;
+        const longitude = 72 + (Math.abs(locationHash % 2000) / 2000) * 20;
+        
+        return {
+          id: event.id,
+          title: event.title,
+          college: event.location,
+          latitude,
+          longitude,
+          date: event.date,
+          price: event.price,
+        };
+      });
+  }
+
   const profileCompletion = profile ? 
     (Object.keys({ full_name: 1, dob: 1, college_name: 1, college_email: 1 })
       .filter(k => profile[k]).length / 4) * 100 : 0;
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p className="text-text-secondary text-lg">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-bg-muted">
+        <HomeExploreSkeleton />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-bg-muted pb-24">
+      {paymentStage && (
+        <PaymentLoading
+          stage={paymentStage}
+          onContinue={() => {
+            setPaymentStage(null);
+            setActiveTab("my-events");
+          }}
+        />
+      )}
       {/* Sticky Top Bar */}
       <div className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -655,12 +749,16 @@ export default function StudentDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* HOME TAB */}
         {activeTab === "home" && (
-          <div className="space-y-8">
-            {/* Happening Today */}
-            <section>
-              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <Icons.Flame className="h-5 w-5 text-primary" /> Happening Today
-              </h2>
+          <>
+            {eventsLoading ? (
+              <HomeExploreSkeleton />
+            ) : (
+              <div className="space-y-8">
+                {/* Happening Today */}
+                <section>
+                  <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <Icons.Flame className="h-5 w-5 text-primary" /> Happening Today
+                  </h2>
               {getTodayEvents().length === 0 ? (
                 <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
                   <p className="text-text-muted">No events today</p>
@@ -696,13 +794,15 @@ export default function StudentDashboard() {
                             </div>
                           )}
                           <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
-                          <button
+                          <LoadingButton
                             onClick={() => handlePay(event)}
                             disabled={!!getRegistration(event.id)}
+                            loading={loadingEventId === event.id}
+                            loadingText="Submitting…"
                             className="w-full bg-gradient-to-r from-primary to-primaryHover text-text-inverse py-2 rounded-lg font-semibold hover:from-primaryHover hover:to-primary transition-all disabled:opacity-50"
                           >
                             {getRegistration(event.id) ? "Registered ✓" : "Register Now"}
-                          </button>
+                          </LoadingButton>
                         </div>
                       </div>
                     </div>
@@ -743,20 +843,120 @@ export default function StudentDashboard() {
                       <p className="text-xs text-text-muted mb-2">{new Date(event.date).toLocaleDateString()}</p>
                       <div className="flex items-center justify-between">
                         <span className="text-text-secondary font-semibold text-sm">₹{event.price}</span>
-                        <button
+                        <LoadingButton
                           onClick={() => handlePay(event)}
                           disabled={!!getRegistration(event.id)}
+                          loading={loadingEventId === event.id}
+                          loadingText="Submitting…"
                           className="text-xs bg-primary text-text-inverse px-3 py-1 rounded-lg hover:bg-primaryHover disabled:opacity-50 transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
                         >
                           {getRegistration(event.id) ? "✓" : "Register"}
-                        </button>
+                        </LoadingButton>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             </section>
-          </div>
+
+            {/* Top 10 Events - Netflix Style */}
+            <section>
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                <Icons.Award className="h-5 w-5 text-primary" /> Top 10 Events
+              </h2>
+              {top10Events.length === 0 ? (
+                <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
+                  <p className="text-text-muted">Loading events…</p>
+                </div>
+              ) : (
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+                  {top10Events.map((event, index) => (
+                    <div key={event.id} className="flex-shrink-0 w-64 snap-start relative">
+                      {/* Netflix-style ranking number */}
+                      <div className="absolute -left-6 top-0 z-10">
+                        <svg
+                          viewBox="0 0 100 150"
+                          className="w-24 h-36 drop-shadow-2xl"
+                        >
+                          <text
+                            x="50"
+                            y="120"
+                            fontSize="140"
+                            fontWeight="900"
+                            textAnchor="middle"
+                            fill="#1a1a1a"
+                            stroke="#9333ea"
+                            strokeWidth="4"
+                            style={{
+                              fontFamily: 'Arial Black, sans-serif',
+                              paintOrder: 'stroke',
+                            }}
+                          >
+                            {index + 1}
+                          </text>
+                        </svg>
+                      </div>
+
+                      <div className="ml-8 bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all group hover:-translate-y-1 hover:shadow-xl">
+                        {event.banner_image && (
+                          <div className="relative">
+                            <img 
+                              src={event.banner_image} 
+                              alt={event.title} 
+                              className="w-full h-40 object-cover" 
+                            />
+                            {/* Top 10 badge overlay */}
+                            <div className="absolute top-2 right-2 bg-primary/90 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-xs font-bold">
+                              #{index + 1} Trending
+                            </div>
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-text-secondary text-sm font-semibold">₹{event.price}</span>
+                            {event.registrationCount > 0 && (
+                              <span className="text-xs text-text-muted">
+                                {event.registrationCount} registered
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-bold text-text-primary mb-1 text-sm line-clamp-2">{event.title}</h3>
+                          {sponsorByEvent[event.id] && (
+                            <div className="flex items-center gap-1 mb-2">
+                              <span className="text-[10px] text-text-muted">Powered by</span>
+                              {sponsorByEvent[event.id].logo_url ? (
+                                <img
+                                  src={sponsorByEvent[event.id].logo_url}
+                                  alt={sponsorByEvent[event.id].name}
+                                  className="h-3 object-contain"
+                                />
+                              ) : (
+                                <span className="text-[10px] text-text-secondary font-medium">
+                                  {sponsorByEvent[event.id].name}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs text-text-muted mb-2">{new Date(event.date).toLocaleDateString()}</p>
+                          <LoadingButton
+                            onClick={() => handlePay(event)}
+                            disabled={!!getRegistration(event.id)}
+                            loading={loadingEventId === event.id}
+                            loadingText="Submitting…"
+                            className="w-full text-xs bg-primary text-text-inverse px-3 py-2 rounded-lg hover:bg-primaryHover disabled:opacity-50 transition-all duration-fast active:scale-95"
+                          >
+                            {getRegistration(event.id) ? "Registered ✓" : "Register Now"}
+                          </LoadingButton>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+                </div>
+              )}
+            </>
         )}
 
         {/* EXPLORE TAB */}
@@ -844,43 +1044,70 @@ export default function StudentDashboard() {
             </div>
 
             {/* Event List */}
-            <div className="space-y-4">
-              {getFilteredEvents().map((event) => {
-                const reg = getRegistration(event.id);
-                const finalPrice = getFinalPrice(event);
-
-                return (
-                  <div key={event.id} className="bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all">
+            {eventsLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-bg-card rounded-lg overflow-hidden border border-border-default">
                     <div className="flex gap-4 p-4">
-                      {event.banner_image && (
-                        <img src={event.banner_image} alt={event.title} className="w-24 h-24 object-cover rounded-lg flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
-                        <p className="text-sm text-text-muted mb-2 line-clamp-2">{event.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-text-secondary">
-                          <span className="flex items-center gap-1"><Icons.Calendar className="h-4 w-4" /> {new Date(event.date).toLocaleDateString()}</span>
-                          <span className="flex items-center gap-1"><Icons.Rupee className="h-4 w-4" /> ₹{event.price}</span>
-                        </div>
+                      <Skeleton className="w-24 h-24 rounded-lg flex-shrink-0" />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <Skeleton className="w-2/3 h-5" variant="text" />
+                        <Skeleton className="w-full h-4" variant="text" />
+                        <Skeleton className="w-1/3 h-4" variant="text" />
                       </div>
-                      <button
-                        onClick={() => handlePay(event)}
-                        disabled={!!reg || loadingEventId === event.id}
-                        className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover disabled:opacity-50 self-center whitespace-nowrap transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
-                      >
-                        {reg ? "✓ Registered" : "Register"}
-                      </button>
+                      <Skeleton className="w-24 h-10 rounded-lg self-center" />
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {getFilteredEvents().map((event) => {
+                  const reg = getRegistration(event.id);
+
+                  return (
+                    <div key={event.id} className="bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all">
+                      <div className="flex gap-4 p-4">
+                        {event.banner_image && (
+                          <img src={event.banner_image} alt={event.title} className="w-24 h-24 object-cover rounded-lg flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
+                          <p className="text-sm text-text-muted mb-2 line-clamp-2">{event.description}</p>
+                          <div className="flex items-center gap-4 text-xs text-text-secondary">
+                            <span className="flex items-center gap-1"><Icons.Calendar className="h-4 w-4" /> {new Date(event.date).toLocaleDateString()}</span>
+                            <span className="flex items-center gap-1"><Icons.Rupee className="h-4 w-4" /> ₹{event.price}</span>
+                          </div>
+                        </div>
+                        <LoadingButton
+                          onClick={() => handlePay(event)}
+                          disabled={!!reg || loadingEventId === event.id}
+                          loading={loadingEventId === event.id}
+                          loadingText="Submitting…"
+                          className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover disabled:opacity-50 self-center whitespace-nowrap transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
+                        >
+                          {reg ? "✓ Registered" : "Register"}
+                        </LoadingButton>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
               </div>
             )}
 
             {/* Nearby Subtab */}
             {exploreSubTab === "nearby" && (
               <div className="space-y-6">
+                <section>
+                  <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <Icons.MapPin className="h-5 w-5 text-primary" /> Nearby Events
+                  </h2>
+                  <CollegeEventsMap 
+                    events={getEventLocations()} 
+                  />
+                </section>
                 <NearbyEvents />
                 <NearbyColleges />
               </div>
@@ -1003,13 +1230,19 @@ export default function StudentDashboard() {
               </button>
             </div>
 
-            {tickets.length === 0 ? (
+              {ticketsLoading ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-500 text-center">Getting your tickets…</p>
+                  {[1, 2, 3].map((i) => (
+                    <TicketCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : tickets.length === 0 ? (
               <div className="bg-bg-card rounded-lg p-12 text-center border border-border-default">
                 <div className="flex justify-center mb-4">
                   <Icons.Ticket className="h-16 w-16 text-text-secondary opacity-50" />
                 </div>
-                <p className="text-text-secondary text-lg mb-2">No tickets yet</p>
-                <p className="text-text-muted text-sm">Register for events to get your tickets!</p>
+                  <p className="text-text-secondary text-lg mb-2">No events yet</p>
                 <button
                   onClick={() => setActiveTab("explore")}
                   className="mt-4 bg-primary text-text-inverse px-6 py-2 rounded-lg hover:bg-primaryHover transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
@@ -1308,8 +1541,8 @@ export default function StudentDashboard() {
 
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default pb-[env(safe-area-inset-bottom)]">
+      {/* Bottom Navigation - Mobile Only */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 px-2 py-2">
           {[
             { id: "home", icon: <Icons.Home className="h-5 w-5" />, label: "Home" },

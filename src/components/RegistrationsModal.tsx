@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { Skeleton } from "./skeletons";
 
 type Registration = {
   student_email: string;
@@ -121,11 +122,14 @@ export function RegistrationsModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
-                <p className="text-purple-300">Loading registrations...</p>
-              </div>
+            <div className="space-y-3">
+              <p className="text-sm text-purple-300 text-center">Loading events…</p>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-purple-900/10 border border-purple-500/20 rounded-lg p-4">
+                  <Skeleton className="w-1/2 h-4" variant="text" />
+                  <Skeleton className="w-1/3 h-3 mt-2" variant="text" />
+                </div>
+              ))}
             </div>
           ) : error ? (
             <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">

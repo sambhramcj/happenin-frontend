@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import FestDetails from "@/components/FestDetails";
 import { Icons } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Skeleton } from "@/components/skeletons";
 
 export default function FestDetailPage() {
   const { data: session, status } = useSession();
@@ -21,9 +22,15 @@ export default function FestDetailPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-        <div className="animate-spin">
-          <Icons.Loader2 className="h-8 w-8 text-primary" />
+      <div className="min-h-screen bg-bg-primary p-6 space-y-6">
+        <p className="text-sm text-text-muted text-center">Loading events…</p>
+        <div className="bg-bg-card rounded-xl border border-border-default overflow-hidden">
+          <Skeleton className="w-full h-48" />
+          <div className="p-6 space-y-3">
+            <Skeleton className="w-2/3 h-6" variant="text" />
+            <Skeleton className="w-full h-4" variant="text" />
+            <Skeleton className="w-1/2 h-4" variant="text" />
+          </div>
         </div>
       </div>
     );

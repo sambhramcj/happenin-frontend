@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { HomeExploreSkeleton } from "@/components/skeletons";
 
 export default function DashboardRedirect() {
   const { data: session, status } = useSession();
@@ -30,11 +31,8 @@ export default function DashboardRedirect() {
   }, [session, status, router]);
 
   return (
-    <div className="min-h-screen bg-[#0f0519] flex items-center justify-center">
-      <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
-        <p className="text-purple-300 text-lg">Loading your dashboard...</p>
-      </div>
+    <div className="min-h-screen bg-bg-muted">
+      <HomeExploreSkeleton />
     </div>
   );
 }

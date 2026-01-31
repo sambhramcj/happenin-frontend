@@ -6,6 +6,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { CollegeCard } from './CollegeCard';
 import { RadiusSelector } from './RadiusSelector';
 import { Icons } from './icons';
+import { Skeleton } from './skeletons';
 import { toast } from 'sonner';
 
 interface College {
@@ -52,9 +53,21 @@ export function NearbyColleges() {
 
   if (geoLoading) {
     return (
-      <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand mb-4"></div>
-        <p className="text-text-muted">Getting your location...</p>
+      <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+        <p className="text-sm text-text-muted text-center mb-4">Loading events…</p>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-bg-muted rounded-lg p-4 border border-border-default">
+              <div className="flex gap-3">
+                <Skeleton className="w-14 h-14 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="w-1/2 h-4" variant="text" />
+                  <Skeleton className="w-1/3 h-3" variant="text" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -96,9 +109,19 @@ export function NearbyColleges() {
         <RadiusSelector value={radius} onChange={setRadius} className="mb-6" />
 
         {loading ? (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand mb-4"></div>
-            <p className="text-text-muted">Loading colleges...</p>
+          <div className="space-y-3">
+            <p className="text-sm text-text-muted text-center">Loading events…</p>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-bg-muted rounded-lg p-4 border border-border-default">
+                <div className="flex gap-3">
+                  <Skeleton className="w-14 h-14 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="w-1/2 h-4" variant="text" />
+                    <Skeleton className="w-1/3 h-3" variant="text" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : colleges.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

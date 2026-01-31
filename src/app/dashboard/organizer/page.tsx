@@ -10,6 +10,8 @@ import AttendanceModal from "@/components/AttendanceModal";
 import EventSubmitToFest from "@/components/EventSubmitToFest";
 import { Icons } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DashboardEventListSkeleton, DashboardStatsSkeleton } from "@/components/skeletons";
+import { LoadingButton } from "@/components/LoadingButton";
 
 type EligibleMember = {
   name: string;
@@ -54,6 +56,7 @@ export default function OrganizerDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [allRegistrations, setAllRegistrations] = useState<Registration[]>([]);
   const [selectedEventForRegs, setSelectedEventForRegs] = useState<string>("");
+  const [dashboardLoading, setDashboardLoading] = useState(true);
 
   // Event form states
   const [title, setTitle] = useState("");
@@ -133,10 +136,18 @@ export default function OrganizerDashboard() {
       return;
     }
 
-    fetchEvents();
-    fetchAllRegistrations();
-    fetchSponsorships();
-    fetchApprovedVolunteers();
+    const loadDashboard = async () => {
+      setDashboardLoading(true);
+      await Promise.all([
+        fetchEvents(),
+        fetchAllRegistrations(),
+        fetchSponsorships(),
+        fetchApprovedVolunteers(),
+      ]);
+      setDashboardLoading(false);
+    };
+
+    loadDashboard();
   }, [session, status, router]);
 
   async function fetchEvents() {
@@ -517,11 +528,9 @@ export default function OrganizerDashboard() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-brand mb-4"></div>
-          <p className="text-text-secondary text-lg">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-bg-muted p-6 space-y-6">
+        <DashboardStatsSkeleton />
+        <DashboardEventListSkeleton />
       </div>
     );
   }
@@ -556,9 +565,15 @@ export default function OrganizerDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* DASHBOARD TAB */}
         {activeTab === "dashboard" && (
-          <div className="space-y-8">
-            {/* Live Snapshot */}
-            <section>
+          dashboardLoading ? (
+            <div className="space-y-6">
+              <DashboardStatsSkeleton />
+              <DashboardEventListSkeleton />
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Live Snapshot */}
+              <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <Icons.Gauge className="h-5 w-5 text-primary" /> Live Snapshot
               </h2>
@@ -638,8 +653,9 @@ export default function OrganizerDashboard() {
                   })}
                 </div>
               )}
-            </section>
-          </div>
+              </section>
+            </div>
+          )
         )}
 
         {/* EVENTS TAB */}
@@ -762,13 +778,15 @@ export default function OrganizerDashboard() {
                   </div>
                 )}
 
-                <button
+                <LoadingButton
                   onClick={handleCreateEvent}
                   disabled={uploadingImage}
+                  loading={uploadingImage}
+                  loadingText="Uploading image…"
                   className="w-full bg-gradient-to-r from-brand to-pink-600 text-text-inverse py-3 rounded-lg hover:from-violet-800 hover:to-pink-500 transition-all font-semibold disabled:opacity-50"
                 >
-                  {uploadingImage ? "Uploading..." : "Create Event"}
-                </button>
+                  Create Event
+                </LoadingButton>
               </div>
             )}
 
@@ -1064,20 +1082,22 @@ export default function OrganizerDashboard() {
 
                                 {app.status === "pending" && (
                                   <div className="flex flex-col gap-2 md:flex-row">
-                                    <button
+                                    <LoadingButton
                                       onClick={() => handleVolunteerResponse(app.id, "accepted")}
                                       disabled={processingVolunteerId === app.id}
+                                      loading={processingVolunteerId === app.id}
                                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                     >
-                                      {processingVolunteerId === app.id ? "..." : "✓ Accept"}
-                                    </button>
-                                    <button
+                                      ✓ Accept
+                                    </LoadingButton>
+                                    <LoadingButton
                                       onClick={() => handleVolunteerResponse(app.id, "rejected")}
                                       disabled={processingVolunteerId === app.id}
+                                      loading={processingVolunteerId === app.id}
                                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                     >
-                                      {processingVolunteerId === app.id ? "..." : "✕ Reject"}
-                                    </button>
+                                      ✕ Reject
+                                    </LoadingButton>
                                   </div>
                                 )}
 

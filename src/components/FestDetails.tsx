@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Icons } from "@/components/icons";
+import { Skeleton } from "@/components/skeletons";
 
 interface Fest {
   id: string;
@@ -208,10 +209,15 @@ export default function FestDetails({ festId, onClose }: FestDetailsProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-3"></div>
-          <p className="text-text-secondary">Loading fest...</p>
+      <div className="space-y-4 py-6">
+        <p className="text-sm text-text-muted text-center">Loading events…</p>
+        <div className="bg-bg-card rounded-xl border border-border-default overflow-hidden">
+          <Skeleton className="w-full h-48" />
+          <div className="p-6 space-y-3">
+            <Skeleton className="w-2/3 h-6" variant="text" />
+            <Skeleton className="w-full h-4" variant="text" />
+            <Skeleton className="w-1/2 h-4" variant="text" />
+          </div>
         </div>
       </div>
     );

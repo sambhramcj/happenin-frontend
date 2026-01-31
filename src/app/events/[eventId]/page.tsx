@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Icons } from "@/components/icons";
+import { EventDetailSkeleton } from "@/components/skeletons";
+import { LoadingButton } from "@/components/LoadingButton";
 import EventPhotoUpload from "@/components/EventPhotoUpload";
 import EventPhotoGallery from "@/components/EventPhotoGallery";
 
@@ -97,11 +99,8 @@ export default function EventDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p className="text-text-secondary">Loading event...</p>
-        </div>
+      <div className="min-h-screen bg-bg-muted">
+        <EventDetailSkeleton />
       </div>
     );
   }
@@ -284,13 +283,15 @@ export default function EventDetailPage() {
                       className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary"
                       rows={4}
                     />
-                    <button
+                    <LoadingButton
                       onClick={handleVolunteerApply}
                       disabled={volunteering || !selectedRole || hasApplied}
+                      loading={volunteering}
+                      loadingText="Submitting application…"
                       className="w-full bg-gradient-to-r from-primary to-primaryHover text-text-inverse py-3 rounded-lg font-semibold hover:from-primaryHover hover:to-primary transition-all disabled:opacity-50"
                     >
                       {hasApplied ? "Application Submitted ✓" : "Submit Application"}
-                    </button>
+                    </LoadingButton>
                   </div>
                 )}
               </div>

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Providers from "./providers";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { OfflineRetryBanner } from "@/components/OfflineRetryBanner";
+import { SplashScreenWrapper } from "@/components/SplashScreenWrapper";
 
 import "./globals.css";
 
@@ -35,8 +37,11 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          {children}
-          <PWAInstallPrompt />
+            <OfflineRetryBanner />
+          <SplashScreenWrapper>
+            {children}
+            <PWAInstallPrompt />
+          </SplashScreenWrapper>
         </Providers>
       </body>
     </html>

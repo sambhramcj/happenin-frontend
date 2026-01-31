@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Icons } from './icons';
+import { Skeleton } from './skeletons';
 
 interface EventLocation {
   id: string;
@@ -24,10 +25,15 @@ export function GeographicHeatmap({ events }: GeographicHeatmapProps) {
 
   if (!mounted) {
     return (
-      <div className="w-full h-96 bg-bg-muted rounded-xl flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand mb-4"></div>
-          <p className="text-text-muted">Loading map...</p>
+      <div className="w-full h-96 bg-bg-muted rounded-xl p-6">
+        <p className="text-sm text-text-muted text-center mb-4">Loading events…</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="bg-bg-card rounded-lg p-4 border border-border-default">
+              <Skeleton className="w-1/2 h-4" variant="text" />
+              <Skeleton className="w-1/3 h-3 mt-2" variant="text" />
+            </div>
+          ))}
         </div>
       </div>
     );

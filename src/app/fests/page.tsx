@@ -8,6 +8,7 @@ import FestCreate from "@/components/FestCreate";
 import FestDetails from "@/components/FestDetails";
 import { Icons } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Skeleton } from "@/components/skeletons";
 
 interface Fest {
   id: string;
@@ -59,10 +60,20 @@ export default function FestsPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p className="text-text-secondary">Loading...</p>
+      <div className="min-h-screen bg-bg-muted p-6 space-y-6">
+        <p className="text-sm text-text-muted text-center">Loading events…</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-bg-card rounded-xl border border-border-default overflow-hidden">
+              <Skeleton className="w-full h-40" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="w-2/3 h-5" variant="text" />
+                <Skeleton className="w-full h-4" variant="text" />
+                <Skeleton className="w-1/2 h-4" variant="text" />
+                <Skeleton className="w-24 h-8 rounded-lg" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

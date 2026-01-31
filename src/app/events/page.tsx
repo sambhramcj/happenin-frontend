@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { NearbyEvents } from "@/components/NearbyEvents";
 import { NearbyColleges } from "@/components/NearbyColleges";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Skeleton } from "@/components/skeletons";
 
 interface Event {
   id: string;
@@ -146,8 +147,27 @@ export default function EventsPage() {
 
         {/* Events Grid */}
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 dark:border-purple-400"></div>
+          <div className="space-y-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">Loading events…</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="p-6 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <Skeleton className="w-2/3 h-6" variant="text" />
+                      <Skeleton className="w-16 h-6 rounded-full" />
+                    </div>
+                    <Skeleton className="w-full h-4" variant="text" />
+                    <Skeleton className="w-5/6 h-4" variant="text" />
+                    <div className="space-y-2">
+                      <Skeleton className="w-1/2 h-4" variant="text" />
+                      <Skeleton className="w-2/3 h-4" variant="text" />
+                    </div>
+                    <Skeleton className="w-full h-10 rounded-lg" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : filteredEvents.length === 0 ? (
           <div className="text-center py-20">

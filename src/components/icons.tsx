@@ -45,6 +45,8 @@ import {
   Check,
   Tag,
   AlertCircle,
+  Lock,
+  WifiOff,
 } from "lucide-react";
 
 export const Icons = {
@@ -94,6 +96,8 @@ export const Icons = {
   Check,
   Tag,
   AlertCircle,
+  Lock,
+  WifiOff,
 };
 
 export type IconKey = keyof typeof Icons;

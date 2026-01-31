@@ -5,6 +5,7 @@ import { getNearbyColleges } from '@/lib/geolocation';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { RadiusSelector } from './RadiusSelector';
 import { Icons } from './icons';
+import { Skeleton } from './skeletons';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -132,9 +133,20 @@ export function NearbyEvents() {
         <RadiusSelector value={radius} onChange={setRadius} className="mb-6" />
 
         {loading ? (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand mb-4"></div>
-            <p className="text-text-muted">Loading events...</p>
+          <div className="space-y-4">
+            <p className="text-sm text-text-muted text-center">Loading events…</p>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-bg-muted rounded-xl p-4 border border-border-default">
+                <div className="flex gap-4">
+                  <Skeleton className="w-24 h-24 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="w-2/3 h-4" variant="text" />
+                    <Skeleton className="w-full h-4" variant="text" />
+                    <Skeleton className="w-1/3 h-3" variant="text" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : events.length > 0 ? (
           <div className="space-y-4">

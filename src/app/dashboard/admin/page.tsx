@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Icons } from "@/components/icons";
 import { RevenueChart, UserGrowthChart } from "@/components/Charts";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AdminTableSkeleton, AdminTimelineSkeleton } from "@/components/skeletons";
 import dynamic from "next/dynamic";
 
 // Dynamic import for GeographicHeatmap to avoid SSR issues
@@ -287,11 +288,9 @@ export default function AdminDashboard() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-brand mb-4"></div>
-          <p className="text-text-secondary text-lg">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-bg-muted p-6 space-y-6">
+        <AdminTableSkeleton />
+        <AdminTimelineSkeleton />
       </div>
     );
   }

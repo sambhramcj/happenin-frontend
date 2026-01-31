@@ -116,7 +116,7 @@ export default function EventPhotoUpload({ eventId, onUploadSuccess }: EventPhot
           disabled={uploading || selectedFiles.length === 0}
           className="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {uploading ? "Uploading..." : `Upload ${selectedFiles.length} Photo(s)`}
+          {uploading ? "Uploading image…" : `Upload ${selectedFiles.length} Photo(s)`}
         </button>
       </div>
     </div>

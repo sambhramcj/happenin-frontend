@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Eye, Check, X, AlertCircle } from 'lucide-react';
+import { Skeleton } from './skeletons';
 
 interface PastCertificate {
   id: string;
@@ -120,8 +121,17 @@ export default function VolunteerApplicationsWithCertificates({ eventId }: Compo
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Loading applications...</p>
+      <div className="space-y-4 py-6">
+        <p className="text-sm text-gray-600 text-center">Loading events…</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
+              <Skeleton className="w-1/2 h-5" variant="text" />
+              <Skeleton className="w-2/3 h-4 mt-2" variant="text" />
+              <Skeleton className="w-1/3 h-3 mt-2" variant="text" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
