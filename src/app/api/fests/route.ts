@@ -100,8 +100,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/fests/[festId] - Update fest
 export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { festId: string } }
+  req: NextRequest
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -109,14 +108,21 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { title, description, bannerImage, startDate, endDate, location, status } =
+    const { festId, title, description, bannerImage, startDate, endDate, location, status } =
       await req.json();
+
+    if (!festId) {
+      return NextResponse.json(
+        { error: "Fest ID is required" },
+        { status: 400 }
+      );
+    }
 
     // Check if user is fest leader
     const { data: fest } = await supabase
       .from("fests")
       .select("core_team_leader_email")
-      .eq("id", params.festId)
+      .eq("id", festId)
       .single();
 
     if (!fest || fest.core_team_leader_email !== session.user.email) {
@@ -138,7 +144,7 @@ export async function PATCH(
     const { data: updated, error } = await supabase
       .from("fests")
       .update(updateData)
-      .eq("id", params.festId)
+      .eq("id", festId)
       .select()
       .single();
 

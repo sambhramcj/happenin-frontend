@@ -13,13 +13,14 @@ export const dynamic = "force-dynamic";
 // GET /api/fests/[festId]/members - List fest members
 export async function GET(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
+    const { festId } = await params;
     const { data, error } = await supabase
       .from("fest_members")
       .select("*")
-      .eq("fest_id", params.festId)
+      .eq("fest_id", festId)
       .order("role", { ascending: false });
 
     if (error) throw error;
@@ -37,9 +38,10 @@ export async function GET(
 // POST /api/fests/[festId]/members - Add member to fest
 export async function POST(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
+    const { festId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -58,7 +60,7 @@ export async function POST(
     const { data: fest } = await supabase
       .from("fests")
       .select("core_team_leader_email")
-      .eq("id", params.festId)
+      .eq("id", festId)
       .single();
 
     if (!fest || fest.core_team_leader_email !== session.user.email) {
@@ -71,7 +73,7 @@ export async function POST(
     const { data: member, error } = await supabase
       .from("fest_members")
       .insert({
-        fest_id: params.festId,
+        fest_id: festId,
         member_email: memberEmail,
         role,
       })
@@ -101,9 +103,10 @@ export async function POST(
 // DELETE /api/fests/[festId]/members/[memberEmail] - Remove member from fest
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
+    const { festId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -122,7 +125,7 @@ export async function DELETE(
     const { data: fest } = await supabase
       .from("fests")
       .select("core_team_leader_email")
-      .eq("id", params.festId)
+      .eq("id", festId)
       .single();
 
     if (!fest || fest.core_team_leader_email !== session.user.email) {
@@ -135,7 +138,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("fest_members")
       .delete()
-      .eq("fest_id", params.festId)
+      .eq("fest_id", festId)
       .eq("member_email", memberEmail);
 
     if (error) throw error;

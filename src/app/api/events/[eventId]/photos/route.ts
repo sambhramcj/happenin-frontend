@@ -9,9 +9,10 @@ const supabase = createClient(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,7 +22,7 @@ export async function GET(
     const { data: eventData } = await supabase
       .from("events")
       .select("id, organizer_email")
-      .eq("id", params.eventId)
+      .eq("id", eventId)
       .single();
 
     if (!eventData) {
@@ -32,7 +33,7 @@ export async function GET(
     const { data: registration } = await supabase
       .from("registrations")
       .select("id")
-      .eq("event_id", params.eventId)
+      .eq("event_id", eventId)
       .eq("student_email", session.user.email)
       .single();
 
@@ -49,7 +50,7 @@ export async function GET(
     const { data, error } = await supabase
       .from("event_photos")
       .select("*")
-      .eq("event_id", params.eventId)
+      .eq("event_id", eventId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -66,9 +67,10 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,7 +80,7 @@ export async function POST(
     const { data: eventData, error: eventError } = await supabase
       .from("events")
       .select("organizer_email")
-      .eq("id", params.eventId)
+      .eq("id", eventId)
       .single();
 
     if (eventError || !eventData) {
@@ -98,7 +100,7 @@ export async function POST(
     const { data, error } = await supabase
       .from("event_photos")
       .insert({
-        event_id: params.eventId,
+        event_id: eventId,
         photo_url: photoUrl,
         uploaded_by: session.user.email,
         description,

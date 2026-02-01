@@ -10,7 +10,7 @@ export default function DashboardHeader() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: "/auth" });
+    signOut({ callbackUrl: "/" });
   };
 
   return (

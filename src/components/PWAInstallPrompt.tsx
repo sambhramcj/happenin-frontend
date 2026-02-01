@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Icons } from "@/components/icons";
 import { toast } from "sonner";
 
@@ -10,9 +11,11 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function PWAInstallPrompt() {
+  const { data: session } = useSession();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
+  const isAuthed = Boolean(session?.user);
 
   useEffect(() => {
     // Register service worker
@@ -36,7 +39,6 @@ export function PWAInstallPrompt() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setShowPrompt(true);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -45,6 +47,20 @@ export function PWAInstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
+
+  useEffect(() => {
+    if (isInstalled || !deferredPrompt) return;
+    if (typeof window === "undefined") return;
+    const key = isAuthed ? "pwaPromptShownAuth" : "pwaPromptShownAnon";
+    const hasShown = window.localStorage.getItem(key) === "true";
+    setShowPrompt(!hasShown);
+  }, [deferredPrompt, isAuthed, isInstalled]);
+
+  const markShown = () => {
+    if (typeof window === "undefined") return;
+    const key = isAuthed ? "pwaPromptShownAuth" : "pwaPromptShownAnon";
+    window.localStorage.setItem(key, "true");
+  };
 
   const handleInstall = async () => {
     if (!deferredPrompt) {
@@ -63,6 +79,7 @@ export function PWAInstallPrompt() {
 
       setDeferredPrompt(null);
       setShowPrompt(false);
+      markShown();
     } catch (error) {
       console.error("Installation failed:", error);
       toast.error("Installation failed");
@@ -89,7 +106,10 @@ export function PWAInstallPrompt() {
               Install
             </button>
             <button
-              onClick={() => setShowPrompt(false)}
+              onClick={() => {
+                setShowPrompt(false);
+                markShown();
+              }}
               className="flex-1 bg-bg-muted text-text-primary py-2 rounded-lg hover:bg-border-default transition-all font-medium text-sm"
             >
               Later
@@ -97,7 +117,10 @@ export function PWAInstallPrompt() {
           </div>
         </div>
         <button
-          onClick={() => setShowPrompt(false)}
+          onClick={() => {
+            setShowPrompt(false);
+            markShown();
+          }}
           className="text-text-secondary hover:text-text-primary mt-1"
         >
           <Icons.X className="h-5 w-5" />

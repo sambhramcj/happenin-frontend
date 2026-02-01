@@ -12,7 +12,7 @@ export function SkeletonTest() {
     <div>
       <Skeleton className="h-4 w-32" />
       <EventCardSkeleton />
-      <DashboardStatsSkeleton count={3} />
+      <DashboardStatsSkeleton />
     </div>
   );
 }

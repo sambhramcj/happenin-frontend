@@ -9,13 +9,6 @@ import { Icons } from "@/components/icons";
 import { RevenueChart, UserGrowthChart } from "@/components/Charts";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AdminTableSkeleton, AdminTimelineSkeleton } from "@/components/skeletons";
-import dynamic from "next/dynamic";
-
-// Dynamic import for GeographicHeatmap to avoid SSR issues
-const GeographicHeatmap = dynamic(
-  () => import('@/components/GeographicHeatmap').then(mod => mod.GeographicHeatmap),
-  { ssr: false }
-);
 
 interface DashboardMetrics {
   totalRevenue: number;
@@ -698,19 +691,6 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                {/* Geographic Heatmap */}
-                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">Event Geographic Distribution</h3>
-                  <GeographicHeatmap 
-                    events={eventPerformance.map((e: any) => ({
-                      id: e.eventId,
-                      title: e.eventTitle,
-                      latitude: 20.5937 + (Math.random() * 15), // Replace with actual lat/lng
-                      longitude: 78.9629 + (Math.random() * 15),
-                      registrationCount: e.registrations,
-                    }))}
-                  />
-                </div>
               </div>
             )}
 

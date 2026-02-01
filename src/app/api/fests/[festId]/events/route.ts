@@ -13,16 +13,17 @@ export const dynamic = "force-dynamic";
 // GET /api/fests/[festId]/events - Get all events in fest
 export async function GET(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
+    const { festId } = await params;
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status"); // pending, approved, rejected
 
     let query = supabase
       .from("fest_events")
       .select("*, events(*)")
-      .eq("fest_id", params.festId)
+      .eq("fest_id", festId)
       .order("requested_at", { ascending: false });
 
     if (status) {
@@ -46,9 +47,10 @@ export async function GET(
 // POST /api/fests/[festId]/events - Submit event to fest
 export async function POST(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
+    const { festId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -67,7 +69,7 @@ export async function POST(
     const { data: fest, error: festError } = await supabase
       .from("fests")
       .select("id")
-      .eq("id", params.festId)
+      .eq("id", festId)
       .single();
 
     if (festError || !fest) {
@@ -78,7 +80,7 @@ export async function POST(
     const { data: festEvent, error } = await supabase
       .from("fest_events")
       .insert({
-        fest_id: params.festId,
+        fest_id: festId,
         event_id: eventId,
         submitted_by_email: session.user.email,
         approval_status: "pending",
@@ -109,9 +111,10 @@ export async function POST(
 // PATCH /api/fests/[festId]/events/[festEventId]/approve - Approve event
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
+    const { festId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -130,7 +133,7 @@ export async function PATCH(
     const { data: fest } = await supabase
       .from("fests")
       .select("core_team_leader_email")
-      .eq("id", params.festId)
+      .eq("id", festId)
       .single();
 
     if (!fest || fest.core_team_leader_email !== session.user.email) {
@@ -154,7 +157,7 @@ export async function PATCH(
       .from("fest_events")
       .update(updateData)
       .eq("id", festEventId)
-      .eq("fest_id", params.festId)
+      .eq("fest_id", festId)
       .select()
       .single();
 
@@ -173,9 +176,10 @@ export async function PATCH(
 // DELETE /api/fests/[festId]/events/[festEventId] - Remove event from fest
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
+    const { festId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -194,7 +198,7 @@ export async function DELETE(
     const { data: fest } = await supabase
       .from("fests")
       .select("core_team_leader_email")
-      .eq("id", params.festId)
+      .eq("id", festId)
       .single();
 
     const { data: festEvent } = await supabase
@@ -225,7 +229,7 @@ export async function DELETE(
       .from("fest_events")
       .delete()
       .eq("id", festEventId)
-      .eq("fest_id", params.festId);
+      .eq("fest_id", festId);
 
     if (error) throw error;
 

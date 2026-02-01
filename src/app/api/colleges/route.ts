@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       .order('name')
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%`)
+      query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%`)
     }
 
     if (state) {

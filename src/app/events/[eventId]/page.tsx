@@ -7,8 +7,7 @@ import { toast } from "sonner";
 import { Icons } from "@/components/icons";
 import { EventDetailSkeleton } from "@/components/skeletons";
 import { LoadingButton } from "@/components/LoadingButton";
-import EventPhotoUpload from "@/components/EventPhotoUpload";
-import EventPhotoGallery from "@/components/EventPhotoGallery";
+
 
 interface Event {
   id: string;
@@ -38,7 +37,7 @@ export default function EventDetailPage() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "volunteers" | "photos">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "volunteers">("overview");
   const [volunteering, setVolunteering] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
   const [volunteerMessage, setVolunteerMessage] = useState("");
@@ -183,7 +182,6 @@ export default function EventDetailPage() {
         <div className="flex gap-2 border-b border-border-default mb-6 bg-bg-card rounded-t-lg p-3">
           {[
             { id: "overview", label: "Overview", icon: Icons.Info },
-            { id: "photos", label: "Photos", icon: Icons.Camera },
             { id: "volunteers", label: "Volunteer", icon: Icons.Award },
           ].map(({ id, label, icon: Icon }: any) => (
             <button
@@ -224,22 +222,7 @@ export default function EventDetailPage() {
           </div>
         )}
 
-        {/* Photos Tab */}
-        {activeTab === "photos" && (
-          <div className="space-y-6">
-            {(session?.user as any)?.role === "student" && (
-              <div className="bg-bg-card rounded-lg p-6 border border-border-default">
-                <h3 className="text-lg font-bold text-text-primary mb-4">Upload Photos</h3>
-                <EventPhotoUpload eventId={eventId} onUploadSuccess={() => {}} />
-              </div>
-            )}
 
-            <div className="bg-bg-card rounded-lg p-6 border border-border-default">
-              <h3 className="text-lg font-bold text-text-primary mb-4">Event Gallery</h3>
-              <EventPhotoGallery eventId={eventId} />
-            </div>
-          </div>
-        )}
 
         {/* Volunteers Tab */}
         {activeTab === "volunteers" && (

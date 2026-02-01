@@ -18,16 +18,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { NearbyEvents } from "@/components/NearbyEvents";
 import { NearbyColleges } from "@/components/NearbyColleges";
 import CertificateComponent from "@/components/CertificateComponent";
-import dynamic from "next/dynamic";
 import { HomeExploreSkeleton, TicketCardSkeleton, Skeleton } from "@/components/skeletons";
 import { PaymentLoading } from "@/components/PaymentLoading";
 import { LoadingButton } from "@/components/LoadingButton";
-
-// Dynamic import for map to avoid SSR issues
-const CollegeEventsMap = dynamic(
-  () => import("@/components/CollegeEventsMap").then(mod => mod.CollegeEventsMap),
-  { ssr: false }
-);
 
 type Membership = {
   club: string;
@@ -643,38 +636,6 @@ export default function StudentDashboard() {
     }
   }
 
-  // Get event locations for map
-  function getEventLocations() {
-    return events
-      .filter(event => {
-        // Parse location for coordinates
-        const location = event.location || "";
-        // Check if location contains coordinates pattern (lat, long)
-        return location.includes(",") || event.location;
-      })
-      .map(event => {
-        // Mock coordinates based on college/location
-        // In production, you'd store actual lat/long in database
-        const locationHash = event.location.split("").reduce((a, b) => {
-          a = ((a << 5) - a) + b.charCodeAt(0);
-          return a & a;
-        }, 0);
-        
-        // India coordinates range: lat 8-37, long 68-97
-        const latitude = 15 + (Math.abs(locationHash % 1000) / 1000) * 20;
-        const longitude = 72 + (Math.abs(locationHash % 2000) / 2000) * 20;
-        
-        return {
-          id: event.id,
-          title: event.title,
-          college: event.location,
-          latitude,
-          longitude,
-          date: event.date,
-          price: event.price,
-        };
-      });
-  }
 
   const profileCompletion = profile ? 
     (Object.keys({ full_name: 1, dob: 1, college_name: 1, college_email: 1 })
@@ -1100,14 +1061,6 @@ export default function StudentDashboard() {
             {/* Nearby Subtab */}
             {exploreSubTab === "nearby" && (
               <div className="space-y-6">
-                <section>
-                  <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                    <Icons.MapPin className="h-5 w-5 text-primary" /> Nearby Events
-                  </h2>
-                  <CollegeEventsMap 
-                    events={getEventLocations()} 
-                  />
-                </section>
                 <NearbyEvents />
                 <NearbyColleges />
               </div>
@@ -1450,7 +1403,7 @@ export default function StudentDashboard() {
                 </span>
               </button>
               <button
-                onClick={() => signOut()}
+                onClick={() => signOut({ callbackUrl: "/" })}
                 className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-error hover:bg-errorSoft transition-all transition-all duration-fast ease-standard"
               >
                 <span className="flex items-center gap-2">

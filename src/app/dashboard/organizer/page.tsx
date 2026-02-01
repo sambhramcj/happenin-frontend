@@ -1550,7 +1550,7 @@ export default function OrganizerDashboard() {
                 </span>
               </button>
               <button
-                onClick={() => signOut()}
+                onClick={() => signOut({ callbackUrl: "/" })}
                 className="w-full text-left px-4 py-3 bg-bg-muted rounded-lg text-error hover:bg-errorSoft transition-all transition-all duration-fast ease-standard"
               >
                 <span className="flex items-center gap-2">

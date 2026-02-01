@@ -9,9 +9,10 @@ const supabase = createClient(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,7 +21,7 @@ export async function PUT(
     const { data, error } = await supabase
       .from("push_notifications")
       .update({ is_read: true })
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("recipient_email", session.user.email)
       .select();
 
@@ -41,9 +42,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -52,7 +54,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("push_notifications")
       .delete()
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("recipient_email", session.user.email);
 
     if (error) throw error;

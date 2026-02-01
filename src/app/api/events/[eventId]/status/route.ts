@@ -10,15 +10,14 @@ const supabase = createClient(
 // GET event cancellation/rescheduling history
 export async function GET(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const eventId = params.eventId;
 
     // Get event to verify organizer
     const { data: event, error: eventError } = await supabase
@@ -80,15 +79,14 @@ export async function GET(
 // PATCH: Reschedule event
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const eventId = params.eventId;
     const body = await req.json();
     const { newDate, newTime, newVenue, reason } = body;
 
@@ -212,15 +210,15 @@ export async function PATCH(
 // DELETE: Cancel event
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const eventId = params.eventId;
     const body = await req.json();
     const { cancellationReason, refundProcessing } = body;
 

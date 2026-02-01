@@ -9,13 +9,14 @@ const supabase = createClient(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const { data, error } = await supabase
       .from("custom_registration_fields")
       .select("*")
-      .eq("event_id", params.eventId)
+      .eq("event_id", eventId)
       .order("display_order", { ascending: true });
 
     if (error) throw error;
@@ -32,9 +33,10 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,7 +46,7 @@ export async function POST(
     const { data: eventData, error: eventError } = await supabase
       .from("events")
       .select("organizer_email")
-      .eq("id", params.eventId)
+      .eq("id", eventId)
       .single();
 
     if (eventError || !eventData) {
@@ -64,7 +66,7 @@ export async function POST(
     const { data, error } = await supabase
       .from("custom_registration_fields")
       .insert({
-        event_id: params.eventId,
+        event_id: eventId,
         field_name: fieldName,
         field_type: fieldType,
         is_required: isRequired || false,

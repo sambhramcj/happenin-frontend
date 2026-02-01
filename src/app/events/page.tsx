@@ -24,7 +24,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "free" | "paid">("all");
-  const [activeTab, setActiveTab] = useState<"all" | "nearby" | "colleges">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "nearby">("all");
 
   useEffect(() => {
     fetchEvents();
@@ -60,7 +60,7 @@ export default function EventsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="flex justify-between items-center px-6 py-4 max-w-7xl mx-auto border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <header className="flex justify-between items-center px-6 py-4 w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <button
           onClick={() => router.push("/")}
           className="text-2xl font-bold text-purple-600 dark:text-purple-400"
@@ -109,23 +109,17 @@ export default function EventsPage() {
                 : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
           >
-            📍 Nearby Events
-          </button>
-          <button
-            onClick={() => setActiveTab("colleges")}
-            className={`px-6 py-3 font-medium transition-all border-b-2 ${
-              activeTab === "colleges"
-                ? "border-purple-600 text-purple-600 dark:text-purple-400"
-                : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            🏫 Nearby Colleges
+            Nearby
           </button>
         </div>
 
         {/* Tab Content */}
-        {activeTab === "nearby" && <NearbyEvents />}
-        {activeTab === "colleges" && <NearbyColleges />}
+        {activeTab === "nearby" && (
+          <div className="space-y-10">
+            <NearbyEvents />
+            <NearbyColleges />
+          </div>
+        )}
         {activeTab === "all" && (
           <>
             {/* Filters */}

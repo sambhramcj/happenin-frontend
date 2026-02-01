@@ -9,13 +9,14 @@ const supabase = createClient(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const { data, error } = await supabase
       .from("event_brochures")
       .select("*")
-      .eq("event_id", params.eventId)
+      .eq("event_id", eventId)
       .single();
 
     if (error && error.code !== "PGRST116") throw error; // PGRST116 is "no rows"
@@ -38,9 +39,10 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -50,7 +52,7 @@ export async function POST(
     const { data: eventData, error: eventError } = await supabase
       .from("events")
       .select("organizer_email")
-      .eq("id", params.eventId)
+      .eq("id", eventId)
       .single();
 
     if (eventError || !eventData) {
@@ -71,13 +73,13 @@ export async function POST(
     await supabase
       .from("event_brochures")
       .delete()
-      .eq("event_id", params.eventId);
+      .eq("event_id", eventId);
 
     // Insert new brochure
     const { data, error } = await supabase
       .from("event_brochures")
       .insert({
-        event_id: params.eventId,
+        event_id: eventId,
         file_url: fileUrl,
         file_name: fileName,
         file_size: fileSize,
@@ -99,9 +101,10 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -111,7 +114,7 @@ export async function DELETE(
     const { data: eventData, error: eventError } = await supabase
       .from("events")
       .select("organizer_email")
-      .eq("id", params.eventId)
+      .eq("id", eventId)
       .single();
 
     if (eventError || !eventData) {
@@ -128,7 +131,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("event_brochures")
       .delete()
-      .eq("event_id", params.eventId);
+      .eq("event_id", eventId);
 
     if (error) throw error;
 

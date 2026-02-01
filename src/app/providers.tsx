@@ -26,7 +26,7 @@ export default function Providers({
 }) {
   return (
     <SessionProvider>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <QueryProvider>
           <OfflineBanner />
           {children}

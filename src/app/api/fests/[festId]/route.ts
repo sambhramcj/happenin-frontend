@@ -11,13 +11,14 @@ export const dynamic = "force-dynamic";
 // GET /api/fests/[festId] - Get fest details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
+    const { festId } = await params;
     const { data: fest, error } = await supabase
       .from("fests")
       .select("*")
-      .eq("id", params.festId)
+      .eq("id", festId)
       .single();
 
     if (error || !fest) {

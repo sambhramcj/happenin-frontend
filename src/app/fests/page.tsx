@@ -143,7 +143,7 @@ export default function FestsPage() {
               />
             )}
 
-            {/* Fests Grid */}
+            {/* Fests Carousel */}
             {fests.length === 0 ? (
               <div className="bg-bg-card rounded-xl p-12 text-center border border-border-default">
                 <Icons.Flame className="h-16 w-16 text-text-muted mx-auto mb-4 opacity-50" />
@@ -156,80 +156,97 @@ export default function FestsPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {fests.map((fest) => {
-                  const isActive =
-                    new Date(fest.start_date) <= new Date() &&
-                    new Date() <= new Date(fest.end_date);
-                  const isPast = new Date() > new Date(fest.end_date);
+              <div className="relative">
+                <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+                  <div className="flex gap-6 px-[20%] pb-8">
+                    {fests.map((fest, index) => {
+                      const isActive =
+                        new Date(fest.start_date) <= new Date() &&
+                        new Date() <= new Date(fest.end_date);
+                      const isPast = new Date() > new Date(fest.end_date);
 
-                  return (
-                    <div
-                      key={fest.id}
-                      className="bg-bg-card rounded-xl overflow-hidden border border-border-default hover:shadow-lg transition-shadow cursor-pointer"
-                      onClick={() => setSelectedFestId(fest.id)}
-                    >
-                      {/* Banner */}
-                      {fest.banner_image ? (
-                        <img
-                          src={fest.banner_image}
-                          alt={fest.title}
-                          className="w-full h-40 object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-40 bg-gradient-to-br from-primary/20 to-pink-500/20 flex items-center justify-center">
-                          <Icons.Flame className="h-12 w-12 text-primary/50" />
-                        </div>
-                      )}
-
-                      {/* Content */}
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-bold text-text-primary line-clamp-1 flex-1">
-                            {fest.title}
-                          </h3>
-                          <span
-                            className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border whitespace-nowrap ${
-                              isActive
-                                ? "bg-green-900/20 text-green-400 border-green-700/50"
-                                : isPast
-                                ? "bg-gray-900/20 text-gray-400 border-gray-700/50"
-                                : "bg-blue-900/20 text-blue-400 border-blue-700/50"
-                            }`}
+                      return (
+                        <div
+                          key={fest.id}
+                          className="flex-shrink-0 w-[60%] snap-center transition-all duration-300 hover:scale-[1.02]"
+                        >
+                          <div
+                            className="bg-bg-card rounded-2xl overflow-hidden border border-border-default hover:shadow-2xl transition-all cursor-pointer h-full"
+                            onClick={() => setSelectedFestId(fest.id)}
                           >
-                            {isActive ? "Active" : isPast ? "Ended" : "Upcoming"}
-                          </span>
-                        </div>
+                            {/* Banner */}
+                            {fest.banner_image ? (
+                              <img
+                                src={fest.banner_image}
+                                alt={fest.title}
+                                className="w-full h-64 object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-64 bg-gradient-to-br from-primary/20 to-pink-500/20 flex items-center justify-center">
+                                <Icons.Flame className="h-20 w-20 text-primary/50" />
+                              </div>
+                            )}
 
-                        <p className="text-sm text-text-muted mb-3 line-clamp-2">
-                          {fest.description}
-                        </p>
+                            {/* Content */}
+                            <div className="p-6">
+                              <div className="flex items-start justify-between gap-2 mb-3">
+                                <h3 className="text-2xl font-bold text-text-primary line-clamp-1 flex-1">
+                                  {fest.title}
+                                </h3>
+                                <span
+                                  className={`px-3 py-1 text-sm font-semibold rounded-full border whitespace-nowrap ${
+                                    isActive
+                                      ? "bg-green-900/20 text-green-400 border-green-700/50"
+                                      : isPast
+                                      ? "bg-gray-900/20 text-gray-400 border-gray-700/50"
+                                      : "bg-blue-900/20 text-blue-400 border-blue-700/50"
+                                  }`}
+                                >
+                                  {isActive ? "Active" : isPast ? "Ended" : "Upcoming"}
+                                </span>
+                              </div>
 
-                        <div className="space-y-2 text-xs text-text-secondary mb-3">
-                          <p className="flex items-center gap-1">
-                            <Icons.Calendar className="h-3 w-3" />
-                            {new Date(fest.start_date).toLocaleDateString()} -{" "}
-                            {new Date(fest.end_date).toLocaleDateString()}
-                          </p>
-                          {fest.location && (
-                            <p className="flex items-center gap-1">
-                              <Icons.MapPin className="h-3 w-3" />
-                              {fest.location}
-                            </p>
-                          )}
-                        </div>
+                              <p className="text-text-muted mb-4 line-clamp-3">
+                                {fest.description}
+                              </p>
 
-                        {isLeader(fest) && (
-                          <div className="pt-2 border-t border-border-default">
-                            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
-                              You're the organizer
-                            </span>
+                              <div className="space-y-2 text-sm text-text-secondary mb-4">
+                                <p className="flex items-center gap-2">
+                                  <Icons.Calendar className="h-4 w-4" />
+                                  {new Date(fest.start_date).toLocaleDateString()} -{" "}
+                                  {new Date(fest.end_date).toLocaleDateString()}
+                                </p>
+                                {fest.location && (
+                                  <p className="flex items-center gap-2">
+                                    <Icons.MapPin className="h-4 w-4" />
+                                    {fest.location}
+                                  </p>
+                                )}
+                              </div>
+
+                              {isLeader(fest) && (
+                                <div className="pt-3 border-t border-border-default">
+                                  <span className="text-sm px-3 py-1.5 bg-primary/10 text-primary rounded-lg">
+                                    You're the organizer
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <style jsx>{`
+                  .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                  }
+                  .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                  }
+                `}</style>
               </div>
             )}
           </div>

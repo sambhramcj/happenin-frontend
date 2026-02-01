@@ -195,16 +195,18 @@ export default function AttendanceModal({
                     {attendance.map((record, idx) => (
                       <div
                         key={record.id}
-                        className="bg-[#2d1b4e] border border-purple-500/20 rounded p-3 text-sm"
+                        className="bg-[#2d1b4e] border border-green-500/30 rounded p-3 text-sm flex items-center gap-3"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-purple-300">
+                        <span className="text-lg text-green-400">✓</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-mono text-purple-300 block truncate">
                             {idx + 1}. {record.student_email}
                           </span>
-                          <span className="text-xs text-purple-500">
-                            {new Date(record.scanned_at).toLocaleTimeString()}
-                          </span>
+                          <span className="text-xs text-green-400">Marked Present</span>
                         </div>
+                        <span className="text-xs text-purple-500 whitespace-nowrap ml-2">
+                          {new Date(record.scanned_at).toLocaleTimeString()}
+                        </span>
                       </div>
                     ))}
                   </div>

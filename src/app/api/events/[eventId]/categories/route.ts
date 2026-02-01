@@ -10,10 +10,10 @@ const supabase = createClient(
 // GET event categories
 export async function GET(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const eventId = params.eventId;
+    const { eventId } = await params;
 
     // Get categories for this event
     const { data: categoryMappings, error } = await supabase
@@ -38,15 +38,14 @@ export async function GET(
 // POST: Add category to event
 export async function POST(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const eventId = params.eventId;
     const body = await req.json();
     const { categoryId } = body;
 
@@ -126,15 +125,15 @@ export async function POST(
 // DELETE: Remove category from event
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const eventId = params.eventId;
     const { searchParams } = new URL(req.url);
     const categoryId = searchParams.get("categoryId");
 
