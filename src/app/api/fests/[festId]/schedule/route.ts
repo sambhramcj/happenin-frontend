@@ -8,10 +8,10 @@ const supabase = createClient(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
-    const festId = params.festId;
+    const { festId } = await params;
 
     // Get approved submissions with event details
     const { data: submissions, error: submissionsError } = await supabase

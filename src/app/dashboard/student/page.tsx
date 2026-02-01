@@ -18,6 +18,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { NearbyEvents } from "@/components/NearbyEvents";
 import { NearbyColleges } from "@/components/NearbyColleges";
 import CertificateComponent from "@/components/CertificateComponent";
+import { EventTimelineDisplay } from "@/components/EventTimelineDisplay";
 import { HomeExploreSkeleton, TicketCardSkeleton, Skeleton } from "@/components/skeletons";
 import { PaymentLoading } from "@/components/PaymentLoading";
 import { LoadingButton } from "@/components/LoadingButton";
@@ -36,7 +37,10 @@ type Event = {
   id: string;
   title: string;
   description: string;
-  date: string;
+  date?: string; // Legacy single date field
+  start_datetime?: string;
+  end_datetime?: string;
+  schedule_sessions?: Array<{ date: string; start_time: string; end_time: string; description: string }> | null;
   location: string;
   price: string;
   banner_image?: string;
@@ -543,6 +547,13 @@ export default function StudentDashboard() {
   function getFilteredEvents() {
     let filtered = [...events];
 
+    // Hide past events (based on end_datetime or fallback to date)
+    const now = new Date();
+    filtered = filtered.filter(e => {
+      const endTime = e.end_datetime ? new Date(e.end_datetime) : (e.date ? new Date(e.date) : new Date(0));
+      return endTime >= now;
+    });
+
     // Search
     if (searchQuery) {
       filtered = filtered.filter(e =>
@@ -554,13 +565,14 @@ export default function StudentDashboard() {
     // Category filter
     if (filterCategory === "today") {
       const today = new Date().toDateString();
-      filtered = filtered.filter(e => new Date(e.date).toDateString() === today);
+      const startTime = e => e.start_datetime ? new Date(e.start_datetime) : (e.date ? new Date(e.date) : new Date(0));
+      filtered = filtered.filter(e => startTime(e).toDateString() === today);
     } else if (filterCategory === "week") {
       const now = new Date();
       const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       filtered = filtered.filter(e => {
-        const eventDate = new Date(e.date);
-        return eventDate >= now && eventDate <= weekFromNow;
+        const startTime = e.start_datetime ? new Date(e.start_datetime) : (e.date ? new Date(e.date) : new Date(0));
+        return startTime >= now && startTime <= weekFromNow;
       });
     }
 
@@ -1035,10 +1047,15 @@ export default function StudentDashboard() {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
                           <p className="text-sm text-text-muted mb-2 line-clamp-2">{event.description}</p>
-                          <div className="flex items-center gap-4 text-xs text-text-secondary">
-                            <span className="flex items-center gap-1"><Icons.Calendar className="h-4 w-4" /> {new Date(event.date).toLocaleDateString()}</span>
+                          <div className="flex items-center gap-4 text-xs text-text-secondary mb-2">
                             <span className="flex items-center gap-1"><Icons.Rupee className="h-4 w-4" /> ₹{event.price}</span>
                           </div>
+                          <EventTimelineDisplay 
+                            startDateTime={event.start_datetime || event.date || ''}
+                            endDateTime={event.end_datetime || event.date || ''}
+                            scheduleSessions={event.schedule_sessions}
+                            eventTitle={event.title}
+                          />
                         </div>
                         <LoadingButton
                           onClick={() => handlePay(event)}

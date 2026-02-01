@@ -9,7 +9,7 @@ const supabase = createClient(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
     const session = await getServerSession();
@@ -18,7 +18,7 @@ export async function POST(
     }
 
     const { eventId } = await request.json();
-    const festId = params.festId;
+    const { festId } = await params;
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
@@ -96,7 +96,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   try {
     const session = await getServerSession();
@@ -104,7 +104,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const festId = params.festId;
+    const { festId } = await params;
 
     // Check if user is festival member
     const { data: member } = await supabase

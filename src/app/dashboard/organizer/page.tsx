@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { RegistrationsModal } from "@/components/RegistrationsModal";
+import { useEventSchedule } from "@/hooks/useEventSchedule";
+import { EventScheduleBuilder } from "@/components/EventScheduleBuilder";
 import AttendanceModal from "@/components/AttendanceModal";
 import EventSubmitToFest from "@/components/EventSubmitToFest";
 import { Icons } from "@/components/icons";
@@ -61,14 +63,13 @@ export default function OrganizerDashboard() {
   // Event form states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [date, setDate] = useState("");
   const [location, setLocation] = useState("");
   const [price, setPrice] = useState("");
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discountClub, setDiscountClub] = useState("");
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [eligibleMembers, setEligibleMembers] = useState<EligibleMember[]>([]);
-  const [bannerImage, setBannerImage] = useState<File | null>(null);
+  const eventSchedule = useEventSchedule();
   const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -449,6 +450,16 @@ export default function OrganizerDashboard() {
   }
 
   async function handleCreateEvent() {
+    if (!title || !description || !location || !price) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!eventSchedule.startDateTime || !eventSchedule.endDateTime) {
+      toast.error("Please set event date and time");
+      return;
+    }
+
     let bannerImageUrl: string | null = null;
     if (bannerImage) {
       bannerImageUrl = await uploadBannerImage();
@@ -457,16 +468,20 @@ export default function OrganizerDashboard() {
       }
     }
 
+    const scheduleData = eventSchedule.getEventScheduleData();
+
     const res = await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title,
         description,
-        date,
         location,
         price,
         bannerImage: bannerImageUrl,
+        start_datetime: scheduleData.start_datetime,
+        end_datetime: scheduleData.end_datetime,
+        schedule_sessions: scheduleData.schedule_sessions,
         discountEnabled,
         discountClub,
         discountAmount,
@@ -479,7 +494,6 @@ export default function OrganizerDashboard() {
       toast.success("Event created successfully!");
       setTitle("");
       setDescription("");
-      setDate("");
       setLocation("");
       setPrice("");
       setDiscountEnabled(false);
@@ -488,6 +502,7 @@ export default function OrganizerDashboard() {
       setEligibleMembers([]);
       setBannerImage(null);
       setBannerImagePreview(null);
+      eventSchedule.setEventType('single-day');
       setShowCreateForm(false);
       fetchEvents();
       fetchAllRegistrations();
@@ -699,26 +714,28 @@ export default function OrganizerDashboard() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-text-secondary mb-2 block">Date</label>
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-text-secondary mb-2 block">Location</label>
-                    <input
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
-                      placeholder="Event location"
-                    />
-                  </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block">Location</label>
+                  <input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                    placeholder="Event location"
+                  />
                 </div>
+
+                <EventScheduleBuilder
+                  eventType={eventSchedule.eventType}
+                  onEventTypeChange={eventSchedule.setEventType}
+                  startDateTime={eventSchedule.startDateTime}
+                  endDateTime={eventSchedule.endDateTime}
+                  onStartDateTimeChange={eventSchedule.setStartDateTime}
+                  onEndDateTimeChange={eventSchedule.setEndDateTime}
+                  scheduleSessions={eventSchedule.scheduleSessions}
+                  onAddSession={eventSchedule.addScheduleSession}
+                  onUpdateSession={eventSchedule.updateScheduleSession}
+                  onRemoveSession={eventSchedule.removeScheduleSession}
+                />
 
                 <div>
                   <label className="text-sm text-text-secondary mb-2 block">Price (₹)</label>

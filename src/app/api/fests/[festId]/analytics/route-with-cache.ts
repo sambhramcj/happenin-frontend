@@ -37,14 +37,14 @@ const CIRCUIT_BREAKER = breakers.analytics;
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { festId: string } }
+  { params }: { params: Promise<{ festId: string }> }
 ) {
   const session = await getServerSession();
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const festId = params.festId;
+  const { festId } = await params;
   const cacheKey = `analytics:fest:${festId}`;
 
   // ──────────────────────────────────────────────

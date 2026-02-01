@@ -9,7 +9,7 @@ const supabase = createClient(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { festId: string; submissionId: string } }
+  { params }: { params: Promise<{ festId: string; submissionId: string }> }
 ) {
   try {
     const session = await getServerSession();
@@ -17,6 +17,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { festId, submissionId } = await params;
     const { action, rejectionReason } = await request.json();
     const { festId, submissionId } = params;
 
