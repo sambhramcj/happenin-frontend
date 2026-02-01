@@ -19,7 +19,6 @@ export async function PATCH(
 
     const { festId, submissionId } = await params;
     const { action, rejectionReason } = await request.json();
-    const { festId, submissionId } = params;
 
     if (!['approve', 'reject'].includes(action)) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
