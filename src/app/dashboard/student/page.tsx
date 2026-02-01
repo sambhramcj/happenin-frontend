@@ -532,13 +532,14 @@ export default function StudentDashboard() {
   // Filter logic
   function getTodayEvents() {
     const today = new Date().toDateString();
-    return events.filter(e => new Date(e.date).toDateString() === today);
+    return events.filter(e => (e.date ? new Date(e.date).toDateString() === today : false));
   }
 
   function getThisWeekEvents() {
     const now = new Date();
     const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     return events.filter(e => {
+      if (!e.date) return false;
       const eventDate = new Date(e.date);
       return eventDate >= now && eventDate <= weekFromNow;
     });
@@ -565,7 +566,7 @@ export default function StudentDashboard() {
     // Category filter
     if (filterCategory === "today") {
       const today = new Date().toDateString();
-      const startTime = e => e.start_datetime ? new Date(e.start_datetime) : (e.date ? new Date(e.date) : new Date(0));
+      const startTime = (e: Event) => e.start_datetime ? new Date(e.start_datetime) : (e.date ? new Date(e.date) : new Date(0));
       filtered = filtered.filter(e => startTime(e).toDateString() === today);
     } else if (filterCategory === "week") {
       const now = new Date();
@@ -599,13 +600,13 @@ export default function StudentDashboard() {
   function getUpcomingEvents() {
     const registered = getRegisteredEvents();
     const now = new Date();
-    return registered.filter(e => new Date(e.date) >= now);
+    return registered.filter(e => (e.date ? new Date(e.date) >= now : false));
   }
 
   function getPastEvents() {
     const registered = getRegisteredEvents();
     const now = new Date();
-    return registered.filter(e => new Date(e.date) < now);
+    return registered.filter(e => (e.date ? new Date(e.date) < now : false));
   }
 
   function getTicketsForTab() {
@@ -813,7 +814,9 @@ export default function StudentDashboard() {
                           )}
                         </div>
                       )}
-                      <p className="text-xs text-text-muted mb-2">{new Date(event.date).toLocaleDateString()}</p>
+                      <p className="text-xs text-text-muted mb-2">
+                        {event.date ? new Date(event.date).toLocaleDateString() : "Date TBA"}
+                      </p>
                       <div className="flex items-center justify-between">
                         <span className="text-text-secondary font-semibold text-sm">₹{event.price}</span>
                         <LoadingButton
@@ -1053,7 +1056,7 @@ export default function StudentDashboard() {
                           <EventTimelineDisplay 
                             startDateTime={event.start_datetime || event.date || ''}
                             endDateTime={event.end_datetime || event.date || ''}
-                            scheduleSessions={event.schedule_sessions}
+                            scheduleSessions={event.schedule_sessions ?? null}
                             eventTitle={event.title}
                           />
                         </div>
