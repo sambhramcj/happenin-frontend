@@ -70,6 +70,7 @@ export default function OrganizerDashboard() {
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [eligibleMembers, setEligibleMembers] = useState<EligibleMember[]>([]);
   const eventSchedule = useEventSchedule();
+  const [bannerImage, setBannerImage] = useState<File | null>(null);
   const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
