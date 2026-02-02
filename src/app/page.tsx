@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ChevronDown, User, Briefcase } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 interface Event {
   id: string;
@@ -116,9 +117,15 @@ function ListItemSkeleton() {
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { setTheme } = useTheme();
   const [selectedCollege, setSelectedCollege] = useState<string>('');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Ensure landing page is always light mode - MUST be first
+  useEffect(() => {
+    setTheme('light');
+  }, [setTheme]);
 
   // Redirect logged-in users to their respective dashboards
   useEffect(() => {

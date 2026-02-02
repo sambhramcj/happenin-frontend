@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light;
+  
   /* Brand */
   --color-primary: #6D28D9;
   --color-primary-hover: #5B21B6;
@@ -54,6 +56,8 @@
 
 /* Dark Mode Theme */
 .dark {
+  color-scheme: dark;
+  
   /* Brand */
   --color-primary: #8B5CF6;
   --color-primary-hover: #A78BFA;
