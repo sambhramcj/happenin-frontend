@@ -6,12 +6,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ChevronDown, User, Briefcase } from 'lucide-react';
 
-// Force light mode for landing page
-if (typeof document !== 'undefined') {
-  document.documentElement.classList.remove('dark');
-  document.documentElement.classList.add('light');
-}
-
 interface Event {
   id: string;
   title: string;
@@ -32,7 +26,7 @@ function EventCard({ event, onClick }: { event: Event; onClick: () => void }) {
   const handleRegister = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!session?.user) {
-      router.push('/auth/signin');
+      router.push('/auth');
     } else {
       router.push(`/events/${event.id}/register`);
     }
@@ -44,19 +38,19 @@ function EventCard({ event, onClick }: { event: Event; onClick: () => void }) {
       className="bg-white rounded-2xl overflow-hidden border-2 border-gray-200 hover:border-purple-300 cursor-pointer transition-all"
       onClick={onClick}
     >
-      <div className="aspect-video bg-bg-muted relative">
+      <div className="aspect-video bg-gray-100 relative">
         {event.image ? (
           <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-text-secondary">
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
             <Calendar className="w-12 h-12" />
           </div>
         )}
       </div>
       <div className="p-4">
-        <h3 className="font-semibold text-text-primary mb-1 line-clamp-2">{event.title}</h3>
-        {event.club && <p className="text-sm text-text-secondary mb-2">{event.club}</p>}
-        <div className="flex items-center gap-4 text-sm text-text-secondary mb-3">
+        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">{event.title}</h3>
+        {event.club && <p className="text-sm text-gray-600 mb-2">{event.club}</p>}
+        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
           <span className="flex items-center gap-1">
             <Calendar className="w-4 h-4" />
             {new Date(event.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
@@ -69,7 +63,7 @@ function EventCard({ event, onClick }: { event: Event; onClick: () => void }) {
           )}
         </div>
         <div className="flex items-center justify-between">
-          <span className={`font-semibold ${event.price === 0 ? 'text-green-600' : 'text-text-primary'}`}>
+          <span className={`font-semibold ${event.price === 0 ? 'text-green-600' : 'text-gray-900'}`}>
             {event.price === 0 ? 'FREE' : `₹${event.price}`}
           </span>
           <button
@@ -87,18 +81,18 @@ function EventCard({ event, onClick }: { event: Event; onClick: () => void }) {
 // Skeleton Loader
 function EventCardSkeleton() {
   return (
-    <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default animate-pulse">
-      <div className="aspect-video bg-bg-muted" />
+    <div className="bg-white rounded-xl overflow-hidden border border-gray-200 animate-pulse">
+      <div className="aspect-video bg-gray-200" />
       <div className="p-4 space-y-3">
-        <div className="h-4 bg-bg-muted rounded w-3/4" />
-        <div className="h-3 bg-bg-muted rounded w-1/2" />
+        <div className="h-4 bg-gray-200 rounded w-3/4" />
+        <div className="h-3 bg-gray-200 rounded w-1/2" />
         <div className="flex gap-4">
-          <div className="h-3 bg-bg-muted rounded w-20" />
-          <div className="h-3 bg-bg-muted rounded w-20" />
+          <div className="h-3 bg-gray-200 rounded w-20" />
+          <div className="h-3 bg-gray-200 rounded w-20" />
         </div>
         <div className="flex items-center justify-between">
-          <div className="h-4 bg-bg-muted rounded w-16" />
-          <div className="h-8 bg-bg-muted rounded w-20" />
+          <div className="h-4 bg-gray-200 rounded w-16" />
+          <div className="h-8 bg-gray-200 rounded w-20" />
         </div>
       </div>
     </div>
@@ -108,13 +102,13 @@ function EventCardSkeleton() {
 // List Item Skeleton
 function ListItemSkeleton() {
   return (
-    <div className="flex items-center gap-4 p-4 border border-border-default rounded-lg animate-pulse">
-      <div className="w-16 h-16 bg-bg-muted rounded" />
+    <div className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg animate-pulse">
+      <div className="w-16 h-16 bg-gray-200 rounded" />
       <div className="flex-1 space-y-2">
-        <div className="h-4 bg-bg-muted rounded w-3/4" />
-        <div className="h-3 bg-bg-muted rounded w-1/2" />
+        <div className="h-4 bg-gray-200 rounded w-3/4" />
+        <div className="h-3 bg-gray-200 rounded w-1/2" />
       </div>
-      <div className="h-4 bg-bg-muted rounded w-16" />
+      <div className="h-4 bg-gray-200 rounded w-16" />
     </div>
   );
 }
@@ -200,10 +194,10 @@ export default function HomePage() {
           </div>
 
           {/* College Selector */}
-          <div className="hidden sm:block flex-1 max-w-xs">
-            <button className="w-full px-4 py-2 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-between text-gray-600 hover:border-purple-300 transition-all">
-              <span className="text-sm font-medium">{selectedCollege || 'Select your college'}</span>
-              <ChevronDown className="w-4 h-4" />
+          <div className="flex-1 max-w-xs">
+            <button className="w-full px-3 sm:px-4 py-2 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-between text-gray-600 hover:border-purple-300 transition-all text-sm sm:text-base">
+              <span className="text-xs sm:text-sm font-medium truncate">{selectedCollege || 'College'}</span>
+              <ChevronDown className="w-4 h-4 flex-shrink-0 ml-1" />
             </button>
           </div>
 
@@ -221,8 +215,8 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24 relative">
+      <section className="relative overflow-hidden bg-white border-b border-gray-200 w-full">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-24 relative overflow-x-hidden">
           <div className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 border border-purple-200 rounded-full mb-6">
               <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse" />
@@ -243,7 +237,7 @@ export default function HomePage() {
       </section>
 
       {/* Happening Today */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 overflow-x-hidden">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-1 h-8 bg-gradient-to-b from-purple-600 to-purple-400 rounded-full" />
           <h2 className="text-3xl font-bold text-gray-900">Happening Today</h2>
@@ -269,7 +263,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-text-secondary">
+          <div className="text-center py-12 text-gray-600">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>No events listed yet. Check back soon.</p>
           </div>
@@ -277,7 +271,7 @@ export default function HomePage() {
       </section>
 
       {/* Trending in Your College */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 overflow-x-hidden">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-1 h-8 bg-gradient-to-b from-purple-600 to-purple-400 rounded-full" />
           <h2 className="text-3xl font-bold text-gray-900">Trending in Your College</h2>
@@ -300,7 +294,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-text-secondary">
+          <div className="text-center py-12 text-gray-600">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>No events listed yet. Check back soon.</p>
           </div>
@@ -326,15 +320,15 @@ export default function HomePage() {
               <motion.div
                 key={event.id}
                 whileHover={{ x: 4 }}
-                className="flex items-center gap-4 p-4 bg-bg-card border border-border-default rounded-lg cursor-pointer hover:border-border-hover hover:shadow-md transition-all"
+                className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 hover:shadow-md transition-all"
                 onClick={() => router.push(`/events/${event.id}`)}
               >
-                <div className="w-16 h-16 bg-bg-muted rounded flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-8 h-8 text-text-secondary" />
+                <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-8 h-8 text-gray-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-text-primary truncate">{event.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-text-secondary mt-1">
+                  <h3 className="font-semibold text-gray-900 truncate">{event.title}</h3>
+                  <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {new Date(event.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
@@ -348,7 +342,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <span className={`font-semibold ${event.price === 0 ? 'text-green-600' : 'text-text-primary'}`}>
+                  <span className={`font-semibold ${event.price === 0 ? 'text-green-600' : 'text-gray-900'}`}>
                     {event.price === 0 ? 'FREE' : `₹${event.price}`}
                   </span>
                 </div>
@@ -374,10 +368,10 @@ export default function HomePage() {
               <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">Happenin</span>
             </div>
             <div className="flex flex-wrap gap-8 text-sm text-gray-600">
-              <a href="/about" className="hover:text-purple-600 transition-colors font-medium">About</a>
-              <a href="/contact" className="hover:text-purple-600 transition-colors font-medium">Contact</a>
-              <a href="/privacy" className="hover:text-purple-600 transition-colors font-medium">Privacy Policy</a>
-              <a href="/terms" className="hover:text-purple-600 transition-colors font-medium">Terms</a>
+              <a href="/about" className="hover:text-purple-600 visited:text-gray-600 transition-colors font-medium">About</a>
+              <a href="/contact" className="hover:text-purple-600 visited:text-gray-600 transition-colors font-medium">Contact</a>
+              <a href="/privacy" className="hover:text-purple-600 visited:text-gray-600 transition-colors font-medium">Privacy Policy</a>
+              <a href="/terms" className="hover:text-purple-600 visited:text-gray-600 transition-colors font-medium">Terms</a>
             </div>
           </div>
           <div className="mt-6 text-center text-sm text-gray-500">

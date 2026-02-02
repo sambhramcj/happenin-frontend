@@ -117,6 +117,11 @@ export default function StudentDashboard() {
       return;
     }
 
+    // Remove forced light mode from auth/landing pages
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.remove('light');
+    }
+
     fetchMemberships();
     fetchProfile();
     fetchEvents();
@@ -658,6 +663,16 @@ export default function StudentDashboard() {
     return (
       <div className="min-h-screen bg-bg-muted">
         <HomeExploreSkeleton />
+      </div>
+    );
+  }
+
+  // Redirect unauthenticated users to login
+  if (status === "unauthenticated") {
+    router.push("/auth");
+    return (
+      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
+        <div className="animate-pulse text-text-secondary">Redirecting to login...</div>
       </div>
     );
   }

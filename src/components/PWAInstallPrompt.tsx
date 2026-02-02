@@ -18,15 +18,16 @@ export function PWAInstallPrompt() {
   const isAuthed = Boolean(session?.user);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     // Register service worker
-    if (typeof window !== 'undefined' && "serviceWorker" in navigator) {
-      window.navigator.serviceWorker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .then((registration) => {
           console.log("✅ Service Worker registered successfully:", registration.scope);
-          
-          // Check for updates
-          registration.update();
+          // Check for updates periodically
+          setInterval(() => registration.update(), 60000); // Check every minute
         })
         .catch((error) => {
           console.error("❌ Service Worker registration failed:", error);
@@ -34,25 +35,38 @@ export function PWAInstallPrompt() {
     }
 
     // Check if app is already installed
-    if (typeof window !== 'undefined' && window.matchMedia("(display-mode: standalone)").matches) {
+    const isInstalled = 
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    
+    if (isInstalled) {
+      console.log("📱 App is running as installed PWA");
       setIsInstalled(true);
+      return; // Don't show install prompt if already installed
     }
 
     // Handle beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      console.log("📱 beforeinstallprompt event fired");
+      console.log("📱 beforeinstallprompt event received - installation available");
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    }
+    // Handle app installed event
+    const handleAppInstalled = () => {
+      console.log("✅ App successfully installed");
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+      setShowPrompt(false);
+      toast.success("App installed successfully!");
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-      }
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
 

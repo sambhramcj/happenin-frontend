@@ -4,12 +4,6 @@ import { signIn, getProviders } from "next-auth/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-// Force light mode for auth page
-if (typeof document !== 'undefined') {
-  document.documentElement.classList.remove('dark');
-  document.documentElement.classList.add('light');
-}
-
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,14 +16,38 @@ function AuthPageContent() {
   const [role, setRole] = useState<"student" | "organizer">("student");
   const [hasApple, setHasApple] = useState(false);
 
+  // Force light mode for auth page - MUST be first useEffect
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, []);
+
   useEffect(() => {
     const roleParam = searchParams.get("role");
     if (roleParam === "organizer") {
       setRole("organizer");
     }
-    // Reset loading state when component mounts (user comes back to page)
+    // Reset loading state when component mounts or returns from OAuth
     setIsLoading(false);
+    setError(null);
   }, [searchParams]);
+
+  // Also reset loading when user navigates back to auth page
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        console.log("User navigated back to auth page");
+        setIsLoading(false);
+        setError(null);
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
 
   useEffect(() => {
     // Detect configured OAuth providers to conditionally show Apple button
@@ -44,7 +62,12 @@ function AuthPageContent() {
     setError(null);
     setIsLoading(true);
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      const result = await signIn("google", { redirect: false, callbackUrl: "/dashboard" });
+      if (result?.error) {
+        setError(result.error);
+        setIsLoading(false);
+      }
+      // If successful, signIn will redirect automatically
     } catch (err) {
       setError("Google login failed. Please try again.");
       setIsLoading(false);
@@ -55,7 +78,12 @@ function AuthPageContent() {
     setError(null);
     setIsLoading(true);
     try {
-      await signIn("apple", { callbackUrl: "/dashboard" });
+      const result = await signIn("apple", { redirect: false, callbackUrl: "/dashboard" });
+      if (result?.error) {
+        setError(result.error);
+        setIsLoading(false);
+      }
+      // If successful, signIn will redirect automatically
     } catch (err) {
       setError("Apple login failed. Please try again.");
       setIsLoading(false);
@@ -151,7 +179,7 @@ function AuthPageContent() {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continue with Google
+              {isLoading ? "Please wait..." : "Continue with Google"}
             </button>
 
             {/* Apple Login - Shown only if configured */}
@@ -165,7 +193,7 @@ function AuthPageContent() {
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M16.365 1.43c0 1.14-.47 2.244-1.223 3.064-.78.848-2.06 1.5-3.25 1.41-.09-1.08.52-2.205 1.27-3.005.81-.88 2.2-1.52 3.203-1.47zM19.7 12.87c-.06-3.07 2.51-4.54 2.63-4.61-1.44-2.11-3.68-2.4-4.47-2.43-1.9-.19-3.71 1.12-4.68 1.12-.98 0-2.46-1.1-4.04-1.07-2.07.03-3.98 1.2-5.04 3.04-2.15 3.73-.55 9.23 1.53 12.26 1.02 1.47 2.24 3.13 3.84 3.07 1.54-.06 2.12-.99 3.98-.99 1.86 0 2.39.99 4.04.96 1.68-.03 2.74-1.49 3.74-2.97 1.18-1.73 1.67-3.41 1.69-3.49-.04-.02-3.24-1.22-3.21-4.79z"/>
                 </svg>
-                Continue with Apple
+                {isLoading ? "Please wait..." : "Continue with Apple"}
               </button>
             )}
 

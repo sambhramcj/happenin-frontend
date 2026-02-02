@@ -138,6 +138,11 @@ export default function OrganizerDashboard() {
       return;
     }
 
+    // Remove forced light mode from auth/landing pages
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.remove('light');
+    }
+
     const loadDashboard = async () => {
       setDashboardLoading(true);
       await Promise.all([
@@ -578,8 +583,24 @@ export default function OrganizerDashboard() {
     );
   }
 
+  // Redirect unauthenticated users
+  if (status === "unauthenticated") {
+    router.push("/auth");
+    return (
+      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
+        <div className="animate-pulse text-text-secondary">Redirecting to login...</div>
+      </div>
+    );
+  }
+
+  // Redirect non-organizers
   if (!session?.user || (session.user as any).role !== "organizer") {
-    return null;
+    router.push("/dashboard/student");
+    return (
+      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
+        <div className="animate-pulse text-text-secondary">Redirecting...</div>
+      </div>
+    );
   }
 
   return (

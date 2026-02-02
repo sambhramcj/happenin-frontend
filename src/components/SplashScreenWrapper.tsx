@@ -13,8 +13,18 @@ export function SplashScreenWrapper({ children }: { children: React.ReactNode })
     setIsMounted(true);
     
     // Check if running as installed PWA
-    const isPWA = window.matchMedia("(display-mode: standalone)").matches;
-    setIsInstalledPWA(isPWA);
+    const checkPWA = () => {
+      // Multiple ways to detect PWA
+      const isPWA = 
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as any).standalone === true ||
+        document.referrer.includes('android-app://');
+      
+      setIsInstalledPWA(isPWA);
+      return isPWA;
+    };
+
+    const isPWA = checkPWA();
     
     const initializeApp = async () => {
       try {
