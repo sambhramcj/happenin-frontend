@@ -11,6 +11,7 @@
     "pre-deploy": "npm run type-check && npm run build"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@hookform/resolvers": "^5.2.2",
     "@pdf-lib/fontkit": "^1.1.1",
     "@supabase/auth-helpers-nextjs": "^0.15.0",

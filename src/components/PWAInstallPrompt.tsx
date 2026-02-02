@@ -19,32 +19,40 @@ export function PWAInstallPrompt() {
 
   useEffect(() => {
     // Register service worker
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
+    if (typeof window !== 'undefined' && "serviceWorker" in navigator) {
+      window.navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .then((registration) => {
-          console.log("Service Worker registered:", registration);
+          console.log("✅ Service Worker registered successfully:", registration.scope);
+          
+          // Check for updates
+          registration.update();
         })
         .catch((error) => {
-          console.log("Service Worker registration failed:", error);
+          console.error("❌ Service Worker registration failed:", error);
         });
     }
 
     // Check if app is already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
+    if (typeof window !== 'undefined' && window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
     }
 
     // Handle beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      console.log("📱 beforeinstallprompt event fired");
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    if (typeof window !== 'undefined') {
+      window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    }
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      }
     };
   }, []);
 

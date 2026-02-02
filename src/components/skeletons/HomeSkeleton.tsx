@@ -17,7 +17,7 @@ export function HomeExploreSkeleton() {
       <div className="space-y-4">
         <Skeleton className="w-40 h-6" variant="text" />
         
-        <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {[1, 2, 3, 4].map((i) => (
             <HorizontalEventCardSkeleton key={i} />
           ))}

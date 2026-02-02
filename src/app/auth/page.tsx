@@ -4,6 +4,12 @@ import { signIn, getProviders } from "next-auth/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+// Force light mode for auth page
+if (typeof document !== 'undefined') {
+  document.documentElement.classList.remove('dark');
+  document.documentElement.classList.add('light');
+}
+
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -21,6 +27,8 @@ function AuthPageContent() {
     if (roleParam === "organizer") {
       setRole("organizer");
     }
+    // Reset loading state when component mounts (user comes back to page)
+    setIsLoading(false);
   }, [searchParams]);
 
   useEffect(() => {

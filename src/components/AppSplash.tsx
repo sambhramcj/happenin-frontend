@@ -1,13 +1,23 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 export function AppSplash() {
   const prefersReducedMotion = useReducedMotion();
+  const [bgClass, setBgClass] = useState("bg-[#0F0A1F]");
+
+  useEffect(() => {
+    // Detect current theme and use it for splash screen
+    if (typeof document !== 'undefined') {
+      const isDark = document.documentElement.classList.contains('dark');
+      setBgClass(isDark ? "bg-[#0F0A1F]" : "bg-white");
+    }
+  }, []);
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F0A1F]"
+      className={`fixed inset-0 z-50 flex items-center justify-center ${bgClass}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

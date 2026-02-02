@@ -492,7 +492,34 @@ export default function OrganizerDashboard() {
     });
 
     if (res.ok) {
-      toast.success("Event created successfully!");
+      const createdEvent = await res.json();
+      const eventLink = `${window.location.origin}/events/${createdEvent.id}`;
+      
+      toast.success(
+        <div>
+          <p className="font-semibold mb-2">Event created successfully!</p>
+          <p className="text-sm mb-2">Share this link:</p>
+          <div className="flex items-center gap-2">
+            <input 
+              type="text" 
+              value={eventLink} 
+              readOnly 
+              className="flex-1 px-2 py-1 bg-bg-muted border border-border-default rounded text-xs"
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(eventLink);
+                toast.success("Link copied!");
+              }}
+              className="px-2 py-1 bg-primary text-white rounded text-xs"
+            >
+              Copy
+            </button>
+          </div>
+        </div>,
+        { duration: 8000 }
+      );
+      
       setTitle("");
       setDescription("");
       setLocation("");

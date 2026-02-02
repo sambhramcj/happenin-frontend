@@ -937,7 +937,7 @@ export default function StudentDashboard() {
 
         {/* EXPLORE TAB */}
         {activeTab === "explore" && (
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-x-hidden">
             {/* Explore Subtabs */}
             <div className="flex gap-2 border-b border-border-default pb-2">
               <button
@@ -990,7 +990,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {["all", "today", "week"].map((cat) => (
                 <button
                   key={cat}
@@ -1166,7 +1166,7 @@ export default function StudentDashboard() {
 
         {/* MY EVENTS TAB */}
         {activeTab === "my-events" && (
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-x-hidden">
             <div className="flex gap-2 border-b border-border-default pb-2">
               <button
                 type="button"
@@ -1253,7 +1253,7 @@ export default function StudentDashboard() {
 
         {/* PROFILE TAB */}
         {activeTab === "profile" && (
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-x-hidden">
             {/* Profile Header */}
             <div className="bg-bg-card rounded-xl p-6 border border-border-default">
               <div className="flex items-center gap-4 mb-4">
@@ -1437,7 +1437,7 @@ export default function StudentDashboard() {
 
         {/* VOLUNTEER TAB */}
         {activeTab === "volunteer" && (
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-x-hidden">
             {/* My Applications */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
