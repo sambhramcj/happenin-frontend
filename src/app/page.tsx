@@ -191,31 +191,60 @@ export default function HomePage() {
     <main className="min-h-screen bg-gray-50">
       {/* Navigation Bar */}
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 backdrop-blur-lg shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-              <span className="text-white font-bold text-xl">H</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          {/* Desktop Layout - Logo, College Selector, Login in one line */}
+          <div className="hidden sm:flex items-center justify-between gap-4">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <span className="text-white font-bold text-xl">H</span>
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">Happenin</span>
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">Happenin</span>
-          </div>
 
-          {/* College Selector */}
-          <div className="flex-1 max-w-xs">
-            <button className="w-full px-3 sm:px-4 py-2 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-between text-gray-600 hover:border-purple-300 transition-all text-sm sm:text-base">
-              <span className="text-xs sm:text-sm font-medium truncate">{selectedCollege || 'College'}</span>
-              <ChevronDown className="w-4 h-4 flex-shrink-0 ml-1" />
-            </button>
-          </div>
+            {/* College Selector */}
+            <div className="flex-1 max-w-xs">
+              <button className="w-full px-3 sm:px-4 py-2 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-between text-gray-600 hover:border-purple-300 transition-all text-sm sm:text-base">
+                <span className="text-xs sm:text-sm font-medium truncate">{selectedCollege || 'College'}</span>
+                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-1" />
+              </button>
+            </div>
 
-          {/* Right Section */}
-          <div className="flex items-center gap-3">
+            {/* Login Button */}
             <button
               onClick={() => router.push('/auth')}
               className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-semibold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all flex items-center gap-2"
             >
               <User className="w-4 h-4" />
               <span>Login</span>
+            </button>
+          </div>
+
+          {/* Mobile Layout - Logo & Login in one line, College selector below */}
+          <div className="sm:hidden space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              {/* Logo */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                  <span className="text-white font-bold text-xl">H</span>
+                </div>
+                <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">Happenin</span>
+              </div>
+
+              {/* Login Button */}
+              <button
+                onClick={() => router.push('/auth')}
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-semibold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all flex items-center gap-2"
+              >
+                <User className="w-4 h-4" />
+                <span>Login</span>
+              </button>
+            </div>
+
+            {/* College Selector */}
+            <button className="w-full px-3 py-2 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-between text-gray-600 hover:border-purple-300 transition-all text-sm font-medium">
+              <span className="truncate">{selectedCollege || 'College'}</span>
+              <ChevronDown className="w-4 h-4 flex-shrink-0 ml-1" />
             </button>
           </div>
         </div>
