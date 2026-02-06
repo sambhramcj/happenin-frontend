@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { BannerUploadForm } from "@/components/BannerUploadForm";
 import { Icons } from "@/components/icons";
 
 export default function SponsorDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<"discover" | "my">("discover");
+  const [activeTab, setActiveTab] = useState<"discover" | "my" | "banners">("discover");
   const [events, setEvents] = useState<any[]>([]);
   const [deals, setDeals] = useState<any[]>([]);
   const [filters, setFilters] = useState({ college: "", budget_min: "", budget_max: "" });
@@ -68,7 +69,7 @@ export default function SponsorDashboard() {
             </button>
           </div>
         </div>
-        <div className="border-t border-border-default">
+          <div className="border-t border-border-default">
           <div className="max-w-7xl mx-auto px-4 flex gap-2">
             <button
               onClick={() => setActiveTab("discover")}
@@ -85,6 +86,14 @@ export default function SponsorDashboard() {
               }`}
             >
               My Sponsorships
+            </button>
+            <button
+              onClick={() => setActiveTab("banners")}
+              className={`px-4 py-3 text-sm font-medium border-b-2 ${
+                activeTab === "banners" ? "border-primary text-primary" : "border-transparent text-text-secondary"
+              }`}
+            >
+              Banners
             </button>
           </div>
         </div>
@@ -175,6 +184,18 @@ export default function SponsorDashboard() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === "banners" && (
+          <div className="space-y-6">
+            <BannerUploadForm
+              bannerType="sponsor"
+              sponsorEmail={session?.user?.email}
+              onSuccess={() => {
+                toast.success("Banner submitted for approval");
+              }}
+            />
           </div>
         )}
       </div>

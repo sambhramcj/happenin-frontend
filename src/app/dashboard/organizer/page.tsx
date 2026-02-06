@@ -12,6 +12,7 @@ import SponsorshipPackagesManager from "@/components/SponsorshipPackagesManager"
 import { SponsorshipPayout } from "@/components/SponsorshipPayout";
 import AttendanceModal from "@/components/AttendanceModal";
 import EventSubmitToFest from "@/components/EventSubmitToFest";
+import { BannerUploadForm } from "@/components/BannerUploadForm";
 import { Icons } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DashboardEventListSkeleton, DashboardStatsSkeleton } from "@/components/skeletons";
@@ -55,7 +56,7 @@ export default function OrganizerDashboard() {
 
   // Event detail view state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [eventDetailView, setEventDetailView] = useState<"overview" | "volunteers" | "certificates">("overview");
+  const [eventDetailView, setEventDetailView] = useState<"overview" | "volunteers" | "certificates" | "banners">("overview");
 
   // Data states
   const [events, setEvents] = useState<Event[]>([]);
@@ -896,6 +897,7 @@ export default function OrganizerDashboard() {
               <div className="flex gap-2 border-b border-border-default overflow-x-auto">
                 {[
                   { id: "overview", icon: Icons.Gauge, label: "Overview" },
+                  { id: "banners", icon: Icons.Image, label: "Banners" },
                   { id: "volunteers", icon: Icons.Award, label: "Volunteers" },
                   { id: "certificates", icon: Icons.Award, label: "Certificates" },
                 ].map((tab) => (
@@ -1151,6 +1153,19 @@ export default function OrganizerDashboard() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Banners Tab */}
+              {eventDetailView === "banners" && (
+                <div className="space-y-6">
+                  <BannerUploadForm
+                    bannerType="event"
+                    eventId={event.id}
+                    onSuccess={() => {
+                      toast.success("Banner submitted for approval");
+                    }}
+                  />
                 </div>
               )}
 

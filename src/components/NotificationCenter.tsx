@@ -8,82 +8,119 @@ interface Notification {
   id: string;
   title: string;
   body: string;
-  isRead: boolean;
-  createdAt: string;
-  actionUrl?: string;
-  type?: "reminder" | "update" | "message" | "achievement";
+  is_read: boolean;
+  created_at: string;
+  action_url?: string;
+  notification_type?: string;
+  push_type?: string;
 }
 
 export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Fetch notifications
     fetchNotifications();
 
-    // Set up polling for new notifications
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
+    // Set up polling for new notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
 
     return () => clearInterval(interval);
   }, []);
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch("/api/notifications");
+      const response = await fetch("/api/notifications/push?limit=20");
       if (response.ok) {
-        const data = await response.json();
-        setNotifications(data);
-        setUnreadCount(data.filter((n: Notification) => !n.isRead).length);
+        const { notifications: data, unreadCount: count } = await response.json();
+        setNotifications(data || []);
+        setUnreadCount(count || 0);
       }
     } catch (error) {
-      console.log("Failed to fetch notifications:", error);
+      console.error("Failed to fetch notifications:", error);
     }
   };
 
-  const markAsRead = async (id: string) => {
+  const handleMarkAsRead = async (id: string, actionUrl?: string) => {
     try {
-      const response = await fetch(`/api/notifications/${id}/read`, {
+      const response = await fetch(`/api/notifications/push/${id}`, {
         method: "PUT",
       });
 
       if (response.ok) {
-        setNotifications(notifications.map(n =>
-          n.id === id ? { ...n, isRead: true } : n
-        ));
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+
+        if (actionUrl) {
+          window.location.href = actionUrl;
+        }
       }
     } catch (error) {
-      console.log("Failed to mark notification as read:", error);
+      console.error("Failed to mark notification as read:", error);
     }
   };
 
-  const deleteNotification = async (id: string) => {
+  const handleMarkAllAsRead = async () => {
     try {
-      const response = await fetch(`/api/notifications/${id}`, {
+      setLoading(true);
+      const response = await fetch("/api/notifications/push/read-all", {
+        method: "PUT",
+      });
+
+      if (response.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => ({ ...n, is_read: true }))
+        );
+        setUnreadCount(0);
+        toast.success("All notifications marked as read");
+      }
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+      toast.error("Failed to mark notifications as read");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/push/${id}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        setNotifications(notifications.filter(n => n.id !== id));
-        setUnreadCount(prev => Math.max(0, prev - (notifications.find(n => n.id === id)?.isRead ? 0 : 1)));
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+        setUnreadCount((prev) =>
+          prev > 0 ? prev - 1 : 0
+        );
+        toast.success("Notification deleted");
       }
     } catch (error) {
-      console.log("Failed to delete notification:", error);
+      console.error("Failed to delete notification:", error);
+      toast.error("Failed to delete notification");
     }
   };
 
   const getNotificationIcon = (type?: string) => {
     switch (type) {
-      case "reminder":
-        return <Icons.Bell className="h-5 w-5 text-yellow-500" />;
-      case "achievement":
-        return <Icons.Award className="h-5 w-5 text-blue-500" />;
-      case "update":
-        return <Icons.Info className="h-5 w-5 text-purple-500" />;
-      case "message":
-        return <Icons.Users className="h-5 w-5 text-green-500" />;
+      case "payment_success":
+        return <Icons.Check className="h-5 w-5 text-green-500" />;
+      case "event_reminder_24h":
+      case "event_reminder_2h":
+      case "event_day_reminder":
+        return <Icons.Clock className="h-5 w-5 text-yellow-500" />;
+      case "registration_milestone":
+      case "first_registration":
+        return <Icons.Users className="h-5 w-5 text-blue-500" />;
+      case "volunteer_application":
+        return <Icons.Heart className="h-5 w-5 text-purple-500" />;
+      case "sponsor_payment_received":
+        return <Icons.DollarSign className="h-5 w-5 text-emerald-500" />;
       default:
         return <Icons.Bell className="h-5 w-5 text-primary" />;
     }
@@ -112,16 +149,9 @@ export function NotificationCenter() {
             <h3 className="font-bold text-text-primary">Notifications</h3>
             {unreadCount > 0 && (
               <button
-                onClick={async () => {
-                  try {
-                    await fetch("/api/notifications/read-all", { method: "PUT" });
-                    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-                    setUnreadCount(0);
-                  } catch (error) {
-                    toast.error("Failed to mark all as read");
-                  }
-                }}
-                className="text-sm text-primary hover:text-primaryHover font-medium"
+                onClick={handleMarkAllAsRead}
+                disabled={loading}
+                className="text-sm text-primary hover:text-primaryHover font-medium disabled:opacity-50"
               >
                 Mark all as read
               </button>
@@ -140,20 +170,19 @@ export function NotificationCenter() {
                 <div
                   key={notification.id}
                   className={`p-4 hover:bg-bg-muted transition-colors cursor-pointer ${
-                    !notification.isRead ? "bg-primary/5" : ""
+                    !notification.is_read ? "bg-primary/5" : ""
                   }`}
                   onClick={() => {
-                    if (!notification.isRead) {
-                      markAsRead(notification.id);
-                    }
-                    if (notification.actionUrl) {
-                      window.location.href = notification.actionUrl;
+                    if (!notification.is_read) {
+                      handleMarkAsRead(notification.id, notification.action_url);
+                    } else if (notification.action_url) {
+                      window.location.href = notification.action_url;
                     }
                   }}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.notification_type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-text-primary text-sm">
@@ -163,13 +192,13 @@ export function NotificationCenter() {
                         {notification.body}
                       </p>
                       <p className="text-xs text-text-muted mt-2">
-                        {new Date(notification.createdAt).toLocaleDateString()}
+                        {new Date(notification.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteNotification(notification.id);
+                        handleDelete(notification.id);
                       }}
                       className="flex-shrink-0 p-1 hover:bg-red-500/20 rounded transition-colors"
                     >

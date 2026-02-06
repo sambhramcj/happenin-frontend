@@ -8,6 +8,7 @@ import { Icons } from "@/components/icons";
 import { EventDetailSkeleton } from "@/components/skeletons";
 import { LoadingButton } from "@/components/LoadingButton";
 import { EventSponsors } from "@/components/EventSponsors";
+import { BannerCarousel } from "@/components/BannerCarousel";
 
 
 interface Event {
@@ -225,6 +226,12 @@ export default function EventDetailPage() {
 
             {/* Event Sponsors */}
             <EventSponsors eventId={eventId} />
+
+            {/* Event Banners */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-text-primary">Featured Banners</h3>
+              <BannerCarousel placement="event_page" maxBanners={2} />
+            </div>
           </div>
         )}
 

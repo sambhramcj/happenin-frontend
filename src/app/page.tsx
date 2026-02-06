@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ChevronDown, User, Briefcase } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { HomepageSponsorBanner } from '@/components/HomepageSponsorBanner';
+import { BannerCarousel } from '@/components/BannerCarousel';
 
 interface Event {
   id: string;
@@ -273,6 +274,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Promotional Banners - Top */}
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <BannerCarousel placement="home_top" maxBanners={3} />
+      </section>
+
       {/* Happening Today */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 overflow-x-hidden">
         <div className="flex items-center gap-3 mb-6">
@@ -392,6 +398,11 @@ export default function HomePage() {
             <p>No events listed yet. Check back soon.</p>
           </div>
         )}
+      </section>
+
+      {/* Promotional Banners - Mid Page */}
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <BannerCarousel placement="home_mid" maxBanners={1} />
       </section>
 
       {/* Homepage Sponsor Banner */}
