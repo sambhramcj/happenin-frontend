@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ChevronDown, User, Briefcase } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { HomepageSponsorBanner } from '@/components/HomepageSponsorBanner';
 
 interface Event {
   id: string;
@@ -392,6 +393,9 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* Homepage Sponsor Banner */}
+      <HomepageSponsorBanner maxSponsors={5} />
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white mt-12">

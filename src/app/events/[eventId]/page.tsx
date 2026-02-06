@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Icons } from "@/components/icons";
 import { EventDetailSkeleton } from "@/components/skeletons";
 import { LoadingButton } from "@/components/LoadingButton";
+import { EventSponsors } from "@/components/EventSponsors";
 
 
 interface Event {
@@ -201,24 +202,29 @@ export default function EventDetailPage() {
 
         {/* Overview Tab */}
         {activeTab === "overview" && (
-          <div className="bg-bg-card rounded-lg p-6 border border-border-default space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-text-primary mb-2">About This Event</h3>
-              <p className="text-text-secondary leading-relaxed">{event.description}</p>
-            </div>
+          <div className="space-y-6">
+            <div className="bg-bg-card rounded-lg p-6 border border-border-default space-y-6">
+              <div>
+                <h3 className="text-lg font-bold text-text-primary mb-2">About This Event</h3>
+                <p className="text-text-secondary leading-relaxed">{event.description}</p>
+              </div>
 
-            <div>
-              <h3 className="text-lg font-bold text-text-primary mb-2">Location</h3>
-              <p className="text-text-secondary">{event.location}</p>
-            </div>
+              <div>
+                <h3 className="text-lg font-bold text-text-primary mb-2">Location</h3>
+                <p className="text-text-secondary">{event.location}</p>
+              </div>
 
-            <div>
-              <h3 className="text-lg font-bold text-text-primary mb-2">Event Details</h3>
-              <div className="space-y-2 text-text-secondary">
-                <p>📅 {new Date(event.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
-                <p>💰 Entry Fee: ₹{event.price}</p>
+              <div>
+                <h3 className="text-lg font-bold text-text-primary mb-2">Event Details</h3>
+                <div className="space-y-2 text-text-secondary">
+                  <p>📅 {new Date(event.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+                  <p>💰 Entry Fee: ₹{event.price}</p>
+                </div>
               </div>
             </div>
+
+            {/* Event Sponsors */}
+            <EventSponsors eventId={eventId} />
           </div>
         )}
 

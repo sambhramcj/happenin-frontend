@@ -9,6 +9,7 @@ import { Icons } from "@/components/icons";
 import { RevenueChart, UserGrowthChart } from "@/components/Charts";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AdminTableSkeleton, AdminTimelineSkeleton } from "@/components/skeletons";
+import AdminSponsorshipsPage from "@/app/dashboard/admin/sponsorships/page";
 
 interface DashboardMetrics {
   totalRevenue: number;
@@ -338,82 +339,7 @@ export default function AdminDashboard() {
         </div>
                 {activeTab === "sponsorships" && (
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-                        <span>🤝</span> Sponsorships ({sponsorships.length})
-                      </h2>
-                    </div>
-
-                    <div className="bg-bg-card rounded-xl border border-border-default overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-text-secondary">
-                            <th className="px-4 py-3">Event</th>
-                            <th className="px-4 py-3">Sponsor</th>
-                            <th className="px-4 py-3">Tier</th>
-                            <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3">Created By</th>
-                            <th className="px-4 py-3">Created At</th>
-                            <th className="px-4 py-3">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sponsorships.map((s) => (
-                            <tr key={s.id} className="border-t border-border-default">
-                              <td className="px-4 py-3">{s.events?.title || s.event_id}</td>
-                              <td className="px-4 py-3 flex items-center gap-2">
-                                {s.sponsors?.logo_url && (
-                                  <img src={s.sponsors.logo_url} alt={s.sponsors?.name} className="h-5" />
-                                )}
-                                <span>{s.sponsors?.name || "-"}</span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <select
-                                  value={tierOverrides[s.id] ?? (s.tier || 'gold')}
-                                  onChange={(e) => setTierOverrides((prev) => ({ ...prev, [s.id]: e.target.value as any }))}
-                                  className="bg-bg-muted border border-border-default rounded-lg px-2 py-1 text-sm capitalize"
-                                >
-                                  <option value="title">title</option>
-                                  <option value="gold">gold</option>
-                                  <option value="silver">silver</option>
-                                  <option value="partner">partner</option>
-                                </select>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`px-2 py-1 rounded-full text-xs border ${s.status === 'approved' ? 'bg-green-900/20 text-green-400 border-green-700/50' : s.status === 'pending' ? 'bg-yellow-900/20 text-yellow-400 border-yellow-700/50' : s.status === 'rejected' ? 'bg-red-900/20 text-red-400 border-red-700/50' : 'bg-gray-800 text-gray-300 border-gray-700'}`}>
-                                  {s.status}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">{s.created_by}</td>
-                              <td className="px-4 py-3">{new Date(s.created_at).toLocaleDateString()}</td>
-                              <td className="px-4 py-3">
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => reviewSponsorship(s.id, 'approve')}
-                                    disabled={reviewingId === s.id || s.status === 'approved'}
-                                    className="px-3 py-1 bg-green-600/20 text-green-300 border border-green-600/40 rounded hover:bg-green-600/30 disabled:opacity-50"
-                                  >
-                                    {reviewingId === s.id ? '...' : 'Approve'}
-                                  </button>
-                                  <button
-                                    onClick={() => reviewSponsorship(s.id, 'reject')}
-                                    disabled={reviewingId === s.id || s.status === 'rejected'}
-                                    className="px-3 py-1 bg-red-600/20 text-red-300 border border-red-600/40 rounded hover:bg-red-600/30 disabled:opacity-50"
-                                  >
-                                    {reviewingId === s.id ? '...' : 'Reject'}
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>)
-                          )}
-                          {sponsorships.length === 0 && (
-                            <tr>
-                              <td colSpan={7} className="px-4 py-8 text-center text-text-muted">No sponsorships yet</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                    <AdminSponsorshipsPage />
                   </div>
                 )}
         {/* OVERVIEW TAB */}

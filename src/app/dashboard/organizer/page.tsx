@@ -8,6 +8,8 @@ import * as XLSX from "xlsx";
 import { RegistrationsModal } from "@/components/RegistrationsModal";
 import { useEventSchedule } from "@/hooks/useEventSchedule";
 import { EventScheduleBuilder } from "@/components/EventScheduleBuilder";
+import SponsorshipPackagesManager from "@/components/SponsorshipPackagesManager";
+import { SponsorshipPayout } from "@/components/SponsorshipPayout";
 import AttendanceModal from "@/components/AttendanceModal";
 import EventSubmitToFest from "@/components/EventSubmitToFest";
 import { Icons } from "@/components/icons";
@@ -30,6 +32,7 @@ type Event = {
   organizer_email: string;
   banner_image?: string;
   discount_enabled?: boolean;
+  sponsorship_enabled?: boolean;
   discount_club?: string;
   discount_amount?: number;
   eligible_members?: EligibleMember[];
@@ -48,11 +51,11 @@ export default function OrganizerDashboard() {
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"dashboard" | "events" | "analytics" | "profile">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "events" | "analytics" | "profile" | "sponsorships">("dashboard");
 
   // Event detail view state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [eventDetailView, setEventDetailView] = useState<"overview" | "volunteers" | "sponsorships" | "certificates">("overview");
+  const [eventDetailView, setEventDetailView] = useState<"overview" | "volunteers" | "certificates">("overview");
 
   // Data states
   const [events, setEvents] = useState<Event[]>([]);
@@ -74,17 +77,7 @@ export default function OrganizerDashboard() {
   const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
-
-  // Sponsorship states
-  const [sponsorships, setSponsorships] = useState<any[]>([]);
-  const [creatingSponsorship, setCreatingSponsorship] = useState(false);
-  const [sponsorName, setSponsorName] = useState("");
-  const [sponsorLogoUrl, setSponsorLogoUrl] = useState("");
-  const [sponsorWebsiteUrl, setSponsorWebsiteUrl] = useState("");
-  const [sponsorContactEmail, setSponsorContactEmail] = useState("");
-  const [sponsorshipEventId, setSponsorshipEventId] = useState("");
-  const [sponsorshipTier, setSponsorshipTier] = useState<"title"|"gold"|"silver"|"partner">("gold");
-  const [sponsorshipAmount, setSponsorshipAmount] = useState<string>("");
+  const [sponsorshipEnabled, setSponsorshipEnabled] = useState(false);
 
   // Certificate states
   const [approvedVolunteers, setApprovedVolunteers] = useState<any[]>([]);
@@ -148,7 +141,6 @@ export default function OrganizerDashboard() {
       await Promise.all([
         fetchEvents(),
         fetchAllRegistrations(),
-        fetchSponsorships(),
         fetchApprovedVolunteers(),
       ]);
       setDashboardLoading(false);
@@ -164,18 +156,6 @@ export default function OrganizerDashboard() {
     setEvents(
       data.events ? data.events.filter((event: Event) => event.organizer_email === session?.user?.email) : []
     );
-  }
-
-  async function fetchSponsorships() {
-    try {
-      const res = await fetch("/api/organizer/sponsorships");
-      if (res.ok) {
-        const json = await res.json();
-        setSponsorships(json.sponsorships || []);
-      }
-    } catch (e) {
-      // noop
-    }
   }
 
   async function fetchVolunteersForEvent(eventId: string) {
@@ -236,44 +216,6 @@ export default function OrganizerDashboard() {
       accepted: volunteerApplications.filter(app => app.status === "accepted").length,
       rejected: volunteerApplications.filter(app => app.status === "rejected").length,
     };
-  }
-
-  async function handleCreateSponsorship(e: React.FormEvent) {
-    e.preventDefault();
-    if (!sponsorshipEventId || !sponsorshipTier || !sponsorName) {
-      toast.error("Please fill required fields");
-      return;
-    }
-    try {
-      setCreatingSponsorship(true);
-      const body: any = {
-        sponsorName,
-        sponsorLogoUrl: sponsorLogoUrl || null,
-        sponsorWebsiteUrl: sponsorWebsiteUrl || null,
-        sponsorContactEmail: sponsorContactEmail || null,
-        eventId: sponsorshipEventId,
-        tier: sponsorshipTier,
-        amount: sponsorshipAmount ? Number(sponsorshipAmount) : null,
-        assets: sponsorLogoUrl ? [{ asset_type: "logo", asset_url: sponsorLogoUrl, placement: "event_header" }] : [],
-      };
-      const res = await fetch("/api/sponsorships", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Failed to create sponsorship");
-      }
-      toast.success("Sponsorship submitted for approval");
-      setSponsorName(""); setSponsorLogoUrl(""); setSponsorWebsiteUrl(""); setSponsorContactEmail("");
-      setSponsorshipEventId(""); setSponsorshipTier("gold"); setSponsorshipAmount("");
-      fetchSponsorships();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create sponsorship");
-    } finally {
-      setCreatingSponsorship(false);
-    }
   }
 
   async function fetchApprovedVolunteers() {
@@ -492,6 +434,7 @@ export default function OrganizerDashboard() {
         discountClub,
         discountAmount,
         eligibleMembers,
+        sponsorshipEnabled,
         organizerEmail: session?.user?.email,
       }),
     });
@@ -533,6 +476,7 @@ export default function OrganizerDashboard() {
       setDiscountClub("");
       setDiscountAmount(0);
       setEligibleMembers([]);
+      setSponsorshipEnabled(false);
       setBannerImage(null);
       setBannerImagePreview(null);
       eventSchedule.setEventType('single-day');
@@ -809,6 +753,26 @@ export default function OrganizerDashboard() {
                   </label>
                 </div>
 
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sponsorshipEnabled}
+                      onChange={(e) => setSponsorshipEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-brand"
+                    />
+                    <span className="text-sm text-text-secondary">Enable Sponsorships</span>
+                  </label>
+                </div>
+
+                {sponsorshipEnabled && (
+                  <div className="bg-bg-card rounded-lg p-4 border border-border-default">
+                    <p className="text-sm text-text-muted">
+                      Save the event to configure sponsorship packages.
+                    </p>
+                  </div>
+                )}
+
                 {discountEnabled && (
                   <div className="bg-bg-muted rounded-lg p-4 space-y-3">
                     <div>
@@ -933,7 +897,6 @@ export default function OrganizerDashboard() {
                 {[
                   { id: "overview", icon: Icons.Gauge, label: "Overview" },
                   { id: "volunteers", icon: Icons.Award, label: "Volunteers" },
-                  { id: "sponsorships", icon: Icons.BadgePercent, label: "Sponsorships" },
                   { id: "certificates", icon: Icons.Award, label: "Certificates" },
                 ].map((tab) => (
                   <button
@@ -954,6 +917,9 @@ export default function OrganizerDashboard() {
               {/* Overview Tab */}
               {eventDetailView === "overview" && (
                 <div className="space-y-6">
+                  {event.sponsorship_enabled && (
+                    <SponsorshipPackagesManager eventId={event.id} />
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                       <Icons.Users className="h-6 w-6 mb-2 text-text-secondary" />
@@ -1184,97 +1150,6 @@ export default function OrganizerDashboard() {
                         <p className="text-text-secondary text-center">No {volunteerFilterStatus === "all" ? "applications" : `${volunteerFilterStatus} applications`}</p>
                       </div>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* Sponsorships Tab */}
-              {eventDetailView === "sponsorships" && (
-                <div className="space-y-6">
-                  {/* Create Form */}
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
-                      <Icons.BadgePercent className="h-5 w-5 text-primary" />
-                      Add Sponsorship for {event.title}
-                    </h3>
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      setSponsorshipEventId(event.id);
-                      handleCreateSponsorship(e);
-                    }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-text-secondary mb-1 block">Tier *</label>
-                        <select value={sponsorshipTier} onChange={e=>setSponsorshipTier(e.target.value as any)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary">
-                          <option value="title">Title</option>
-                          <option value="gold">Gold</option>
-                          <option value="silver">Silver</option>
-                          <option value="partner">Partner</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-text-secondary mb-1 block">Sponsor Name *</label>
-                        <input value={sponsorName} onChange={e=>setSponsorName(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary" required/>
-                      </div>
-                      <div>
-                        <label className="text-sm text-text-secondary mb-1 block">Amount (₹)</label>
-                        <input type="number" value={sponsorshipAmount} onChange={e=>setSponsorshipAmount(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary" />
-                      </div>
-                      <div>
-                        <label className="text-sm text-text-secondary mb-1 block">Logo URL</label>
-                        <input value={sponsorLogoUrl} onChange={e=>setSponsorLogoUrl(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary" placeholder="https://..."/>
-                      </div>
-                      <div>
-                        <label className="text-sm text-text-secondary mb-1 block">Website URL</label>
-                        <input value={sponsorWebsiteUrl} onChange={e=>setSponsorWebsiteUrl(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary" placeholder="https://..."/>
-                      </div>
-                      <div>
-                        <label className="text-sm text-text-secondary mb-1 block">Contact Email</label>
-                        <input value={sponsorContactEmail} onChange={e=>setSponsorContactEmail(e.target.value)} className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary" placeholder="brand@example.com"/>
-                      </div>
-                      <div className="md:col-span-2">
-                        <button type="submit" disabled={creatingSponsorship} className="w-full bg-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-primaryHover disabled:opacity-50 font-medium">
-                          {creatingSponsorship ? "Submitting..." : "Submit for Approval"}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-
-                  {/* List */}
-                  <div className="bg-bg-card rounded-xl border border-border-default overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-text-secondary border-b border-border-default">
-                          <th className="px-4 py-3">Sponsor</th>
-                          <th className="px-4 py-3">Tier</th>
-                          <th className="px-4 py-3">Status</th>
-                          <th className="px-4 py-3">Created At</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sponsorships.filter(s => s.event_id === event.id).map((s) => (
-                          <tr key={s.id} className="border-t border-border-default">
-                            <td className="px-4 py-3 flex items-center gap-2">
-                              {s.sponsors?.logo_url && (
-                                <img src={s.sponsors.logo_url} alt={s.sponsors?.name} className="h-5" />
-                              )}
-                              <span className="text-text-primary">{s.sponsors?.name || "-"}</span>
-                            </td>
-                            <td className="px-4 py-3 capitalize text-text-primary">{s.tier || "-"}</td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-1 rounded-full text-xs border ${s.status === 'approved' ? 'bg-green-900/20 text-green-400 border-green-700/50' : s.status === 'pending' ? 'bg-yellow-900/20 text-yellow-400 border-yellow-700/50' : s.status === 'rejected' ? 'bg-red-900/20 text-red-400 border-red-700/50' : 'bg-gray-800 text-gray-300 border-gray-700'}`}>
-                                {s.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-text-secondary">{new Date(s.created_at).toLocaleDateString()}</td>
-                          </tr>
-                        ))}
-                        {sponsorships.filter(s => s.event_id === event.id).length === 0 && (
-                          <tr>
-                            <td colSpan={4} className="px-4 py-8 text-center text-text-muted">No sponsorships for this event yet</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
                   </div>
                 </div>
               )}
@@ -1569,6 +1444,17 @@ export default function OrganizerDashboard() {
           </div>
         )}
 
+        {/* SPONSORSHIPS TAB */}
+        {activeTab === "sponsorships" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-text-primary mb-2">Sponsorship Earnings</h2>
+              <p className="text-text-secondary">Track your sponsorship revenue and payouts</p>
+            </div>
+            <SponsorshipPayout organizerEmail={session?.user?.email || ""} />
+          </div>
+        )}
+
         {/* PROFILE TAB */}
         {activeTab === "profile" && (
           <div className="space-y-6">
@@ -1636,6 +1522,7 @@ export default function OrganizerDashboard() {
             { id: "dashboard", icon: Icons.Dashboard, label: "Dashboard" },
             { id: "events", icon: Icons.Clipboard, label: "Events" },
             { id: "analytics", icon: Icons.TrendingUp, label: "Analytics" },
+            { id: "sponsorships", icon: Icons.Handshake, label: "Sponsorships" },
             { id: "profile", icon: Icons.User, label: "Profile" },
           ].map((tab) => (
             <button

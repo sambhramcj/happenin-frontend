@@ -33,19 +33,19 @@ export default function TicketComponent({
   const [sponsor, setSponsor] = useState<{ name: string; logo_url?: string } | null>(null);
   const qrRef = React.useRef<HTMLDivElement>(null);
 
-  // Fetch sponsor for the event (approved only)
+  // Fetch sponsor for the event
   React.useEffect(() => {
     let cancelled = false;
     async function run() {
       if (!eventId) return;
       try {
-        const res = await fetch(`/api/sponsorships?eventId=${eventId}`);
+        const res = await fetch(`/api/sponsorship/public?event_id=${eventId}`);
         if (!res.ok) return;
         const json = await res.json();
-        const s = (json.sponsorships || [])[0];
-        if (!s) return;
-        const sp = s.sponsors || {};
-        if (!cancelled) setSponsor({ name: sp.name, logo_url: sp.logo_url });
+        const deal = (json.deals || [])[0];
+        if (!deal) return;
+        const sp = deal.sponsors_profile || {};
+        if (!cancelled) setSponsor({ name: sp.company_name, logo_url: sp.logo_url });
       } catch {}
     }
     run();

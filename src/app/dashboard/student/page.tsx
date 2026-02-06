@@ -84,7 +84,6 @@ export default function StudentDashboard() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
-  const [sponsorByEvent, setSponsorByEvent] = useState<Record<string, { name: string; logo_url?: string }>>({});
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(true);
@@ -108,6 +107,7 @@ export default function StudentDashboard() {
   const [filterPrice, setFilterPrice] = useState<"all" | "free" | "paid">("all");
   const [filterCategory, setFilterCategory] = useState<"all" | "today" | "week">("all");
   const [top10Events, setTop10Events] = useState<any[]>([]);
+  const [searchPlaceholder, setSearchPlaceholder] = useState("Search fests...");
 
   useEffect(() => {
     if (status === "loading") return;
@@ -133,6 +133,19 @@ export default function StudentDashboard() {
     // Fetch top 10 events
     getTop10Events().then(setTop10Events);
   }, [session, status, router]);
+
+  // Animated search placeholder
+  useEffect(() => {
+    const placeholders = ["Search fests...", "Search workshops...", "Search competitions...", "Search hackathons..."];
+    let currentIndex = 0;
+
+    const intervalId = setInterval(() => {
+      currentIndex = (currentIndex + 1) % placeholders.length;
+      setSearchPlaceholder(placeholders[currentIndex]);
+    }, 2000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   async function fetchVolunteerData() {
     if (!session?.user?.email) return;
@@ -246,41 +259,11 @@ export default function StudentDashboard() {
         const data = await res.json();
         const list = data.events || [];
         setEvents(list);
-        // Fetch approved sponsorship for each event (logo-only display)
-        fetchSponsorsForEvents(list);
       }
     } catch (err) {
       console.error("Error fetching events:", err);
     } finally {
       setEventsLoading(false);
-    }
-  }
-
-  async function fetchSponsorsForEvents(list: Event[]) {
-    try {
-      const results = await Promise.all(
-        list.map(async (e) => {
-          try {
-            const r = await fetch(`/api/sponsorships?eventId=${e.id}`);
-            if (!r.ok) return [e.id, null] as const;
-            const json = await r.json();
-            const s = (json.sponsorships || [])[0];
-            if (!s) return [e.id, null] as const;
-            const sponsor = s.sponsors || {};
-            return [e.id, { name: sponsor.name, logo_url: sponsor.logo_url }] as const;
-          } catch {
-            return [e.id, null] as const;
-          }
-        })
-      );
-
-      const map: Record<string, { name: string; logo_url?: string }> = {};
-      for (const [eventId, sponsor] of results) {
-        if (sponsor) map[eventId] = sponsor;
-      }
-      setSponsorByEvent(map);
-    } catch (e) {
-      console.error("Error fetching sponsors:", e);
     }
   }
 
@@ -766,22 +749,6 @@ export default function StudentDashboard() {
                             <span className="text-text-secondary text-sm font-semibold">₹{event.price}</span>
                           </div>
                           <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
-                          {sponsorByEvent[event.id] && (
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs text-text-muted">Powered by</span>
-                              {sponsorByEvent[event.id].logo_url ? (
-                                <img
-                                  src={sponsorByEvent[event.id].logo_url}
-                                  alt={sponsorByEvent[event.id].name}
-                                  className="h-4 object-contain"
-                                />)
-                                : (
-                                  <span className="text-xs text-text-secondary font-medium">
-                                    {sponsorByEvent[event.id].name}
-                                  </span>
-                                )}
-                            </div>
-                          )}
                           <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
                           <LoadingButton
                             onClick={() => handlePay(event)}
@@ -813,22 +780,6 @@ export default function StudentDashboard() {
                     )}
                     <div className="p-3">
                       <h3 className="font-semibold text-text-primary text-sm mb-1 line-clamp-1">{event.title}</h3>
-                      {sponsorByEvent[event.id] && (
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-[10px] text-text-muted">Powered by</span>
-                          {sponsorByEvent[event.id].logo_url ? (
-                            <img
-                              src={sponsorByEvent[event.id].logo_url}
-                              alt={sponsorByEvent[event.id].name}
-                              className="h-3 object-contain"
-                            />
-                          ) : (
-                            <span className="text-[10px] text-text-secondary font-medium">
-                              {sponsorByEvent[event.id].name}
-                            </span>
-                          )}
-                        </div>
-                      )}
                       <p className="text-xs text-text-muted mb-2">
                         {event.date ? new Date(event.date).toLocaleDateString() : "Date TBA"}
                       </p>
@@ -912,22 +863,6 @@ export default function StudentDashboard() {
                             )}
                           </div>
                           <h3 className="font-bold text-text-primary mb-1 text-sm line-clamp-2">{event.title}</h3>
-                          {sponsorByEvent[event.id] && (
-                            <div className="flex items-center gap-1 mb-2">
-                              <span className="text-[10px] text-text-muted">Powered by</span>
-                              {sponsorByEvent[event.id].logo_url ? (
-                                <img
-                                  src={sponsorByEvent[event.id].logo_url}
-                                  alt={sponsorByEvent[event.id].name}
-                                  className="h-3 object-contain"
-                                />
-                              ) : (
-                                <span className="text-[10px] text-text-secondary font-medium">
-                                  {sponsorByEvent[event.id].name}
-                                </span>
-                              )}
-                            </div>
-                          )}
                           <p className="text-xs text-text-muted mb-2">{new Date(event.date).toLocaleDateString()}</p>
                           <LoadingButton
                             onClick={() => handlePay(event)}
@@ -997,7 +932,7 @@ export default function StudentDashboard() {
             <div className="sticky top-20 z-30 bg-bg-card/95 backdrop-blur-md p-4 rounded-xl border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
               <input
                 type="text"
-                placeholder="Search events, clubs, or fests..."
+                placeholder={searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-3 text-text-primary placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary transition-all"

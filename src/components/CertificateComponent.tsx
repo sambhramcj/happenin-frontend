@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
@@ -12,6 +12,12 @@ interface CertificateProps {
   eventName: string;
   issuedDate: string;
   issuedBy: string;
+  eventId?: string;
+}
+
+interface Sponsor {
+  name: string;
+  logo_url?: string;
 }
 
 export default function CertificateComponent({
@@ -21,9 +27,36 @@ export default function CertificateComponent({
   eventName,
   issuedDate,
   issuedBy,
+  eventId,
 }: CertificateProps) {
   const certificateRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [sponsor, setSponsor] = useState<Sponsor | null>(null);
+
+  // Fetch sponsor for the event
+  useEffect(() => {
+    if (!eventId) return;
+
+    const fetchSponsor = async () => {
+      try {
+        const res = await fetch(`/api/sponsorship/public?event_id=${eventId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const deal = data.deals?.[0];
+          if (deal?.sponsors_profile) {
+            setSponsor({
+              name: deal.sponsors_profile.company_name,
+              logo_url: deal.sponsors_profile.logo_url,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching sponsor:", error);
+      }
+    };
+
+    fetchSponsor();
+  }, [eventId]);
 
   const handleDownload = async () => {
     if (!certificateRef.current) return;
@@ -62,11 +95,16 @@ export default function CertificateComponent({
           aspectRatio: "16 / 10",
         }}
       >
-        {/* Decorative corners */}
-        <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-purple-600" />
-        <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-purple-600" />
-        <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-purple-600" />
-        <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-purple-600" />
+        {/* Sponsor Logo (bottom left corner) */}
+        {sponsor && sponsor.logo_url && (
+          <div className="absolute bottom-6 left-6 max-w-24">
+            <img
+              src={sponsor.logo_url}
+              alt={sponsor.name}
+              className="max-h-12 object-contain"
+            />
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex flex-col justify-center items-center h-full text-center space-y-6">
