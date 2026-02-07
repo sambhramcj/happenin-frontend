@@ -32,6 +32,14 @@ export async function GET(req: NextRequest) {
       amount_paid,
       platform_fee,
       organizer_amount,
+      facilitation_fee_amount,
+      facilitation_fee_paid,
+      payment_reference,
+      marked_paid_by,
+      marked_paid_at,
+      payment_proof_url,
+      confirmed_by,
+      confirmed_at,
       status,
       created_at,
       sponsor_id,
@@ -65,7 +73,7 @@ export async function GET(req: NextRequest) {
 }
 
 // PATCH /api/admin/sponsorships
-// Admin-only: disable/enable sponsors or packages, or update deal status
+// Admin-only: disable/enable sponsors or packages, update deal status, or mark facilitation fee as paid
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email as string | undefined;
@@ -75,9 +83,37 @@ export async function PATCH(req: NextRequest) {
   if (role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { action, target_type, target_id, value } = body;
+  const { action, target_type, target_id, value, deal_id, payment_reference } = body;
 
-  if (!action || !target_type || !target_id) {
+  if (!action) {
+    return NextResponse.json({ error: "Missing action field" }, { status: 400 });
+  }
+
+  // Handle marking facilitation fee as paid
+  if (action === "mark_facilitation_paid") {
+    if (!deal_id || !payment_reference) {
+      return NextResponse.json({ error: "Missing deal_id or payment_reference" }, { status: 400 });
+    }
+
+    const { error } = await serviceSupabase
+      .from("sponsorship_deals")
+      .update({
+        facilitation_fee_paid: true,
+        payment_reference: payment_reference,
+        marked_paid_by: email,
+        marked_paid_at: new Date().toISOString(),
+      })
+      .eq("id", deal_id);
+
+    if (error) {
+      console.error("Error marking facilitation fee as paid:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (!target_type || !target_id) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 

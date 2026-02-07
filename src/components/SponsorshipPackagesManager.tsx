@@ -17,6 +17,8 @@ export default function SponsorshipPackagesManager({ eventId }: SponsorshipPacka
   const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingTier, setCreatingTier] = useState<string | null>(null);
+  const [sponsorshipSettled, setSponsorshipSettled] = useState(false);
+  const [checkingSettlement, setCheckingSettlement] = useState(true);
 
   const tiers = [
     { value: 'bronze', label: 'Bronze', color: 'from-amber-700 to-amber-600' },
@@ -27,7 +29,22 @@ export default function SponsorshipPackagesManager({ eventId }: SponsorshipPacka
 
   useEffect(() => {
     fetchPackages();
+    checkSponsorshipStatus();
   }, [eventId]);
+
+  async function checkSponsorshipStatus() {
+    try {
+      const res = await fetch(`/api/organizer/sponsorship-status/${eventId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSponsorshipSettled(data.settled);
+      }
+    } catch (err) {
+      console.error("Failed to check sponsorship status:", err);
+    } finally {
+      setCheckingSettlement(false);
+    }
+  }
 
   async function fetchPackages() {
     setLoading(true);
@@ -111,7 +128,26 @@ export default function SponsorshipPackagesManager({ eventId }: SponsorshipPacka
   return (
     <div className="space-y-6">
       <div className="bg-bg-card rounded-xl border border-border-default p-6">
-        <h3 className="text-lg font-bold text-text-primary mb-4">Sponsorship Packages</h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-bold text-text-primary">Sponsorship Packages</h3>
+          {!checkingSettlement && (
+            <div className={`px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-2 ${
+              sponsorshipSettled
+                ? "bg-success/10 text-success border border-success/20"
+                : "bg-warning/10 text-warning border border-warning/20"
+            }`}>
+              <div className={`h-2 w-2 rounded-full ${sponsorshipSettled ? "bg-success" : "bg-warning"}`} />
+              {sponsorshipSettled ? "Features Unlocked" : "Awaiting Payment Confirmation"}
+            </div>
+          )}
+        </div>
+
+        {!sponsorshipSettled && (
+          <div className="bg-warningSoft border border-warning/30 rounded-lg p-4 mb-6 text-sm text-warning">
+            <p className="font-medium mb-1">Awaiting Payment Confirmation</p>
+            <p className="text-warning/80">Features will unlock once you confirm sponsor payment receipt. Go to Deals section below to mark as paid.</p>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {tiers.map((tier) => {

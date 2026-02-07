@@ -30,58 +30,58 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch all events for this organizer
-    const { data: events, error: eventsError } = await serviceSupabase
-      .from("events")
-      .select("id")
-      .eq("organizer_email", email);
+    const { data: bankAccount } = await serviceSupabase
+      .from("organizer_bank_accounts")
+      .select("*")
+      .eq("organizer_email", email)
+      .single();
 
-    if (eventsError) throw eventsError;
-
-    if (!events || events.length === 0) {
-      return NextResponse.json({
-        totalEarnings: 0,
-        activeDeals: 0,
-        deals: [],
-      });
-    }
-
-    const eventIds = events.map((e) => e.id);
-
-    // Fetch sponsorship deals for these events
-    const { data: deals, error: dealsError } = await serviceSupabase
-      .from("sponsorship_deals")
+    const { data: payouts, error: payoutsError } = await serviceSupabase
+      .from("sponsorship_payouts")
       .select(
         `
         id,
-        event_id,
-        amount_paid,
+        sponsorship_deal_id,
+        gross_amount,
         platform_fee,
-        organizer_amount,
-        status,
+        payout_amount,
+        payout_status,
+        payout_method,
+        paid_at,
         created_at,
-        events (id, title),
-        sponsors_profile (company_name, email)
+        sponsorship_deals (
+          id,
+          event_id,
+          sponsorship_packages (tier),
+          events (id, title),
+          sponsors_profile (company_name)
+        )
       `
       )
-      .in("event_id", eventIds)
+      .eq("organizer_email", email)
       .order("created_at", { ascending: false });
 
-    if (dealsError) throw dealsError;
+    if (payoutsError) throw payoutsError;
 
-    const typedDeals = deals || [];
-    const totalEarnings = typedDeals.reduce(
-      (sum: number, d: any) => sum + (d.organizer_amount || 0),
+    const typedPayouts = payouts || [];
+    const totalEarnings = typedPayouts.reduce(
+      (sum: number, p: any) => sum + (p.payout_amount || 0),
       0
     );
-    const activeDeals = typedDeals.filter((d: any) =>
-      ["pending", "confirmed", "active"].includes(d.status)
-    ).length;
+    const paidToOrganizer = typedPayouts.reduce(
+      (sum: number, p: any) => sum + (p.payout_status === "paid" ? p.payout_amount || 0 : 0),
+      0
+    );
+    const pendingPayouts = typedPayouts.filter((p: any) => p.payout_status === "pending").length;
 
     return NextResponse.json({
-      totalEarnings,
-      activeDeals,
-      deals: typedDeals,
+      bankAccount: bankAccount || null,
+      totals: {
+        totalEarnings,
+        paidToOrganizer,
+        pendingPayouts,
+      },
+      payouts: typedPayouts,
     });
   } catch (error) {
     console.error("Error fetching payout:", error);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { isSponsorshipSettled } from "@/lib/sponsorshipAccess";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -31,6 +32,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // GATING: Only show sponsors with confirmed status or higher
+  // Status filtering above ensures only confirmed/active/completed deals are shown
   let deals = (data || []).filter((d: any) => d.sponsors_profile?.is_active !== false);
 
   if (placement === "homepage") {

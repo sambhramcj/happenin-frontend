@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { supabase } from "@/lib/supabase";
+import { isSponsorshipSettled, sponsorshipNotSettledError } from "@/lib/sponsorshipAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,15 @@ export async function POST(
     if (!event || event.organizer_email !== organizerEmail) {
       return NextResponse.json(
         { error: "Unauthorized - not event organizer" },
+        { status: 403 }
+      );
+    }
+
+    // 2b. Check sponsorship settlement (GATING)
+    const settled = await isSponsorshipSettled(eventId);
+    if (!settled) {
+      return NextResponse.json(
+        sponsorshipNotSettledError(),
         { status: 403 }
       );
     }
@@ -123,6 +133,15 @@ export async function GET(
 
     if (!event || event.organizer_email !== organizerEmail) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    // 2b. Check sponsorship settlement (GATING)
+    const settled = await isSponsorshipSettled(eventId);
+    if (!settled) {
+      return NextResponse.json(
+        sponsorshipNotSettledError(),
+        { status: 403 }
+      );
     }
 
     // 3. Fetch attendance records

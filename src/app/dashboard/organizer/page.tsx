@@ -10,6 +10,7 @@ import { useEventSchedule } from "@/hooks/useEventSchedule";
 import { EventScheduleBuilder } from "@/components/EventScheduleBuilder";
 import SponsorshipPackagesManager from "@/components/SponsorshipPackagesManager";
 import { SponsorshipPayout } from "@/components/SponsorshipPayout";
+import { OrganizerSponsorshipDeals } from "@/components/OrganizerSponsorshipDeals";
 import AttendanceModal from "@/components/AttendanceModal";
 import EventSubmitToFest from "@/components/EventSubmitToFest";
 import { BannerUploadForm } from "@/components/BannerUploadForm";
@@ -920,7 +921,10 @@ export default function OrganizerDashboard() {
               {eventDetailView === "overview" && (
                 <div className="space-y-6">
                   {event.sponsorship_enabled && (
-                    <SponsorshipPackagesManager eventId={event.id} />
+                    <>
+                      <SponsorshipPackagesManager eventId={event.id} />
+                      <OrganizerSponsorshipDeals eventId={event.id} />
+                    </>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-bg-card rounded-xl p-6 border border-border-default">

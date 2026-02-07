@@ -30,7 +30,7 @@ export async function logAdminAction(
 
 // Get dashboard metrics
 export async function getDashboardMetrics() {
-  const [revenueData, transactionData, userData, eventData] =
+  const [revenueData, transactionData, userData, eventData, payoutData, pendingPayouts] =
     await Promise.all([
       supabase
         .from('payments')
@@ -46,15 +46,32 @@ export async function getDashboardMetrics() {
       supabase
         .from('events')
         .select('id', { count: 'exact' }),
+      supabase
+        .from('sponsorship_payouts')
+        .select('gross_amount, platform_fee, payout_amount, payout_status'),
+      supabase
+        .from('sponsorship_payouts')
+        .select('id', { count: 'exact', head: true })
+        .eq('payout_status', 'pending'),
     ])
 
   const totalRevenue = revenueData.data?.reduce((sum: number, p: any) => sum + p.amount, 0) || 0
+  const totalSponsorshipRevenue = payoutData.data?.reduce((sum: number, p: any) => sum + (p.gross_amount || 0), 0) || 0
+  const totalPlatformEarnings = payoutData.data?.reduce((sum: number, p: any) => sum + (p.platform_fee || 0), 0) || 0
+  const totalPaidToOrganizers = payoutData.data?.reduce(
+    (sum: number, p: any) => sum + (p.payout_status === 'paid' ? p.payout_amount || 0 : 0),
+    0
+  ) || 0
 
   return {
     totalRevenue,
     totalTransactions: transactionData.count || 0,
     totalUsers: userData.count || 0,
     totalEvents: eventData.count || 0,
+    totalSponsorshipRevenue,
+    totalPlatformEarnings,
+    totalPaidToOrganizers,
+    pendingPayoutsCount: pendingPayouts.count || 0,
   }
 }
 

@@ -10,12 +10,17 @@ import { RevenueChart, UserGrowthChart } from "@/components/Charts";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AdminTableSkeleton, AdminTimelineSkeleton } from "@/components/skeletons";
 import AdminSponsorshipsPage from "@/app/dashboard/admin/sponsorships/page";
+import { AdminSponsorshipPayouts } from "@/components/AdminSponsorshipPayouts";
 
 interface DashboardMetrics {
   totalRevenue: number;
   totalTransactions: number;
   totalUsers: number;
   totalEvents: number;
+  totalSponsorshipRevenue: number;
+  totalPlatformEarnings: number;
+  totalPaidToOrganizers: number;
+  pendingPayoutsCount: number;
 }
 
 type Event = {
@@ -49,7 +54,7 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "colleges" | "events" | "payments" | "users" | "sponsorships">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "colleges" | "events" | "payments" | "users" | "sponsorships" | "payouts">("overview");
   const [usersSubTab, setUsersSubTab] = useState<"students" | "organizers">("students");
   const [analyticsTab, setAnalyticsTab] = useState<"overview" | "revenue" | "users" | "events" | "logs" | "reports" | "disputes">("overview");
 
@@ -322,6 +327,7 @@ export default function AdminDashboard() {
             { id: "payments", label: "Payments", icon: <Icons.Wallet className="h-4 w-4" /> },
             { id: "users", label: "Users", icon: <Icons.Users className="h-4 w-4" /> },
             { id: "sponsorships", label: "Sponsorships", icon: <Icons.Handshake className="h-4 w-4" /> },
+            { id: "payouts", label: "Sponsorship Payouts", icon: <Icons.Wallet className="h-4 w-4" /> },
           ].map((t: any) => (
             <button
               key={t.id}
@@ -340,6 +346,11 @@ export default function AdminDashboard() {
                 {activeTab === "sponsorships" && (
                   <div className="space-y-6">
                     <AdminSponsorshipsPage />
+                  </div>
+                )}
+                {activeTab === "payouts" && (
+                  <div className="space-y-6">
+                    <AdminSponsorshipPayouts />
                   </div>
                 )}
         {/* OVERVIEW TAB */}
@@ -371,6 +382,32 @@ export default function AdminDashboard() {
                     <Icons.Calendar className="h-6 w-6 mb-2 text-orange-500" />
                     <div className="text-3xl font-bold text-text-primary">{metrics.totalEvents}</div>
                     <div className="text-sm text-text-muted">Total Events</div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {metrics && (
+              <section>
+                <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <Icons.Wallet className="h-5 w-5 text-primary" /> Sponsorship Payouts
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <div className="text-sm text-text-muted">Total Sponsorship Revenue</div>
+                    <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalSponsorshipRevenue)}</div>
+                  </div>
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <div className="text-sm text-text-muted">Platform Earnings</div>
+                    <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalPlatformEarnings)}</div>
+                  </div>
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <div className="text-sm text-text-muted">Paid to Organizers</div>
+                    <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalPaidToOrganizers)}</div>
+                  </div>
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                    <div className="text-sm text-text-muted">Pending Payouts</div>
+                    <div className="text-2xl font-bold text-text-primary">{metrics.pendingPayoutsCount}</div>
                   </div>
                 </div>
               </section>
@@ -523,6 +560,28 @@ export default function AdminDashboard() {
                         <div className="text-sm text-text-muted">Total Events</div>
                         <div className="text-xl font-bold text-text-primary">{metrics.totalEvents}</div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">Sponsorship Payouts</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-4 bg-bg-muted rounded-lg">
+                      <div className="text-sm text-text-muted mb-1">Total Sponsorship Revenue</div>
+                      <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalSponsorshipRevenue)}</div>
+                    </div>
+                    <div className="p-4 bg-bg-muted rounded-lg">
+                      <div className="text-sm text-text-muted mb-1">Platform Earnings</div>
+                      <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalPlatformEarnings)}</div>
+                    </div>
+                    <div className="p-4 bg-bg-muted rounded-lg">
+                      <div className="text-sm text-text-muted mb-1">Paid to Organizers</div>
+                      <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalPaidToOrganizers)}</div>
+                    </div>
+                    <div className="p-4 bg-bg-muted rounded-lg">
+                      <div className="text-sm text-text-muted mb-1">Pending Payouts</div>
+                      <div className="text-2xl font-bold text-text-primary">{metrics.pendingPayoutsCount}</div>
                     </div>
                   </div>
                 </div>

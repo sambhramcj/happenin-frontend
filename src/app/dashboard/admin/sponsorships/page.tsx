@@ -12,6 +12,14 @@ interface Deal {
   amount_paid: number;
   platform_fee: number;
   organizer_amount: number;
+  facilitation_fee_amount?: number;
+  facilitation_fee_paid?: boolean;
+  payment_reference?: string;
+  marked_paid_by?: string;
+  marked_paid_at?: string;
+  payment_proof_url?: string;
+  confirmed_by?: string;
+  confirmed_at?: string;
   status: string;
   created_at: string;
   sponsor_id: string;
@@ -33,6 +41,7 @@ export default function AdminSponsorshipsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [paymentReferences, setPaymentReferences] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (session?.user && (session.user as any).role !== 'admin') {
@@ -123,6 +132,39 @@ export default function AdminSponsorshipsPage() {
     } catch (error) {
       console.error('Error disabling package:', error);
       toast.error('Failed to disable package');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleMarkFacilitationFeePaid = async (dealId: string, paymentReference: string) => {
+    if (!paymentReference.trim()) {
+      toast.error('Please enter payment reference (e.g., UPI ID, IMPS reference)');
+      return;
+    }
+
+    try {
+      setUpdatingId(dealId);
+      const res = await fetch('/api/admin/sponsorships', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'mark_facilitation_paid',
+          deal_id: dealId,
+          payment_reference: paymentReference,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success('Facilitation fee marked as paid. Features unlocked!');
+        await fetchDeals();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to mark facilitation fee as paid');
+      }
+    } catch (error) {
+      console.error('Error marking facilitation fee as paid:', error);
+      toast.error('Failed to mark facilitation fee as paid');
     } finally {
       setUpdatingId(null);
     }
@@ -222,7 +264,8 @@ export default function AdminSponsorshipsPage() {
               <th className="px-4 py-3 text-right text-text-secondary font-medium">Amount Paid</th>
               <th className="px-4 py-3 text-right text-text-secondary font-medium">Platform Fee</th>
               <th className="px-4 py-3 text-right text-text-secondary font-medium">Organizer Amount</th>
-              <th className="px-4 py-3 text-left text-text-secondary font-medium">Status</th>
+              <th className="px-4 py-3 text-left text-text-secondary font-medium">Payment Status</th>
+              <th className="px-4 py-3 text-left text-text-secondary font-medium">Commission</th>
               <th className="px-4 py-3 text-left text-text-secondary font-medium">Actions</th>
             </tr>
           </thead>
@@ -256,12 +299,52 @@ export default function AdminSponsorshipsPage() {
                   ₹{(deal.organizer_amount / 100).toFixed(0)}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(deal.status)} capitalize`}>
-                    {deal.status}
+                  <div>
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(deal.status)}`}>
+                      {deal.status}
+                    </span>
+                    {deal.status === 'confirmed' && deal.confirmed_by && (
+                      <div className="text-xs text-text-muted mt-1">
+                        Confirmed by organizer
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                    deal.facilitation_fee_paid 
+                      ? 'bg-success/10 text-success border border-success/20' 
+                      : 'bg-warning/10 text-warning border border-warning/20'
+                  }`}>
+                    {deal.facilitation_fee_paid ? 'Paid' : 'Pending'}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2">
+                    {!deal.facilitation_fee_paid && deal.status === 'confirmed' && (
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          placeholder="Payment ref"
+                          value={paymentReferences[deal.id] || ''}
+                          onChange={(e) => setPaymentReferences({ ...paymentReferences, [deal.id]: e.target.value })}
+                          className="flex-1 px-2 py-1 text-xs border border-border-default rounded bg-bg-muted text-text-primary placeholder:text-text-muted"
+                        />
+                        <button
+                          onClick={() => handleMarkFacilitationFeePaid(deal.id, paymentReferences[deal.id] || '')}
+                          disabled={updatingId === deal.id}
+                          className="text-xs px-2 py-1 border border-success text-success hover:bg-success/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          title="Mark platform commission as received"
+                        >
+                          {updatingId === deal.id ? 'Marking...' : 'Mark Commission Paid'}
+                        </button>
+                      </div>
+                    )}
+                    {deal.status === 'pending' && (
+                      <div className="text-xs text-text-muted italic">
+                        Awaiting organizer confirmation
+                      </div>
+                    )}
                     <button
                       onClick={() => handleDisableSponsor(deal.sponsors_profile.email)}
                       disabled={updatingId === deal.sponsors_profile.email}

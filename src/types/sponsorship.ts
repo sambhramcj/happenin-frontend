@@ -44,6 +44,32 @@ export interface SponsorProfile {
   created_at: string;
 }
 
+export interface OrganizerBankAccount {
+  id: string;
+  organizer_email: string;
+  account_holder_name?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  ifsc_code?: string | null;
+  upi_id?: string | null;
+  is_verified: boolean;
+  created_at: string;
+}
+
+export interface SponsorshipPayout {
+  id: string;
+  sponsorship_deal_id: string;
+  organizer_email: string;
+  gross_amount: number;
+  platform_fee: number;
+  payout_amount: number;
+  payout_method?: 'UPI' | 'IMPS' | null;
+  payout_status: 'pending' | 'paid';
+  paid_at?: string | null;
+  admin_email?: string | null;
+  created_at: string;
+}
+
 export interface CreatePackageRequest {
   event_id: string;
   tier: 'bronze' | 'silver' | 'gold' | 'platinum';

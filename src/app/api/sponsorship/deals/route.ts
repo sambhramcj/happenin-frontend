@@ -9,6 +9,10 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
+function getPlatformFeeRate(tier: string) {
+  return tier === "platinum" || tier === "gold" ? 0.1 : 0.15;
+}
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user || (session.user as any).role !== "sponsor") {
@@ -38,8 +42,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Amount out of range" }, { status: 400 });
   }
 
-  const platform_fee = amount * 0.20;
-  const organizer_amount = amount * 0.80;
+  const platform_fee = amount * getPlatformFeeRate(pkg.tier);
+  const organizer_amount = amount - platform_fee;
 
   try {
     const order = await razorpay.orders.create({
@@ -152,6 +156,44 @@ export async function PATCH(req: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (deal) {
+    const { data: payoutSource, error: payoutError } = await supabase
+      .from("sponsorship_deals")
+      .select(
+        `
+        id,
+        amount_paid,
+        platform_fee,
+        organizer_amount,
+        events (organizer_email),
+        sponsorship_packages (tier)
+      `
+      )
+      .eq("id", deal.id)
+      .single();
+
+    if (!payoutError && payoutSource?.events?.organizer_email) {
+      const tier = payoutSource.sponsorship_packages?.tier || "bronze";
+      const grossAmount = payoutSource.amount_paid || 0;
+      const platformFee = payoutSource.platform_fee ?? grossAmount * getPlatformFeeRate(tier);
+      const payoutAmount = payoutSource.organizer_amount ?? grossAmount - platformFee;
+
+      await supabase
+        .from("sponsorship_payouts")
+        .upsert(
+          {
+            sponsorship_deal_id: payoutSource.id,
+            organizer_email: payoutSource.events.organizer_email,
+            gross_amount: grossAmount,
+            platform_fee: platformFee,
+            payout_amount: payoutAmount,
+            payout_status: "pending",
+          },
+          { onConflict: "sponsorship_deal_id" }
+        );
+    }
   }
 
   return NextResponse.json({ deal });
