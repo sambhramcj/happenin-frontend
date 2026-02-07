@@ -174,25 +174,30 @@ export async function PATCH(req: Request) {
       .eq("id", deal.id)
       .single();
 
-    if (!payoutError && payoutSource?.events?.organizer_email) {
-      const tier = payoutSource.sponsorship_packages?.tier || "bronze";
-      const grossAmount = payoutSource.amount_paid || 0;
-      const platformFee = payoutSource.platform_fee ?? grossAmount * getPlatformFeeRate(tier);
-      const payoutAmount = payoutSource.organizer_amount ?? grossAmount - platformFee;
+    if (!payoutError && payoutSource) {
+      const eventData = payoutSource.events as any;
+      const organizerEmail = eventData?.organizer_email;
+      
+      if (organizerEmail) {
+        const tier = (payoutSource.sponsorship_packages as any)?.tier || "bronze";
+        const grossAmount = payoutSource.amount_paid || 0;
+        const platformFee = payoutSource.platform_fee ?? grossAmount * getPlatformFeeRate(tier);
+        const payoutAmount = payoutSource.organizer_amount ?? grossAmount - platformFee;
 
-      await supabase
-        .from("sponsorship_payouts")
-        .upsert(
-          {
-            sponsorship_deal_id: payoutSource.id,
-            organizer_email: payoutSource.events.organizer_email,
-            gross_amount: grossAmount,
-            platform_fee: platformFee,
-            payout_amount: payoutAmount,
-            payout_status: "pending",
-          },
-          { onConflict: "sponsorship_deal_id" }
-        );
+        await supabase
+          .from("sponsorship_payouts")
+          .upsert(
+            {
+              sponsorship_deal_id: payoutSource.id,
+              organizer_email: organizerEmail,
+              gross_amount: grossAmount,
+              platform_fee: platformFee,
+              payout_amount: payoutAmount,
+              payout_status: "pending",
+            },
+            { onConflict: "sponsorship_deal_id" }
+          );
+      }
     }
   }
 
