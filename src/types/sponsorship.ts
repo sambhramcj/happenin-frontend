@@ -34,6 +34,22 @@ export interface SponsorshipDeal {
   created_at: string;
 }
 
+export interface SponsorshipOrder {
+  id: string;
+  sponsor_email: string;
+  event_id: string | null;
+  fest_id?: string | null;
+  pack_type: 'digital' | 'app' | 'fest';
+  amount: number;
+  razorpay_order_id: string;
+  razorpay_payment_id?: string | null;
+  status: 'created' | 'paid' | 'failed';
+  visibility_active: boolean;
+  organizer_payout_settled: boolean;
+  organizer_payout_settled_at?: string | null;
+  created_at: string;
+}
+
 export interface SponsorProfile {
   email: string;
   company_name: string;
@@ -102,11 +118,14 @@ export const SPONSORSHIP_VISIBILITY = {
     'Logo on event certificates',
     'Event page banner',
     'Homepage rotating banner (fest days)',
+    'Click and impression tracking',
   ],
   fest: [
     'Logo on all fest event tickets',
     'Logo on all fest event certificates',
-    'Homepage rotating banner (fest days)',
-    'Additional homepage banner slots',
+    'Event page banners',
+    'Homepage rotating banners',
+    'Additional homepage placements',
+    'Click and impression tracking',
   ],
 } as const;

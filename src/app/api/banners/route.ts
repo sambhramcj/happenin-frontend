@@ -24,7 +24,8 @@ export async function GET(request: Request) {
         *,
         events (id, title),
         fests (id, title),
-        sponsorship_deals (id, visibility_active, payment_status)
+        sponsorship_deals (id, visibility_active, payment_status),
+        sponsorship_orders (id, visibility_active, status)
       `,
         { count: "exact" }
       );
@@ -59,7 +60,13 @@ export async function GET(request: Request) {
     if (!session?.user?.email || (session?.user as any)?.role !== "admin") {
       banners = banners.filter((banner: any) => {
         if (banner.type !== "sponsor") return true;
-        return banner.sponsorship_deals?.visibility_active && banner.sponsorship_deals?.payment_status === "verified";
+        const orderOk =
+          banner.sponsorship_orders?.visibility_active &&
+          banner.sponsorship_orders?.status === "paid";
+        const dealOk =
+          banner.sponsorship_deals?.visibility_active &&
+          banner.sponsorship_deals?.payment_status === "verified";
+        return orderOk || dealOk;
       });
     }
 
@@ -94,6 +101,7 @@ export async function POST(request: Request) {
       festId,
       sponsorEmail,
       sponsorshipDealId,
+      sponsorshipOrderId,
       imageUrl,
       placement,
       linkType,
@@ -156,7 +164,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Verify sponsor owns the sponsorship and link to a deal
+    // Verify sponsor owns the sponsorship and link to an order
     if (type === "sponsor" && sponsorEmail) {
       if (sponsorEmail !== session.user.email) {
         return NextResponse.json(
@@ -165,37 +173,70 @@ export async function POST(request: Request) {
         );
       }
 
-      if (!sponsorshipDealId) {
+      if (!sponsorshipOrderId && !sponsorshipDealId) {
         return NextResponse.json(
-          { error: "Sponsorship deal is required for sponsor banners" },
+          { error: "Sponsorship order is required for sponsor banners" },
           { status: 400 }
         );
       }
 
-      const { data: deal, error: dealError } = await supabase
-        .from("sponsorship_deals")
-        .select("id, sponsor_email, event_id, fest_id, sponsorship_packages (type, scope)")
-        .eq("id", sponsorshipDealId)
-        .single();
+      let packType: string | null = null;
+      let orderEventId: string | null = null;
+      let orderFestId: string | null = null;
 
-      if (dealError || !deal || deal.sponsor_email !== sponsorEmail) {
-        return NextResponse.json(
-          { error: "Invalid sponsorship deal" },
-          { status: 403 }
-        );
+      if (sponsorshipOrderId) {
+        const { data: order, error: orderError } = await supabase
+          .from("sponsorship_orders")
+          .select("id, sponsor_email, event_id, fest_id, pack_type, status, visibility_active")
+          .eq("id", sponsorshipOrderId)
+          .single();
+
+        if (orderError || !order || order.sponsor_email !== sponsorEmail) {
+          return NextResponse.json(
+            { error: "Invalid sponsorship order" },
+            { status: 403 }
+          );
+        }
+
+        if (order.status !== "paid" || !order.visibility_active) {
+          return NextResponse.json(
+            { error: "Sponsorship visibility is not active" },
+            { status: 400 }
+          );
+        }
+
+        packType = order.pack_type;
+        orderEventId = order.event_id;
+        orderFestId = order.fest_id;
+      } else if (sponsorshipDealId) {
+        const { data: deal, error: dealError } = await supabase
+          .from("sponsorship_deals")
+          .select("id, sponsor_email, event_id, fest_id, sponsorship_packages (type, scope)")
+          .eq("id", sponsorshipDealId)
+          .single();
+
+        if (dealError || !deal || deal.sponsor_email !== sponsorEmail) {
+          return NextResponse.json(
+            { error: "Invalid sponsorship deal" },
+            { status: 403 }
+          );
+        }
+
+        packType = (deal as any).sponsorship_packages?.type || null;
+        orderEventId = deal.event_id;
+        orderFestId = deal.fest_id;
       }
 
-      const packType = (deal as any).sponsorship_packages?.type;
-      if (deal.event_id && eventId && deal.event_id !== eventId) {
+      if (orderEventId && eventId && orderEventId !== eventId) {
         return NextResponse.json(
-          { error: "Event does not match sponsorship deal" },
+          { error: "Event does not match sponsorship" },
           { status: 400 }
         );
       }
 
-      if (deal.fest_id && festId && deal.fest_id !== festId) {
+      if (orderFestId && festId && orderFestId !== festId) {
         return NextResponse.json(
-          { error: "Fest does not match sponsorship deal" },
+          { error: "Fest does not match sponsorship" },
           { status: 400 }
         );
       }
@@ -226,6 +267,7 @@ export async function POST(request: Request) {
       }
 
       if (packType === "fest") {
+        allowedPlacements.add("event_page");
         allowedPlacements.add("home_top");
         allowedPlacements.add("home_mid");
       }
@@ -261,6 +303,7 @@ export async function POST(request: Request) {
         fest_id: festId,
         sponsor_email: sponsorEmail,
         sponsorship_deal_id: sponsorshipDealId,
+        sponsorship_order_id: sponsorshipOrderId,
         image_url: imageUrl,
         placement,
         link_type: linkType,

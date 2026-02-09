@@ -22,20 +22,23 @@ export async function GET(req: Request) {
   }
 
   let query = supabase
-    .from("sponsorship_deals")
-    .select(`
+    .from("sponsorship_orders")
+    .select(
+      `
       id,
       event_id,
       fest_id,
-      payment_status,
+      pack_type,
+      amount,
+      status,
       visibility_active,
-      sponsorship_packages (type, scope, price),
       sponsors_profile (company_name, logo_url, website_url, is_active),
       events (id, title, fest_id),
       fests (id, title, start_date, end_date)
-    `)
+    `
+    )
     .eq("visibility_active", true)
-    .eq("payment_status", "verified");
+    .eq("status", "paid");
 
   if (event_id) {
     if (festId) {
@@ -55,7 +58,7 @@ export async function GET(req: Request) {
   if (placement === "homepage") {
     const now = new Date();
     deals = deals.filter((d: any) => {
-      const packType = d.sponsorship_packages?.type;
+      const packType = d.pack_type;
       if (!['app', 'fest'].includes(packType)) return false;
 
       const festStart = d.fests?.start_date ? new Date(d.fests.start_date) : null;
@@ -69,5 +72,13 @@ export async function GET(req: Request) {
     });
   }
 
-  return NextResponse.json({ deals });
+  const mapped = deals.map((deal: any) => ({
+    ...deal,
+    sponsorship_packages: {
+      type: deal.pack_type,
+      price: deal.amount,
+    },
+  }));
+
+  return NextResponse.json({ deals: mapped });
 }

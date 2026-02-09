@@ -28,10 +28,10 @@ export async function isSponsorshipSettled(eventId: string): Promise<boolean> {
     }
 
     let query = supabase
-      .from('sponsorship_deals')
-      .select('id, visibility_active, payment_status')
+      .from('sponsorship_orders')
+      .select('id, visibility_active, status')
       .eq('visibility_active', true)
-      .eq('payment_status', 'verified');
+      .eq('status', 'paid');
 
     if (event?.fest_id) {
       query = query.or(`event_id.eq.${eventId},fest_id.eq.${event.fest_id}`);
@@ -39,18 +39,18 @@ export async function isSponsorshipSettled(eventId: string): Promise<boolean> {
       query = query.eq('event_id', eventId);
     }
 
-    const { data: deals, error } = await query;
+    const { data: orders, error } = await query;
 
     if (error) {
       console.error('Error checking sponsorship settlement:', error);
       return true;
     }
 
-    if (!deals || deals.length === 0) {
+    if (!orders || orders.length === 0) {
       return true;
     }
 
-    return deals.some(deal => deal.visibility_active && deal.payment_status === 'verified');
+    return orders.some(order => order.visibility_active && order.status === 'paid');
   } catch (err) {
     console.error('Unexpected error in isSponsorshipSettled:', err);
     return true;

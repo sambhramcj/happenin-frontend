@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -19,7 +18,12 @@ const db = serviceKey
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as {
+      razorpay_order_id?: string;
+      razorpay_payment_id?: string;
+      razorpay_signature?: string;
+      eventId?: string;
+    };
 
     const {
       razorpay_order_id,
@@ -48,8 +52,16 @@ export async function POST(req: Request) {
     const studentEmail = session.user.email as string;
 
     // 1️⃣ Verify signature (timing-safe)
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return NextResponse.json(
+        { error: "Server misconfigured" },
+        { status: 500 }
+      );
+    }
+
     const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac("sha256", keySecret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
     const sigA = Buffer.from(generatedSignature);
@@ -64,7 +76,7 @@ export async function POST(req: Request) {
     // 2️⃣ Fetch event
     const { data: event } = await db
       .from("events")
-      .select("*")
+      .select("id,title,price,date,location")
       .eq("id", eventId)
       .single();
 
@@ -76,45 +88,63 @@ export async function POST(req: Request) {
     }
 
     // 3️⃣ Calculate final price again (server trust)
-    let finalPrice = Number(event.price);
-
-    if (event.discount_enabled && event.discount_club) {
-      const { data: membership } = await db
-        .from("memberships")
-        .select("*")
-        .eq("student_email", studentEmail)
-        .eq("club", event.discount_club)
-        .single();
-
-      if (
-        membership &&
-        Array.isArray(event.eligible_members) &&
-        event.eligible_members.some(
-          (m: any) => m.memberId === membership.member_id
-        )
-      ) {
-        finalPrice =
-          finalPrice - Number(event.discount_amount || 0);
-      }
-    }
-
-    if (finalPrice < 0) finalPrice = 0;
+    const finalPrice = Math.max(0, Number(event.price));
 
     // 4️⃣ Check if already registered
-    const { data: existingReg, error: checkError } = await supabase
+    const { data: existingPayment } = await db
       .from("registrations")
-      .select("id")
+      .select("id,student_email,event_id,status")
+      .or(
+        `razorpay_order_id.eq.${razorpay_order_id},razorpay_payment_id.eq.${razorpay_payment_id}`
+      )
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPayment?.id) {
+      if (
+        existingPayment.student_email !== studentEmail ||
+        existingPayment.event_id !== eventId
+      ) {
+        return NextResponse.json(
+          { error: "Payment already used" },
+          { status: 409 }
+        );
+      }
+
+      return NextResponse.json({ success: true, message: "Already verified" });
+    }
+
+    const { data: existingReg } = await db
+      .from("registrations")
+      .select("id,status")
       .eq("student_email", studentEmail)
       .eq("event_id", eventId)
       .maybeSingle();
 
-    if (existingReg) {
-      // Already registered, return success without re-registering
-      console.log("Student already registered for this event");
-      return NextResponse.json({ 
-        success: true, 
-        message: "Already registered" 
-      });
+    if (existingReg?.id) {
+      if (existingReg.status === "confirmed") {
+        return NextResponse.json({ success: true, message: "Already registered" });
+      }
+
+      const { error: updateError } = await db
+        .from("registrations")
+        .update({
+          final_price: finalPrice,
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature,
+          status: "confirmed",
+        })
+        .eq("id", existingReg.id);
+
+      if (updateError) {
+        return NextResponse.json(
+          { error: "Failed to confirm registration" },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({ success: true });
     }
 
     // 5️⃣ Save registration (using admin client to bypass RLS)
@@ -122,6 +152,10 @@ export async function POST(req: Request) {
       student_email: studentEmail,
       event_id: eventId,
       final_price: finalPrice,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      status: "confirmed",
     };
 
     const { data: newRegistration, error: insertError } = await db

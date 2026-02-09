@@ -31,6 +31,7 @@ export default function SponsorDashboard() {
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [loadingDeals, setLoadingDeals] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -80,10 +81,10 @@ export default function SponsorDashboard() {
 
   async function fetchDeals() {
     setLoadingDeals(true);
-    const res = await fetch("/api/sponsorship/deals");
+    const res = await fetch("/api/sponsorships/orders");
     if (res.ok) {
       const data = await res.json();
-      setDeals(data.deals || []);
+      setDeals(data.orders || []);
     }
     setLoadingDeals(false);
   }
@@ -125,6 +126,32 @@ export default function SponsorDashboard() {
       toast.error("Failed to save profile");
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function handleLogoUpload(file: File) {
+    try {
+      setUploadingLogo(true);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/sponsor/upload-logo", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to upload logo");
+        return;
+      }
+
+      setProfileForm((prev) => ({ ...prev, logo_url: data.url }));
+      toast.success("Logo uploaded");
+    } catch (error) {
+      toast.error("Failed to upload logo");
+    } finally {
+      setUploadingLogo(false);
     }
   }
 
@@ -203,6 +230,22 @@ export default function SponsorDashboard() {
                   onChange={(e) => setProfileForm((prev) => ({ ...prev, logo_url: e.target.value }))}
                   className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
                 />
+              </div>
+              <div>
+                <label className="block text-sm text-text-secondary mb-2">Upload Logo (PNG/SVG)</label>
+                <input
+                  type="file"
+                  accept="image/png, image/svg+xml"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file);
+                  }}
+                  disabled={uploadingLogo}
+                  className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
+                />
+                {uploadingLogo && (
+                  <div className="text-xs text-text-secondary mt-2">Uploading logo...</div>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-text-secondary mb-2">Contact Name</label>
@@ -326,18 +369,18 @@ export default function SponsorDashboard() {
                         <div className="font-semibold text-text-primary">
                           {deal.events?.title || deal.fests?.title || "Fest Sponsorship"}
                         </div>
-                        <div className="text-xs text-text-muted">{deal.sponsorship_packages?.type} · ₹{deal.sponsorship_packages?.price}</div>
-                        <div className="text-xs text-text-muted">Status: {deal.payment_status}</div>
+                        <div className="text-xs text-text-muted">{deal.pack_type} · ₹{deal.amount}</div>
+                        <div className="text-xs text-text-muted">Status: {deal.status}</div>
                       </div>
                       <div className="text-xs text-text-secondary">
-                        {deal.visibility_active ? "Visibility Active" : "Visibility Pending"}
+                        {deal.status === "paid" && deal.visibility_active ? "Visibility Active" : "Visibility Pending"}
                       </div>
                     </div>
-                    {deal.sponsorship_packages?.type && (
+                    {deal.pack_type && (
                       <div className="mt-3">
                         <div className="text-xs text-text-secondary mb-2">Visibility includes</div>
                         <ul className="list-disc pl-5 space-y-1">
-                          {SPONSORSHIP_VISIBILITY[deal.sponsorship_packages.type as keyof typeof SPONSORSHIP_VISIBILITY].map(
+                          {SPONSORSHIP_VISIBILITY[deal.pack_type as keyof typeof SPONSORSHIP_VISIBILITY].map(
                             (item) => (
                               <li key={item} className="text-xs text-text-secondary">
                                 {item}
@@ -360,14 +403,14 @@ export default function SponsorDashboard() {
         {profile && activeTab === "banners" && (
           <div className="space-y-6">
             {deals
-              .filter((deal) => deal.payment_status === "verified")
+              .filter((deal) => deal.status === "paid" && deal.visibility_active)
               .map((deal) => {
-                const packType = deal.sponsorship_packages?.type;
+                const packType = deal.pack_type;
                 const placements: Array<"home_top" | "home_mid" | "event_page"> = [];
 
                 if (packType === "digital") placements.push("event_page");
                 if (packType === "app") placements.push("event_page", "home_top");
-                if (packType === "fest") placements.push("home_top", "home_mid");
+                if (packType === "fest") placements.push("event_page", "home_top", "home_mid");
 
                 return (
                   <div key={deal.id} className="bg-bg-card rounded-xl border border-border-default p-6 space-y-3">
@@ -384,7 +427,7 @@ export default function SponsorDashboard() {
                       sponsorEmail={session?.user?.email}
                       eventId={deal.event_id || undefined}
                       festId={deal.fest_id || undefined}
-                      sponsorshipDealId={deal.id}
+                      sponsorshipOrderId={deal.id}
                       allowedPlacements={placements}
                       linkUrl={profile?.website_url || ""}
                       onSuccess={() => toast.success("Banner submitted for approval")}
@@ -392,9 +435,9 @@ export default function SponsorDashboard() {
                   </div>
                 );
               })}
-            {deals.filter((deal) => deal.payment_status === "verified").length === 0 && (
+            {deals.filter((deal) => deal.status === "paid" && deal.visibility_active).length === 0 && (
               <div className="bg-bg-card border border-border-default rounded-xl p-6 text-text-muted">
-                Banners are available after payment verification.
+                Banners are available after payment confirmation.
               </div>
             )}
           </div>

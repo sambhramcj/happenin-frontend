@@ -5,16 +5,22 @@ import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { SPONSORSHIP_VISIBILITY } from "@/types/sponsorship";
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+type PackType = "digital" | "app" | "fest";
+
 export default function SponsorEventPage() {
   const { eventId } = useParams();
   const [event, setEvent] = useState<any>(null);
-  const [packages, setPackages] = useState<any[]>([]);
+  const [packages, setPackages] = useState<Array<{ type: PackType; price: number }>>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPackage, setSelectedPackage] = useState<any | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "Bank" | "Cash">("UPI");
-  const [transactionReference, setTransactionReference] = useState("");
-  const [paymentDate, setPaymentDate] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<PackType | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "paid" | "pending">("idle");
 
   useEffect(() => {
     fetchEventDetails();
@@ -22,59 +28,120 @@ export default function SponsorEventPage() {
 
   async function fetchEventDetails() {
     setLoading(true);
-    const res = await fetch(`/api/sponsorship/packages?event_id=${eventId}`);
-    if (res.ok) {
-      const data = await res.json();
-      setPackages(data.packages || []);
-    }
-
     const eventRes = await fetch(`/api/events`);
     if (eventRes.ok) {
       const all = await eventRes.json();
       const e = (all || []).find((x: any) => x.id === eventId);
       setEvent(e || null);
+      if (e) {
+        const packs: Array<{ type: PackType; price: number }> = [
+          { type: "digital", price: 10000 },
+          { type: "app", price: 25000 },
+        ];
+        if (e.fest_id) {
+          packs.push({ type: "fest", price: 50000 });
+        }
+        setPackages(packs);
+      }
     }
     setLoading(false);
   }
 
-  async function submitSponsorship() {
+  function loadRazorpayScript(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  }
+
+  async function handleSponsorNow() {
     if (!selectedPackage) {
       toast.error("Select a sponsorship pack");
       return;
     }
 
-    if (!transactionReference.trim() || !paymentDate) {
-      toast.error("Enter payment reference and date");
+    if (!eventId) {
+      toast.error("Missing event details");
       return;
     }
 
     try {
-      setSubmitting(true);
-      const res = await fetch("/api/sponsorship/deals", {
+      setProcessing(true);
+      setPaymentStatus("processing");
+
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error("Razorpay SDK failed to load");
+        setPaymentStatus("idle");
+        return;
+      }
+
+      const res = await fetch("/api/sponsorships/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           event_id: eventId,
-          package_id: selectedPackage.id,
-          transaction_reference: transactionReference,
-          payment_method: paymentMethod,
-          payment_date: paymentDate,
+          pack_type: selectedPackage,
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Failed to submit sponsorship");
+        toast.error(data.error || "Failed to create order");
+        setPaymentStatus("idle");
         return;
       }
 
-      toast.success("Payment details submitted for verification");
-      setTransactionReference("");
-      setPaymentDate("");
+      const razorpay = new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: Math.round(data.amount * 100),
+        currency: data.currency || "INR",
+        name: "Happenin",
+        description: "Sponsorship Payment",
+        order_id: data.orderId,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch("/api/sponsorships/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok) {
+              setPaymentStatus("paid");
+              toast.success("Sponsorship payment confirmed");
+            } else {
+              console.error("Verification error:", verifyData);
+              setPaymentStatus("pending");
+              toast.error("Payment verification pending");
+            }
+          } catch (error) {
+            setPaymentStatus("pending");
+            toast.error("Payment verification pending");
+          }
+        },
+        prefill: {},
+      });
+
+      razorpay.open();
     } catch (error) {
-      toast.error("Failed to submit sponsorship");
+      toast.error("Payment failed");
+      setPaymentStatus("idle");
     } finally {
-      setSubmitting(false);
+      setProcessing(false);
     }
   }
 
@@ -90,11 +157,15 @@ export default function SponsorEventPage() {
     <div className="min-h-screen bg-bg-muted p-6">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="bg-bg-card rounded-xl border border-border-default overflow-hidden">
-          {event.banner_image && <img src={event.banner_image} alt={event.title} className="w-full h-64 object-cover" />}
+          {event.banner_image && (
+            <img src={event.banner_image} alt={event.title} className="w-full h-64 object-cover" />
+          )}
           <div className="p-6">
             <h1 className="text-2xl font-bold text-text-primary mb-2">{event.title}</h1>
             <p className="text-text-secondary mb-4">{event.description}</p>
-            <div className="text-xs text-text-muted">{event.location} · {event.date ? new Date(event.date).toLocaleDateString() : "Date TBA"}</div>
+            <div className="text-xs text-text-muted">
+              {event.location} · {event.date ? new Date(event.date).toLocaleDateString() : "Date TBA"}
+            </div>
           </div>
         </div>
 
@@ -106,14 +177,14 @@ export default function SponsorEventPage() {
           )}
 
           {packages.map((pkg) => {
-            const visibilityList = SPONSORSHIP_VISIBILITY[pkg.type as keyof typeof SPONSORSHIP_VISIBILITY] || [];
-            const isSelected = selectedPackage?.id === pkg.id;
+            const visibilityList = SPONSORSHIP_VISIBILITY[pkg.type] || [];
+            const isSelected = selectedPackage === pkg.type;
 
             return (
               <button
-                key={pkg.id}
+                key={pkg.type}
                 type="button"
-                onClick={() => setSelectedPackage(pkg)}
+                onClick={() => setSelectedPackage(pkg.type)}
                 className={`w-full text-left bg-bg-card rounded-xl border p-6 transition-colors ${
                   isSelected ? "border-primary bg-bg-muted" : "border-border-default"
                 }`}
@@ -122,12 +193,14 @@ export default function SponsorEventPage() {
                   <div className="text-lg font-bold text-text-primary capitalize">
                     {pkg.type} Visibility Pack
                   </div>
-                  <div className="text-sm text-text-secondary">₹{pkg.price?.toLocaleString?.() || pkg.price}</div>
+                  <div className="text-sm text-text-secondary">₹{pkg.price.toLocaleString()}</div>
                 </div>
 
                 <div className="space-y-2">
-                  {visibilityList.map((item: string) => (
-                    <div key={item} className="text-sm text-text-secondary">• {item}</div>
+                  {visibilityList.map((item) => (
+                    <div key={item} className="text-sm text-text-secondary">
+                      • {item}
+                    </div>
                   ))}
                 </div>
               </button>
@@ -136,52 +209,30 @@ export default function SponsorEventPage() {
         </div>
 
         <div className="bg-bg-card rounded-xl border border-border-default p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-text-primary">Submit Offline Payment Details</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Sponsor This Event</h2>
           <p className="text-sm text-text-secondary">
-            Pay Happenin directly via UPI, bank transfer, or cash. Your visibility activates only after admin verification.
+            Payments are processed securely by Razorpay. Visibility activates after payment confirmation.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Payment Method</label>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as "UPI" | "Bank" | "Cash")}
-                className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
-              >
-                <option value="UPI">UPI</option>
-                <option value="Bank">Bank Transfer</option>
-                <option value="Cash">Cash</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Payment Date</label>
-              <input
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Transaction Reference</label>
-            <input
-              value={transactionReference}
-              onChange={(e) => setTransactionReference(e.target.value)}
-              placeholder="UPI reference / bank transfer ID / cash receipt"
-              className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
-            />
-          </div>
-
           <button
-            onClick={submitSponsorship}
-            disabled={!selectedPackage || submitting}
+            onClick={handleSponsorNow}
+            disabled={!selectedPackage || processing}
             className="w-full bg-primary text-text-inverse py-2 rounded-lg hover:bg-primaryHover disabled:opacity-50"
           >
-            {submitting ? "Submitting..." : "Submit for Verification"}
+            {processing ? "Processing..." : "Sponsor Now"}
           </button>
+
+          {paymentStatus === "paid" && (
+            <div className="text-sm text-text-secondary">
+              Status: Active
+            </div>
+          )}
+
+          {paymentStatus === "pending" && (
+            <div className="text-sm text-text-secondary">
+              Status: Verification pending
+            </div>
+          )}
         </div>
       </div>
     </div>

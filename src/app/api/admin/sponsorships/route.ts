@@ -24,29 +24,27 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status");
 
   let query = serviceSupabase
-    .from("sponsorship_deals")
+    .from("sponsorship_orders")
     .select(`
       id,
+      sponsor_email,
       event_id,
       fest_id,
-      package_id,
-      payment_status,
-      transaction_reference,
-      payment_method,
-      payment_date,
-      verified_by_admin,
+      pack_type,
+      amount,
+      status,
       visibility_active,
+      organizer_payout_settled,
+      organizer_payout_settled_at,
       created_at,
-      sponsor_email,
       events (id, title, fest_id),
       fests (id, title, start_date, end_date),
-      sponsorship_packages (id, type, price, scope),
       sponsors_profile (company_name, email, website_url, is_active)
     `)
     .order("created_at", { ascending: false });
 
   if (status) {
-    query = query.eq("payment_status", status);
+    query = query.eq("status", status);
   }
 
   const { data: deals, error } = await query;
@@ -56,9 +54,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Calculate total revenue from paid sponsorships
   const totalRevenue = (deals || []).reduce((sum: number, d: any) => {
-    if (d.payment_status !== "verified") return sum;
-    return sum + (d.sponsorship_packages?.price || 0);
+    if (d.status !== "paid") return sum;
+    return sum + (d.amount || 0);
   }, 0);
   const dealsCount = deals?.length || 0;
 
@@ -130,62 +129,86 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Missing action field" }, { status: 400 });
   }
 
+  // For sponsorship_orders, automatically verified when payment is completed.
+  // This action now toggles visibility for already-paid orders.
   if (action === "verify_payment") {
     if (!deal_id) {
       return NextResponse.json({ error: "Missing deal_id" }, { status: 400 });
     }
 
+    // For new sponsorship_orders, status='paid' is automatic from Razorpay verification.
+    // Admin can toggle visibility_active instead.
     const { error } = await serviceSupabase
-      .from("sponsorship_deals")
+      .from("sponsorship_orders")
       .update({
-        payment_status: "verified",
-        verified_by_admin: true,
         visibility_active: true,
       })
       .eq("id", deal_id);
 
     if (error) {
-      console.error("Error verifying sponsorship payment:", error);
+      console.error("Error updating sponsorship visibility:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   }
 
+  // Reject/disable a paid sponsorship order
   if (action === "reject_payment") {
     if (!deal_id) {
       return NextResponse.json({ error: "Missing deal_id" }, { status: 400 });
     }
 
     const { error } = await serviceSupabase
-      .from("sponsorship_deals")
+      .from("sponsorship_orders")
       .update({
-        payment_status: "rejected",
-        verified_by_admin: false,
         visibility_active: false,
       })
       .eq("id", deal_id);
 
     if (error) {
-      console.error("Error rejecting sponsorship payment:", error);
+      console.error("Error disabling sponsorship:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   }
 
+  // Toggle visibility for sponsorship orders
   if (action === "toggle_visibility") {
     if (!deal_id || typeof value !== "boolean") {
       return NextResponse.json({ error: "Missing deal_id or value" }, { status: 400 });
     }
 
     const { error } = await serviceSupabase
-      .from("sponsorship_deals")
+      .from("sponsorship_orders")
       .update({ visibility_active: value })
       .eq("id", deal_id);
 
     if (error) {
       console.error("Error toggling visibility:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  // Toggle organizer payout settlement status
+  if (action === "toggle_payout_settled") {
+    if (!deal_id || typeof value !== "boolean") {
+      return NextResponse.json({ error: "Missing deal_id or value" }, { status: 400 });
+    }
+
+    const { error } = await serviceSupabase
+      .from("sponsorship_orders")
+      .update({
+        organizer_payout_settled: value,
+        organizer_payout_settled_at: value ? new Date().toISOString() : null,
+      })
+      .eq("id", deal_id);
+
+    if (error) {
+      console.error("Error updating payout status:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -206,24 +229,15 @@ export async function PATCH(req: NextRequest) {
       console.error("Error updating sponsor:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-  } else if (target_type === "package") {
+  } else if (target_type === "order") {
+    // Update sponsorship order visibility
     const { error } = await serviceSupabase
-      .from("sponsorship_packages")
-      .update({ is_active: value ?? true })
+      .from("sponsorship_orders")
+      .update({ visibility_active: value ?? true })
       .eq("id", target_id);
 
     if (error) {
-      console.error("Error updating package:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-  } else if (target_type === "deal") {
-    const { error } = await serviceSupabase
-      .from("sponsorship_deals")
-      .update({ payment_status: value || "pending" })
-      .eq("id", target_id);
-
-    if (error) {
-      console.error("Error updating deal:", error);
+      console.error("Error updating order:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
   }

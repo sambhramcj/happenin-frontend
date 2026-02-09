@@ -23,7 +23,7 @@ interface BannerUploadFormProps {
   eventId?: string;
   festId?: string;
   sponsorEmail?: string | null;
-  sponsorshipDealId?: string;
+  sponsorshipOrderId?: string;
   allowedPlacements?: Array<"home_top" | "home_mid" | "event_page">;
   linkUrl?: string;
   onSuccess?: (banner: any) => void;
@@ -34,7 +34,7 @@ export function BannerUploadForm({
   eventId,
   festId,
   sponsorEmail,
-  sponsorshipDealId,
+  sponsorshipOrderId,
   allowedPlacements,
   linkUrl,
   onSuccess,
@@ -85,8 +85,8 @@ export function BannerUploadForm({
       return;
     }
 
-    if (bannerType === "sponsor" && !sponsorshipDealId) {
-      toast.error("Missing sponsorship deal information");
+    if (bannerType === "sponsor" && !sponsorshipOrderId) {
+      toast.error("Missing sponsorship order information");
       return;
     }
 
@@ -128,7 +128,7 @@ export function BannerUploadForm({
           sponsorEmail: bannerType === "sponsor" ? sponsorEmail : undefined,
           imageUrl: uploadData.publicUrl,
           placement,
-          sponsorshipDealId: bannerType === "sponsor" ? sponsorshipDealId : undefined,
+          sponsorshipOrderId: bannerType === "sponsor" ? sponsorshipOrderId : undefined,
           linkType: bannerType === "event" ? "internal_event" : "external_url",
           linkTargetId: bannerType === "event" ? eventId : undefined,
           linkUrl: bannerType === "sponsor" ? linkUrl : undefined,

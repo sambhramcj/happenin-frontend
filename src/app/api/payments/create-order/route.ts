@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const { eventId } = await req.json();
+    const body = (await req.json()) as { eventId?: string };
+    const { eventId } = body;
 
     // 0️⃣ Verify required body
     if (!eventId) {
@@ -69,9 +70,15 @@ export async function POST(req: Request) {
     }
 
     // 1️⃣ Fetch event
-    const { data: event, error: eventError } = await supabase
+    const adminDb = supabaseUrl && serviceRoleKey
+      ? createClient(supabaseUrl, serviceRoleKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+      : supabase;
+
+    const { data: event, error: eventError } = await adminDb
       .from("events")
-      .select("*")
+      .select("id,title,price")
       .eq("id", eventId)
       .single();
 
@@ -82,35 +89,27 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2️⃣ Default price
-    let finalPrice = Number(event.price);
+    // 2️⃣ Enforce non-duplicate registration before payment
+    const { data: existingReg } = await adminDb
+      .from("registrations")
+      .select("id,status")
+      .eq("student_email", studentEmail)
+      .eq("event_id", eventId)
+      .maybeSingle();
 
-    // 3️⃣ Apply discount ONLY if enabled
-    if (event.discount_enabled && event.discount_club) {
-      const { data: membership } = await supabase
-        .from("memberships")
-        .select("*")
-        .eq("student_email", studentEmail)
-        .eq("club", event.discount_club)
-        .single();
-
-      if (
-        membership &&
-        Array.isArray(event.eligible_members) &&
-        event.eligible_members.some(
-          (m: any) => m.memberId === membership.member_id
-        )
-      ) {
-        finalPrice =
-          finalPrice - Number(event.discount_amount || 0);
-      }
+    if (existingReg?.id) {
+      return NextResponse.json(
+        { error: "Already registered for this event" },
+        { status: 409 }
+      );
     }
 
-    if (finalPrice < 0) finalPrice = 0;
+    // 3️⃣ Final price is server-trusted event price (no client override)
+    const finalPrice = Math.max(0, Number(event.price));
 
     // 4️⃣ Create Razorpay order
     const order = await razorpay.orders.create({
-      amount: finalPrice * 100, // paise
+      amount: Math.round(finalPrice * 100), // paise
       currency: "INR",
       receipt: `evt_${eventId.slice(-6)}_${Date.now()}`,
     });

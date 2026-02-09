@@ -141,7 +141,7 @@ export const api = {
   },
 
   // Payments
-  async createOrder(data: { eventId: string; finalPrice: number }) {
+  async createOrder(data: { eventId: string }) {
     return apiRequest<{ orderId: string; amount: number }>('/api/payments/create-order', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -154,7 +154,6 @@ export const api = {
     razorpay_payment_id: string;
     razorpay_signature: string;
     eventId: string;
-    finalPrice: number;
   }) {
     return apiRequest<{ success: boolean; ticket?: any }>('/api/payments/verify', {
       method: 'POST',
