@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const validCategories = ['social', 'on_ground', 'stall', 'digital'];
+  const validCategories = ["social", "on_ground", "stall"];
   if (!validCategories.includes(category)) {
     return NextResponse.json({ error: "Invalid category" }, { status: 400 });
   }
@@ -48,6 +48,44 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ deliverable: data });
+}
+
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || (session.user as any).role !== "organizer") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const package_id = searchParams.get("package_id");
+
+  if (!package_id) {
+    return NextResponse.json({ error: "Missing package_id" }, { status: 400 });
+  }
+
+  const { data: pkg } = await supabase
+    .from("sponsorship_packages")
+    .select("event_id, events!inner(organizer_email)")
+    .eq("id", package_id)
+    .single();
+
+  if (!pkg || (pkg as any).events.organizer_email !== session.user.email) {
+    return NextResponse.json({ error: "Package not found or unauthorized" }, { status: 404 });
+  }
+
+  const { data, error } = await supabase
+    .from("sponsorship_deliverables")
+    .select("id, title, description, category")
+    .eq("package_id", package_id)
+    .eq("type", "organizer_defined")
+    .in("category", ["social", "on_ground", "stall"])
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ deliverables: data || [] });
 }
 
 export async function DELETE(req: Request) {

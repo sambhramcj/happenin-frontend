@@ -42,12 +42,21 @@ export default function CertificateComponent({
         const res = await fetch(`/api/sponsorship/public?event_id=${eventId}`);
         if (res.ok) {
           const data = await res.json();
-          const deal = data.deals?.[0];
-          if (deal?.sponsors_profile) {
-            setSponsor({
-              name: deal.sponsors_profile.company_name,
-              logo_url: deal.sponsors_profile.logo_url,
-            });
+          const deals = data.deals || [];
+          if (deals.length > 0) {
+            const priority = ["fest", "app", "digital"];
+            const chosen = deals.sort((a: any, b: any) => {
+              const aRank = priority.indexOf(a?.sponsorship_packages?.type || "");
+              const bRank = priority.indexOf(b?.sponsorship_packages?.type || "");
+              return (aRank === -1 ? 99 : aRank) - (bRank === -1 ? 99 : bRank);
+            })[0];
+
+            if (chosen?.sponsors_profile) {
+              setSponsor({
+                name: chosen.sponsors_profile.company_name,
+                logo_url: chosen.sponsors_profile.logo_url,
+              });
+            }
           }
         }
       } catch (error) {

@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import Image from "next/image";
 
 const UPLOAD_RULES = [
-  "Recommended Size: 1600 × 900 pixels (16:9 ratio)",
-  "Minimum Size: 1200 × 675 pixels",
+  "Recommended Size: 1600 × 500 pixels (16:5 ratio)",
+  "Minimum Size: 1200 × 375 pixels",
   "Maximum File Size: 2MB",
   "Allowed Formats: JPG, PNG, WebP",
   "Maximum 2 lines of text inside banner image",
@@ -21,14 +21,22 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 interface BannerUploadFormProps {
   bannerType: "event" | "sponsor";
   eventId?: string;
+  festId?: string;
   sponsorEmail?: string | null;
+  sponsorshipDealId?: string;
+  allowedPlacements?: Array<"home_top" | "home_mid" | "event_page">;
+  linkUrl?: string;
   onSuccess?: (banner: any) => void;
 }
 
 export function BannerUploadForm({
   bannerType,
   eventId,
+  festId,
   sponsorEmail,
+  sponsorshipDealId,
+  allowedPlacements,
+  linkUrl,
   onSuccess,
 }: BannerUploadFormProps) {
   const [title, setTitle] = useState("");
@@ -36,6 +44,9 @@ export function BannerUploadForm({
   const [preview, setPreview] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [showRules, setShowRules] = useState(true);
+  const [placement, setPlacement] = useState<"home_top" | "home_mid" | "event_page">(
+    allowedPlacements?.[0] || "home_top"
+  );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -74,6 +85,16 @@ export function BannerUploadForm({
       return;
     }
 
+    if (bannerType === "sponsor" && !sponsorshipDealId) {
+      toast.error("Missing sponsorship deal information");
+      return;
+    }
+
+    if (bannerType === "sponsor" && !linkUrl) {
+      toast.error("Sponsor website URL is required for banner links");
+      return;
+    }
+
     try {
       setUploading(true);
 
@@ -103,12 +124,14 @@ export function BannerUploadForm({
           title,
           type: bannerType,
           eventId: bannerType === "event" ? eventId : undefined,
+          festId: bannerType === "sponsor" ? festId : undefined,
           sponsorEmail: bannerType === "sponsor" ? sponsorEmail : undefined,
           imageUrl: uploadData.publicUrl,
-          placement: "home_top",
-          linkType:
-            bannerType === "event" ? "internal_event" : "internal_sponsor",
-          linkTargetId: bannerType === "event" ? eventId : sponsorEmail,
+          placement,
+          sponsorshipDealId: bannerType === "sponsor" ? sponsorshipDealId : undefined,
+          linkType: bannerType === "event" ? "internal_event" : "external_url",
+          linkTargetId: bannerType === "event" ? eventId : undefined,
+          linkUrl: bannerType === "sponsor" ? linkUrl : undefined,
           startDate: new Date().toISOString(),
         }),
       }).then((r) => r.json());
@@ -182,6 +205,25 @@ export function BannerUploadForm({
         />
       </div>
 
+      {allowedPlacements && allowedPlacements.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            Placement
+          </label>
+          <select
+            value={placement}
+            onChange={(e) => setPlacement(e.target.value as "home_top" | "home_mid" | "event_page")}
+            className="w-full px-4 py-2 bg-bg-primary border border-border-default rounded-lg text-text-primary"
+          >
+            {allowedPlacements.map((option) => (
+              <option key={option} value={option}>
+                {option.replace("_", " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* File Upload */}
       <div>
         <label className="block text-sm font-medium text-text-primary mb-2">
@@ -218,12 +260,12 @@ export function BannerUploadForm({
               src={preview}
               alt="Banner preview"
               width={1600}
-              height={900}
+              height={500}
               className="w-full h-auto object-cover"
             />
           </div>
           <p className="text-xs text-text-secondary mt-2">
-            <strong>Note:</strong> This banner will appear in {bannerType === "event" ? "your event page and home carousel" : "sponsor placement and home carousel"} once approved.
+            <strong>Note:</strong> This banner appears only after admin approval and verified sponsorship visibility.
           </p>
         </div>
       )}
@@ -232,7 +274,7 @@ export function BannerUploadForm({
       <button
         onClick={handleUpload}
         disabled={!file || !title.trim() || uploading}
-        className="w-full py-2 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primaryHover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-2 px-4 bg-primary text-text-inverse rounded-lg font-medium hover:bg-primaryHover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {uploading ? (
           <>

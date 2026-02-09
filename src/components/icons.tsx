@@ -50,6 +50,7 @@ import {
   DollarSign,
   Trash2,
   Image,
+  MessageCircle,
 } from "lucide-react";
 
 export const Icons = {
@@ -104,6 +105,7 @@ export const Icons = {
   DollarSign,
   Trash2,
   Image,
+  WhatsApp: MessageCircle,
 };
 
 export type IconKey = keyof typeof Icons;

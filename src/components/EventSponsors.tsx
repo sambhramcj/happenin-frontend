@@ -4,15 +4,16 @@ import { useEffect, useState } from 'react';
 
 interface SponsorDeal {
   id: string;
-  amount_paid: number;
-  status: string;
+  payment_status: string;
+  visibility_active: boolean;
   sponsors_profile: {
     company_name: string;
     logo_url?: string;
     website_url?: string;
   };
   sponsorship_packages: {
-    tier: string;
+    type: string;
+    price: number;
   };
 }
 
@@ -46,42 +47,31 @@ export function EventSponsors({ eventId }: EventSponsorsProps) {
     return null;
   }
 
-  const getTierGradient = (tier: string) => {
-    const gradients: Record<string, string> = {
-      bronze: 'from-amber-700 to-amber-600',
-      silver: 'from-gray-400 to-gray-500',
-      gold: 'from-yellow-500 to-yellow-600',
-      platinum: 'from-purple-600 to-purple-700',
-    };
-    return gradients[tier.toLowerCase()] || 'from-gray-500 to-gray-600';
-  };
-
-  // Group sponsors by tier
-  const sponsorsByTier = sponsors.reduce((acc: Record<string, SponsorDeal[]>, sponsor) => {
-    const tier = sponsor.sponsorship_packages.tier.toLowerCase();
-    if (!acc[tier]) acc[tier] = [];
-    acc[tier].push(sponsor);
+  const sponsorsByType = sponsors.reduce((acc: Record<string, SponsorDeal[]>, sponsor) => {
+    const type = sponsor.sponsorship_packages.type.toLowerCase();
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(sponsor);
     return acc;
   }, {});
 
-  const tierOrder = ['platinum', 'gold', 'silver', 'bronze'];
+  const typeOrder = ['fest', 'app', 'digital'];
 
   return (
     <div className="bg-bg-card rounded-xl p-6 border border-border-default">
       <h3 className="text-lg font-bold text-text-primary mb-4">Event Sponsors</h3>
       
       <div className="space-y-6">
-        {tierOrder.map((tier) => {
-          if (!sponsorsByTier[tier]) return null;
+        {typeOrder.map((type) => {
+          if (!sponsorsByType[type]) return null;
 
           return (
-            <div key={tier}>
-              <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 bg-gradient-to-r ${getTierGradient(tier)} text-white capitalize`}>
-                {tier} Sponsors
+            <div key={type}>
+              <div className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 bg-bg-muted text-text-primary border border-border-default capitalize">
+                {type} Sponsors
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {sponsorsByTier[tier].map((sponsor) => (
+                {sponsorsByType[type].map((sponsor) => (
                   <a
                     key={sponsor.id}
                     href={sponsor.sponsors_profile.website_url || '#'}

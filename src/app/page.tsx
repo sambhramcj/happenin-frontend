@@ -6,8 +6,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ChevronDown, User, Briefcase } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { HomepageSponsorBanner } from '@/components/HomepageSponsorBanner';
 import { BannerCarousel } from '@/components/BannerCarousel';
+import { CollegeSelector } from '@/components/CollegeSelector';
 
 interface Event {
   id: string;
@@ -206,10 +206,11 @@ export default function HomePage() {
 
             {/* College Selector */}
             <div className="flex-1 max-w-xs">
-              <button className="w-full px-3 sm:px-4 py-2 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-between text-gray-600 hover:border-purple-300 transition-all text-sm sm:text-base">
-                <span className="text-xs sm:text-sm font-medium truncate">{selectedCollege || 'College'}</span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-1" />
-              </button>
+              <CollegeSelector 
+                value={selectedCollege}
+                onChange={(collegeId, collegeName) => setSelectedCollege(collegeName)}
+                placeholder="Select college..."
+              />
             </div>
 
             {/* Login Button */}
@@ -244,10 +245,11 @@ export default function HomePage() {
             </div>
 
             {/* College Selector */}
-            <button className="w-full px-3 py-2 bg-white border-2 border-gray-200 rounded-xl flex items-center justify-between text-gray-600 hover:border-purple-300 transition-all text-sm font-medium">
-              <span className="truncate">{selectedCollege || 'College'}</span>
-              <ChevronDown className="w-4 h-4 flex-shrink-0 ml-1" />
-            </button>
+            <CollegeSelector 
+              value={selectedCollege}
+              onChange={(collegeId, collegeName) => setSelectedCollege(collegeName)}
+              placeholder="Select college..."
+            />
           </div>
         </div>
       </nav>
@@ -402,11 +404,9 @@ export default function HomePage() {
 
       {/* Promotional Banners - Mid Page */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <BannerCarousel placement="home_mid" maxBanners={1} />
+        <BannerCarousel placement="home_mid" maxBanners={2} />
       </section>
 
-      {/* Homepage Sponsor Banner */}
-      <HomepageSponsorBanner maxSponsors={5} />
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white mt-12">
@@ -426,7 +426,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="mt-6 text-center text-sm text-gray-500">
-            © 2026 Happenin. Making campus events accessible.
+            © 2026 Happenin Technologies. Making campus events accessible.
           </div>
         </div>
       </footer>

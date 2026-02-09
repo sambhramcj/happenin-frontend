@@ -9,23 +9,19 @@ interface Deal {
   id: string;
   event_id: string;
   package_id: string;
-  amount_paid: number;
-  platform_fee: number;
-  organizer_amount: number;
-  facilitation_fee_amount?: number;
-  facilitation_fee_paid?: boolean;
-  payment_reference?: string;
-  marked_paid_by?: string;
-  marked_paid_at?: string;
-  payment_proof_url?: string;
-  confirmed_by?: string;
-  confirmed_at?: string;
-  status: string;
+  payment_status: string;
+  transaction_reference?: string;
+  payment_method?: string;
+  payment_date?: string;
+  verified_by_admin?: boolean;
+  visibility_active?: boolean;
   created_at: string;
-  sponsor_id: string;
-  events: { id: string; title: string };
-  sponsorship_packages: { id: string; tier: string };
+  sponsor_email: string;
+  events?: { id: string; title: string } | null;
+  fests?: { id: string; title: string } | null;
+  sponsorship_packages: { id: string; type: string; price: number; scope: string };
   sponsors_profile: { company_name: string; email: string; is_active: boolean };
+  sponsor_analytics?: { clicks: number; impressions: number };
 }
 
 interface Analytics {
@@ -41,7 +37,6 @@ export default function AdminSponsorshipsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [paymentReferences, setPaymentReferences] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (session?.user && (session.user as any).role !== 'admin') {
@@ -106,65 +101,83 @@ export default function AdminSponsorshipsPage() {
     }
   };
 
-  const handleDisablePackage = async (packageId: string) => {
-    if (!confirm(`Are you sure you want to disable this package?`)) return;
-
-    try {
-      setUpdatingId(packageId);
-      const res = await fetch('/api/admin/sponsorships', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'disable',
-          target_type: 'package',
-          target_id: packageId,
-          value: false,
-        }),
-      });
-
-      if (res.ok) {
-        toast.success('Package disabled');
-        await fetchDeals();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Failed to disable package');
-      }
-    } catch (error) {
-      console.error('Error disabling package:', error);
-      toast.error('Failed to disable package');
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleMarkFacilitationFeePaid = async (dealId: string, paymentReference: string) => {
-    if (!paymentReference.trim()) {
-      toast.error('Please enter payment reference (e.g., UPI ID, IMPS reference)');
-      return;
-    }
-
+  const handleVerifyPayment = async (dealId: string) => {
     try {
       setUpdatingId(dealId);
       const res = await fetch('/api/admin/sponsorships', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'mark_facilitation_paid',
+          action: 'verify_payment',
           deal_id: dealId,
-          payment_reference: paymentReference,
         }),
       });
 
       if (res.ok) {
-        toast.success('Facilitation fee marked as paid. Features unlocked!');
+        toast.success('Payment verified. Visibility enabled.');
         await fetchDeals();
       } else {
         const data = await res.json();
-        toast.error(data.error || 'Failed to mark facilitation fee as paid');
+        toast.error(data.error || 'Failed to verify payment');
       }
     } catch (error) {
-      console.error('Error marking facilitation fee as paid:', error);
-      toast.error('Failed to mark facilitation fee as paid');
+      console.error('Error verifying payment:', error);
+      toast.error('Failed to verify payment');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleRejectPayment = async (dealId: string) => {
+    try {
+      setUpdatingId(dealId);
+      const res = await fetch('/api/admin/sponsorships', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reject_payment',
+          deal_id: dealId,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success('Payment rejected');
+        await fetchDeals();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to reject payment');
+      }
+    } catch (error) {
+      console.error('Error rejecting payment:', error);
+      toast.error('Failed to reject payment');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleToggleVisibility = async (dealId: string, value: boolean) => {
+    try {
+      setUpdatingId(dealId);
+      const res = await fetch('/api/admin/sponsorships', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle_visibility',
+          deal_id: dealId,
+          value,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success(value ? 'Visibility enabled' : 'Visibility disabled');
+        await fetchDeals();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to update visibility');
+      }
+    } catch (error) {
+      console.error('Error updating visibility:', error);
+      toast.error('Failed to update visibility');
     } finally {
       setUpdatingId(null);
     }
@@ -178,25 +191,7 @@ export default function AdminSponsorshipsPage() {
     );
   }
 
-  const getTierColor = (tier: string) => {
-    const colors: Record<string, string> = {
-      bronze: 'from-amber-700 to-amber-600',
-      silver: 'from-gray-400 to-gray-500',
-      gold: 'from-yellow-500 to-yellow-600',
-      platinum: 'from-purple-600 to-purple-700',
-    };
-    return colors[tier.toLowerCase()] || 'from-gray-500 to-gray-600';
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      confirmed: 'bg-blue-100 text-blue-800',
-      active: 'bg-green-100 text-green-800',
-      completed: 'bg-gray-100 text-gray-800',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
+  const formatStatus = (status: string) => status.replace(/_/g, " ");
 
   return (
     <div className="space-y-6">
@@ -216,9 +211,9 @@ export default function AdminSponsorshipsPage() {
         </div>
 
         <div className="bg-bg-card border border-border-default rounded-lg p-6">
-          <div className="text-text-secondary text-sm font-medium">Active Deals</div>
+          <div className="text-text-secondary text-sm font-medium">Verified Deals</div>
           <div className="text-3xl font-bold text-text-primary mt-2">
-            {deals.filter((d) => ['pending', 'confirmed', 'active'].includes(d.status)).length}
+            {deals.filter((d) => d.payment_status === 'verified').length}
           </div>
           <div className="text-text-muted text-xs mt-2">Out of {deals.length} total</div>
         </div>
@@ -237,7 +232,7 @@ export default function AdminSponsorshipsPage() {
           >
             All
           </button>
-          {['pending', 'confirmed', 'active', 'completed'].map((status) => (
+          {['pending', 'verified', 'rejected'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -260,12 +255,11 @@ export default function AdminSponsorshipsPage() {
             <tr>
               <th className="px-4 py-3 text-left text-text-secondary font-medium">Sponsor</th>
               <th className="px-4 py-3 text-left text-text-secondary font-medium">Event</th>
-              <th className="px-4 py-3 text-left text-text-secondary font-medium">Tier</th>
-              <th className="px-4 py-3 text-right text-text-secondary font-medium">Amount Paid</th>
-              <th className="px-4 py-3 text-right text-text-secondary font-medium">Platform Fee</th>
-              <th className="px-4 py-3 text-right text-text-secondary font-medium">Organizer Amount</th>
-              <th className="px-4 py-3 text-left text-text-secondary font-medium">Payment Status</th>
-              <th className="px-4 py-3 text-left text-text-secondary font-medium">Commission</th>
+              <th className="px-4 py-3 text-left text-text-secondary font-medium">Pack</th>
+              <th className="px-4 py-3 text-right text-text-secondary font-medium">Price</th>
+              <th className="px-4 py-3 text-left text-text-secondary font-medium">Payment Details</th>
+              <th className="px-4 py-3 text-left text-text-secondary font-medium">Visibility</th>
+              <th className="px-4 py-3 text-left text-text-secondary font-medium">Clicks/Impressions</th>
               <th className="px-4 py-3 text-left text-text-secondary font-medium">Actions</th>
             </tr>
           </thead>
@@ -274,76 +268,64 @@ export default function AdminSponsorshipsPage() {
               <tr key={deal.id} className="hover:bg-bg-muted transition-colors">
                 <td className="px-4 py-3">
                   <div className="font-medium text-text-primary">{deal.sponsors_profile.company_name}</div>
-                  <div className="text-xs text-text-muted">{deal.sponsor_id}</div>
+                  <div className="text-xs text-text-muted">{deal.sponsor_email}</div>
                   {!deal.sponsors_profile.is_active && (
-                    <div className="text-xs text-red-600 mt-1">Disabled</div>
+                    <div className="text-xs text-text-muted mt-1">Disabled</div>
                   )}
                 </td>
-                <td className="px-4 py-3 text-text-primary">{deal.events.title}</td>
+                <td className="px-4 py-3 text-text-primary">
+                  {deal.events?.title || deal.fests?.title || "Fest Sponsorship"}
+                </td>
                 <td className="px-4 py-3">
-                  <span
-                    className={`inline-block px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getTierColor(
-                      deal.sponsorship_packages.tier
-                    )} text-white capitalize`}
-                  >
-                    {deal.sponsorship_packages.tier}
+                  <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-bg-card text-text-primary border border-border-default capitalize">
+                    {deal.sponsorship_packages.type}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right text-text-primary font-medium">
-                  ₹{(deal.amount_paid / 100).toFixed(0)}
-                </td>
-                <td className="px-4 py-3 text-right text-text-primary font-medium">
-                  ₹{(deal.platform_fee / 100).toFixed(0)}
-                </td>
-                <td className="px-4 py-3 text-right text-text-primary font-medium">
-                  ₹{(deal.organizer_amount / 100).toFixed(0)}
+                  ₹{deal.sponsorship_packages.price?.toLocaleString?.() || deal.sponsorship_packages.price}
                 </td>
                 <td className="px-4 py-3">
-                  <div>
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(deal.status)}`}>
-                      {deal.status}
-                    </span>
-                    {deal.status === 'confirmed' && deal.confirmed_by && (
-                      <div className="text-xs text-text-muted mt-1">
-                        Confirmed by organizer
-                      </div>
-                    )}
+                  <div className="text-xs text-text-secondary">
+                    <div>Method: {deal.payment_method || "-"}</div>
+                    <div>Reference: {deal.transaction_reference || "-"}</div>
+                    <div>Date: {deal.payment_date || "-"}</div>
+                    <div>Status: {formatStatus(deal.payment_status)}</div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                    deal.facilitation_fee_paid 
-                      ? 'bg-success/10 text-success border border-success/20' 
-                      : 'bg-warning/10 text-warning border border-warning/20'
-                  }`}>
-                    {deal.facilitation_fee_paid ? 'Paid' : 'Pending'}
-                  </span>
+                  {deal.visibility_active ? "Active" : "Inactive"}
+                </td>
+                <td className="px-4 py-3 text-xs text-text-secondary">
+                  {deal.sponsor_analytics?.clicks ?? 0} / {deal.sponsor_analytics?.impressions ?? 0}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-2">
-                    {!deal.facilitation_fee_paid && deal.status === 'confirmed' && (
-                      <div className="flex gap-1">
-                        <input
-                          type="text"
-                          placeholder="Payment ref"
-                          value={paymentReferences[deal.id] || ''}
-                          onChange={(e) => setPaymentReferences({ ...paymentReferences, [deal.id]: e.target.value })}
-                          className="flex-1 px-2 py-1 text-xs border border-border-default rounded bg-bg-muted text-text-primary placeholder:text-text-muted"
-                        />
+                    {deal.payment_status === "pending" && (
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => handleMarkFacilitationFeePaid(deal.id, paymentReferences[deal.id] || '')}
+                          onClick={() => handleVerifyPayment(deal.id)}
                           disabled={updatingId === deal.id}
-                          className="text-xs px-2 py-1 border border-success text-success hover:bg-success/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                          title="Mark platform commission as received"
+                          className="text-xs px-2 py-1 border border-border-default text-text-primary hover:bg-bg-muted rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {updatingId === deal.id ? 'Marking...' : 'Mark Commission Paid'}
+                          {updatingId === deal.id ? 'Verifying...' : 'Verify Payment'}
+                        </button>
+                        <button
+                          onClick={() => handleRejectPayment(deal.id)}
+                          disabled={updatingId === deal.id}
+                          className="text-xs px-2 py-1 border border-border-default text-text-secondary hover:bg-bg-muted rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Reject
                         </button>
                       </div>
                     )}
-                    {deal.status === 'pending' && (
-                      <div className="text-xs text-text-muted italic">
-                        Awaiting organizer confirmation
-                      </div>
+                    {deal.payment_status === "verified" && (
+                      <button
+                        onClick={() => handleToggleVisibility(deal.id, !deal.visibility_active)}
+                        disabled={updatingId === deal.id}
+                        className="text-xs px-2 py-1 border border-border-default text-text-secondary hover:bg-bg-muted rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {deal.visibility_active ? "Disable Visibility" : "Enable Visibility"}
+                      </button>
                     )}
                     <button
                       onClick={() => handleDisableSponsor(deal.sponsors_profile.email)}

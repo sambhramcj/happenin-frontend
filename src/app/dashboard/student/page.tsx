@@ -89,7 +89,11 @@ export default function StudentDashboard() {
   const [ticketsLoading, setTicketsLoading] = useState(true);
   const [loadingEventId, setLoadingEventId] = useState<string | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
-    const [paymentStage, setPaymentStage] = useState<"creating" | "confirming" | "pending" | "success" | null>(null);
+  const [paymentStage, setPaymentStage] = useState<"creating" | "confirming" | "pending" | "success" | null>(null);
+  const [whatsappStatusByEvent, setWhatsappStatusByEvent] = useState<Record<string, boolean>>({});
+  const [whatsappStatusLoading, setWhatsappStatusLoading] = useState(false);
+  const [lastRegisteredEventId, setLastRegisteredEventId] = useState<string | null>(null);
+  const [lastRegistrationWhatsappEnabled, setLastRegistrationWhatsappEnabled] = useState(false);
 
   // Volunteer states
   const [volunteerApplications, setVolunteerApplications] = useState<any[]>([]);
@@ -133,6 +137,24 @@ export default function StudentDashboard() {
     // Fetch top 10 events
     getTop10Events().then(setTop10Events);
   }, [session, status, router]);
+
+  useEffect(() => {
+    if (activeTab !== "my-events") return;
+    const eventIds = tickets.map((ticket) => ticket.event_id).filter(Boolean);
+    fetchWhatsappStatus(eventIds);
+  }, [activeTab, tickets]);
+
+  useEffect(() => {
+    if (!lastRegisteredEventId || paymentStage !== "success") return;
+    fetch(`/api/whatsapp/status?event_id=${lastRegisteredEventId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        setLastRegistrationWhatsappEnabled(Boolean(data?.enabled));
+      })
+      .catch(() => {
+        setLastRegistrationWhatsappEnabled(false);
+      });
+  }, [lastRegisteredEventId, paymentStage]);
 
   // Animated search placeholder
   useEffect(() => {
@@ -292,6 +314,54 @@ export default function StudentDashboard() {
       console.error("Error fetching tickets:", err);
     } finally {
       setTicketsLoading(false);
+    }
+  }
+
+  async function fetchWhatsappStatus(eventIds: string[]) {
+    if (!eventIds.length) return;
+    setWhatsappStatusLoading(true);
+    try {
+      const results = await Promise.all(
+        eventIds.map(async (eventId) => {
+          const res = await fetch(`/api/whatsapp/status?event_id=${eventId}`);
+          if (!res.ok) return { eventId, enabled: false };
+          const data = await res.json();
+          return { eventId, enabled: Boolean(data.enabled) };
+        })
+      );
+
+      setWhatsappStatusByEvent((prev) => {
+        const next = { ...prev };
+        results.forEach((item) => {
+          next[item.eventId] = item.enabled;
+        });
+        return next;
+      });
+    } finally {
+      setWhatsappStatusLoading(false);
+    }
+  }
+
+  async function handleJoinWhatsapp(eventId: string) {
+    try {
+      const res = await fetch("/api/whatsapp/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id: eventId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Unable to open WhatsApp group");
+        return;
+      }
+
+      const data = await res.json();
+      if (data.link) {
+        window.open(data.link, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      toast.error("Unable to open WhatsApp group");
     }
   }
 
@@ -491,9 +561,9 @@ export default function StudentDashboard() {
               
               await fetchTickets();
               setLoadingEventId(null);
-              setPaymentStage(null);
-              toast.success("✓ Registration confirmed!");
-              setActiveTab("my-events");
+              setLastRegisteredEventId(event.id);
+              setPaymentStage("success");
+              toast.success("Registration confirmed!");
             } else {
               console.error("Payment verification delayed:", verifyData);
               setLoadingEventId(null);
@@ -669,6 +739,14 @@ export default function StudentDashboard() {
             setPaymentStage(null);
             setActiveTab("my-events");
           }}
+          actionLabel={
+            paymentStage === "success" && lastRegistrationWhatsappEnabled ? "Join WhatsApp Group" : undefined
+          }
+          onAction={
+            paymentStage === "success" && lastRegistrationWhatsappEnabled && lastRegisteredEventId
+              ? () => handleJoinWhatsapp(lastRegisteredEventId)
+              : undefined
+          }
         />
       )}
       {/* Sticky Top Bar */}
@@ -1193,6 +1271,15 @@ export default function StudentDashboard() {
                         design="modern"
                         eventId={ticket.event_id}
                       />
+                      {whatsappStatusByEvent[ticket.event_id] && (
+                        <button
+                          onClick={() => handleJoinWhatsapp(ticket.event_id)}
+                          className="mt-4 w-full bg-bg-muted border border-border-default text-text-secondary py-2 rounded-lg hover:text-text-primary hover:bg-bg-card transition-all flex items-center justify-center gap-2"
+                        >
+                          <Icons.WhatsApp className="h-4 w-4" />
+                          Join WhatsApp Group
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

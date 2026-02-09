@@ -6,45 +6,53 @@ const supabase = createClient(
 );
 
 /**
- * Check if sponsorship payment is confirmed for an event
- * 
+ * Check if sponsorship visibility is active for an event
+ *
  * Returns TRUE if:
- * - Event has NO sponsorship deals (no sponsorships required)
- * - Event has sponsorship deals AND at least one deal has status = 'confirmed' or 'active' or 'completed'
- * 
- * Returns FALSE if:
- * - Event has sponsorship deals AND all are in 'pending' status
- * 
- * PAYMENT FLOW:
- * Stage 1: Sponsor → Organizer (outside app) → Organizer marks as paid → status = 'confirmed' → Features unlock
- * Stage 2: Organizer → Platform commission (tracked separately via facilitation_fee_paid)
- * 
- * Used to gate: QR scanning, certificate generation, sponsor reports, sponsor logo rendering
+ * - Event has NO sponsorship deals
+ * - Event has at least one deal with visibility_active = true and payment_status = 'verified'
+ *
+ * Used for rendering sponsor visibility and status indicators.
  */
 export async function isSponsorshipSettled(eventId: string): Promise<boolean> {
   try {
-    // Get all sponsorship deals for this event
-    const { data: deals, error } = await supabase
-      .from('sponsorship_deals')
-      .select('id, status')
-      .eq('event_id', eventId);
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('fest_id')
+      .eq('id', eventId)
+      .single();
 
-    if (error) {
-      console.error('Error checking sponsorship settlement:', error);
-      // On error, assume settled (fail-open to not block legitimate operations)
+    if (eventError) {
+      console.error('Error fetching event for sponsorship visibility:', eventError);
       return true;
     }
 
-    // If no sponsorships exist, consider it settled
+    let query = supabase
+      .from('sponsorship_deals')
+      .select('id, visibility_active, payment_status')
+      .eq('visibility_active', true)
+      .eq('payment_status', 'verified');
+
+    if (event?.fest_id) {
+      query = query.or(`event_id.eq.${eventId},fest_id.eq.${event.fest_id}`);
+    } else {
+      query = query.eq('event_id', eventId);
+    }
+
+    const { data: deals, error } = await query;
+
+    if (error) {
+      console.error('Error checking sponsorship settlement:', error);
+      return true;
+    }
+
     if (!deals || deals.length === 0) {
       return true;
     }
 
-    // If ANY deal has status = 'confirmed', 'active', or 'completed', sponsorship is settled
-    return deals.some(deal => ['confirmed', 'active', 'completed'].includes(deal.status));
+    return deals.some(deal => deal.visibility_active && deal.payment_status === 'verified');
   } catch (err) {
     console.error('Unexpected error in isSponsorshipSettled:', err);
-    // Fail-open on errors
     return true;
   }
 }
@@ -55,8 +63,8 @@ export async function isSponsorshipSettled(eventId: string): Promise<boolean> {
  */
 export function sponsorshipNotSettledError() {
   return {
-    error: 'Sponsorship payment confirmation required',
-    code: 'SPONSORSHIP_NOT_SETTLED',
-    message: 'Features will unlock once organizer confirms sponsor payment receipt.',
+    error: 'Sponsorship visibility not active',
+    code: 'SPONSORSHIP_VISIBILITY_INACTIVE',
+    message: 'Visibility activates after admin verifies payment.',
   };
 }

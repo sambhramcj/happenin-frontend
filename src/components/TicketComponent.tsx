@@ -42,9 +42,15 @@ export default function TicketComponent({
         const res = await fetch(`/api/sponsorship/public?event_id=${eventId}`);
         if (!res.ok) return;
         const json = await res.json();
-        const deal = (json.deals || [])[0];
-        if (!deal) return;
-        const sp = deal.sponsors_profile || {};
+        const deals = json.deals || [];
+        if (deals.length === 0) return;
+        const priority = ["fest", "app", "digital"];
+        const chosen = deals.sort((a: any, b: any) => {
+          const aRank = priority.indexOf(a?.sponsorship_packages?.type || "");
+          const bRank = priority.indexOf(b?.sponsorship_packages?.type || "");
+          return (aRank === -1 ? 99 : aRank) - (bRank === -1 ? 99 : bRank);
+        })[0];
+        const sp = chosen.sponsors_profile || {};
         if (!cancelled) setSponsor({ name: sp.company_name, logo_url: sp.logo_url });
       } catch {}
     }

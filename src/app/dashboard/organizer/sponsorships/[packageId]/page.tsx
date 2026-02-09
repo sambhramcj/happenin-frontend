@@ -3,30 +3,33 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { DELIVERABLE_CATEGORIES } from "@/types/sponsorship";
+
+const OFFLINE_DELIVERABLE_CATEGORIES = [
+  { value: "social", label: "Social media" },
+  { value: "on_ground", label: "On-ground" },
+  { value: "stall", label: "Stall or booth" },
+] as const;
 
 export default function SponsorshipDeliverablesManager() {
-  const { packageId } = useParams();
+  const { packageId } = useParams() as { packageId: string };
   const router = useRouter();
-  const [pkg, setPkg] = useState<any>(null);
   const [deliverables, setDeliverables] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState("social");
+  const [category, setCategory] = useState<(typeof OFFLINE_DELIVERABLE_CATEGORIES)[number]["value"]>(
+    "social"
+  );
   const [description, setDescription] = useState("");
 
   useEffect(() => {
-    fetchPackage();
+    fetchDeliverables();
   }, [packageId]);
 
-  async function fetchPackage() {
+  async function fetchDeliverables() {
     try {
-      const res = await fetch(`/api/sponsorship/packages?package_id=${packageId}`);
+      const res = await fetch(`/api/sponsorship/deliverables?package_id=${packageId}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.package) {
-          setPkg(data.package);
-          setDeliverables(data.package.sponsorship_deliverables || []);
-        }
+        setDeliverables(data.deliverables || []);
       }
     } catch {
       // noop
@@ -36,12 +39,12 @@ export default function SponsorshipDeliverablesManager() {
   }
 
   async function addDeliverable() {
-    if (!category || !description.trim()) {
+    if (!description.trim()) {
       toast.error("Description is required");
       return;
     }
 
-    const categoryMeta = DELIVERABLE_CATEGORIES.find((c) => c.value === category);
+    const categoryMeta = OFFLINE_DELIVERABLE_CATEGORIES.find((c) => c.value === category);
 
     const res = await fetch("/api/sponsorship/deliverables", {
       method: "POST",
@@ -57,7 +60,7 @@ export default function SponsorshipDeliverablesManager() {
     if (res.ok) {
       toast.success("Deliverable added");
       setDescription("");
-      fetchPackage();
+      fetchDeliverables();
     } else {
       const data = await res.json();
       toast.error(data.error || "Failed to add deliverable");
@@ -68,10 +71,9 @@ export default function SponsorshipDeliverablesManager() {
     const res = await fetch(`/api/sponsorship/deliverables?deliverable_id=${deliverableId}`, {
       method: "DELETE",
     });
-
     if (res.ok) {
       toast.success("Deliverable removed");
-      fetchPackage();
+      fetchDeliverables();
     } else {
       const data = await res.json();
       toast.error(data.error || "Failed to remove deliverable");
@@ -89,24 +91,13 @@ export default function SponsorshipDeliverablesManager() {
     );
   }
 
-  if (!pkg) {
-    return (
-      <div className="min-h-screen bg-bg-muted p-6">
-        <div className="text-text-muted">Package not found</div>
-      </div>
-    );
-  }
-
-  const platformDefaults = deliverables.filter((d) => d.type === "platform_default");
-  const organizerDeliverables = deliverables.filter((d) => d.type === "organizer_defined");
-
   return (
     <div className="min-h-screen bg-bg-muted p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">Manage Deliverables</h1>
-            <p className="text-text-secondary text-sm">{pkg.tier?.toUpperCase()} Package</p>
+            <h1 className="text-2xl font-bold text-text-primary">Organizer Deliverables</h1>
+            <p className="text-text-secondary text-sm">Only offline deliverables are listed here</p>
           </div>
           <button
             onClick={() => router.back()}
@@ -115,29 +106,16 @@ export default function SponsorshipDeliverablesManager() {
             Back
           </button>
         </div>
-
         <div className="bg-bg-card rounded-xl border border-border-default p-6">
-          <h2 className="text-lg font-bold text-text-primary mb-4">Platform Default Deliverables</h2>
-          <div className="space-y-3">
-            {platformDefaults.map((d) => (
-              <div key={d.id} className="p-3 bg-bg-muted rounded-lg border border-border-default">
-                <div className="text-sm font-semibold text-text-primary">{d.title}</div>
-                <div className="text-xs text-text-secondary">{d.description}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-bg-card rounded-xl border border-border-default p-6">
-          <h2 className="text-lg font-bold text-text-primary mb-4">Organizer Deliverables</h2>
+          <h2 className="text-lg font-bold text-text-primary mb-4">Add Offline Deliverables</h2>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => setCategory(e.target.value as typeof category)}
                 className="bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
               >
-                {DELIVERABLE_CATEGORIES.map((cat) => (
+                {OFFLINE_DELIVERABLE_CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>
                     {cat.label}
                   </option>
@@ -158,22 +136,25 @@ export default function SponsorshipDeliverablesManager() {
             </button>
 
             <div className="space-y-3">
-              {organizerDeliverables.map((d) => (
-                <div key={d.id} className="flex items-center justify-between p-3 bg-bg-muted rounded-lg border border-border-default">
+              {deliverables.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between p-3 bg-bg-muted rounded-lg border border-border-default"
+                >
                   <div>
                     <div className="text-sm font-semibold text-text-primary">{d.title}</div>
                     <div className="text-xs text-text-secondary">{d.description}</div>
                   </div>
                   <button
                     onClick={() => removeDeliverable(d.id)}
-                    className="text-xs text-red-400 hover:text-red-300"
+                    className="text-xs text-text-secondary hover:text-text-primary"
                   >
                     Remove
                   </button>
                 </div>
               ))}
-              {organizerDeliverables.length === 0 && (
-                <div className="text-sm text-text-muted">No deliverables added yet</div>
+              {deliverables.length === 0 && (
+                <div className="text-sm text-text-muted">No offline deliverables added yet</div>
               )}
             </div>
           </div>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { isSponsorshipSettled } from "@/lib/sponsorshipAccess";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -11,20 +10,39 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Missing event_id or placement" }, { status: 400 });
   }
 
+  let festId: string | null = null;
+  if (event_id) {
+    const { data: event } = await supabase
+      .from("events")
+      .select("fest_id")
+      .eq("id", event_id)
+      .single();
+
+    festId = event?.fest_id || null;
+  }
+
   let query = supabase
     .from("sponsorship_deals")
     .select(`
       id,
       event_id,
-      status,
-      amount_paid,
-      sponsorship_packages (tier),
-      sponsors_profile (company_name, logo_url, website_url, is_active)
+      fest_id,
+      payment_status,
+      visibility_active,
+      sponsorship_packages (type, scope, price),
+      sponsors_profile (company_name, logo_url, website_url, is_active),
+      events (id, title, fest_id),
+      fests (id, title, start_date, end_date)
     `)
-    .in("status", ["confirmed", "active", "completed"]);
+    .eq("visibility_active", true)
+    .eq("payment_status", "verified");
 
   if (event_id) {
-    query = query.eq("event_id", event_id);
+    if (festId) {
+      query = query.or(`event_id.eq.${event_id},fest_id.eq.${festId}`);
+    } else {
+      query = query.eq("event_id", event_id);
+    }
   }
 
   const { data, error } = await query;
@@ -32,12 +50,23 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // GATING: Only show sponsors with confirmed status or higher
-  // Status filtering above ensures only confirmed/active/completed deals are shown
   let deals = (data || []).filter((d: any) => d.sponsors_profile?.is_active !== false);
 
   if (placement === "homepage") {
-    deals = deals.filter((d: any) => ["gold", "platinum"].includes(d.sponsorship_packages?.tier));
+    const now = new Date();
+    deals = deals.filter((d: any) => {
+      const packType = d.sponsorship_packages?.type;
+      if (!['app', 'fest'].includes(packType)) return false;
+
+      const festStart = d.fests?.start_date ? new Date(d.fests.start_date) : null;
+      const festEnd = d.fests?.end_date ? new Date(d.fests.end_date) : null;
+
+      if (festStart && festEnd) {
+        return now >= festStart && now <= festEnd;
+      }
+
+      return true;
+    });
   }
 
   return NextResponse.json({ deals });

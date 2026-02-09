@@ -8,7 +8,6 @@ import * as XLSX from "xlsx";
 import { RegistrationsModal } from "@/components/RegistrationsModal";
 import { useEventSchedule } from "@/hooks/useEventSchedule";
 import { EventScheduleBuilder } from "@/components/EventScheduleBuilder";
-import SponsorshipPackagesManager from "@/components/SponsorshipPackagesManager";
 import { SponsorshipPayout } from "@/components/SponsorshipPayout";
 import { OrganizerSponsorshipDeals } from "@/components/OrganizerSponsorshipDeals";
 import AttendanceModal from "@/components/AttendanceModal";
@@ -77,9 +76,16 @@ export default function OrganizerDashboard() {
   const eventSchedule = useEventSchedule();
   const [bannerImage, setBannerImage] = useState<File | null>(null);
   const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
+  const [brochureFile, setBrochureFile] = useState<File | null>(null);
+  const [prizePoolDescription, setPrizePoolDescription] = useState("");
+  const [prizePoolAmount, setPrizePoolAmount] = useState("");
+  const [organizerContactPhone, setOrganizerContactPhone] = useState("");
+  const [organizerContactEmail, setOrganizerContactEmail] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [sponsorshipEnabled, setSponsorshipEnabled] = useState(false);
+  const [whatsappGroupEnabled, setWhatsappGroupEnabled] = useState(false);
+  const [whatsappGroupLink, setWhatsappGroupLink] = useState("");
 
   // Certificate states
   const [approvedVolunteers, setApprovedVolunteers] = useState<any[]>([]);
@@ -93,6 +99,11 @@ export default function OrganizerDashboard() {
   const [selectedEventForVolunteers, setSelectedEventForVolunteers] = useState<string>("");
   const [volunteerFilterStatus, setVolunteerFilterStatus] = useState<"all" | "pending" | "accepted" | "rejected">("all");
   const [processingVolunteerId, setProcessingVolunteerId] = useState<string | null>(null);
+
+  const [eventWhatsappEnabled, setEventWhatsappEnabled] = useState(false);
+  const [eventWhatsappLink, setEventWhatsappLink] = useState("");
+  const [eventWhatsappLoading, setEventWhatsappLoading] = useState(false);
+  const [eventWhatsappSaving, setEventWhatsappSaving] = useState(false);
 
   // Modal states
   const [registrationsModal, setRegistrationsModal] = useState<{
@@ -150,6 +161,11 @@ export default function OrganizerDashboard() {
 
     loadDashboard();
   }, [session, status, router]);
+
+  useEffect(() => {
+    if (!selectedEventId) return;
+    fetchEventWhatsappSettings(selectedEventId);
+  }, [selectedEventId]);
 
   async function fetchEvents() {
     const res = await fetch("/api/events");
@@ -232,6 +248,69 @@ export default function OrganizerDashboard() {
     } catch (err) {
       console.error("Error fetching approved volunteers:", err);
     }
+  }
+
+  async function fetchEventWhatsappSettings(eventId: string) {
+    try {
+      setEventWhatsappLoading(true);
+      const res = await fetch(`/api/organizer/events/${eventId}/whatsapp`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setEventWhatsappEnabled(Boolean(data.whatsapp_group_enabled));
+      setEventWhatsappLink(data.whatsapp_group_link || "");
+    } catch (err) {
+      console.error("Error fetching WhatsApp settings:", err);
+    } finally {
+      setEventWhatsappLoading(false);
+    }
+  }
+
+  async function saveEventWhatsappSettings(eventId: string) {
+    const trimmed = whatsappGroupLinkValue(eventWhatsappLink);
+    if (eventWhatsappEnabled && !trimmed) {
+      toast.error("WhatsApp link is required when enabled");
+      return;
+    }
+    if (trimmed && !isValidWhatsappLink(trimmed)) {
+      toast.error("WhatsApp link must start with https://chat.whatsapp.com/");
+      return;
+    }
+
+    try {
+      setEventWhatsappSaving(true);
+      const res = await fetch(`/api/organizer/events/${eventId}/whatsapp`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          whatsapp_group_enabled: eventWhatsappEnabled,
+          whatsapp_group_link: trimmed,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to update WhatsApp settings");
+        return;
+      }
+
+      const data = await res.json();
+      setEventWhatsappEnabled(Boolean(data.whatsapp_group_enabled));
+      setEventWhatsappLink(data.whatsapp_group_link || "");
+      toast.success("WhatsApp settings updated");
+    } catch (err) {
+      console.error("Error saving WhatsApp settings:", err);
+      toast.error("Failed to update WhatsApp settings");
+    } finally {
+      setEventWhatsappSaving(false);
+    }
+  }
+
+  function whatsappGroupLinkValue(value: string) {
+    return value.trim();
+  }
+
+  function isValidWhatsappLink(link: string) {
+    return /^https:\/\/chat\.whatsapp\.com\/.+/.test(link);
   }
 
   async function handleIssueCertificate() {
@@ -399,6 +478,31 @@ export default function OrganizerDashboard() {
     }
   }
 
+  async function uploadBrochure(): Promise<string | null> {
+    if (!brochureFile) return null;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', brochureFile);
+
+      const res = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to upload brochure');
+      }
+
+      return data.imageUrl;
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload brochure');
+      return null;
+    }
+  }
+
   async function handleCreateEvent() {
     if (!title || !description || !location || !price) {
       toast.error("Please fill in all required fields");
@@ -410,10 +514,28 @@ export default function OrganizerDashboard() {
       return;
     }
 
+    const whatsappLink = whatsappGroupLinkValue(whatsappGroupLink);
+    if (whatsappGroupEnabled && !whatsappLink) {
+      toast.error("WhatsApp link is required when enabled");
+      return;
+    }
+    if (whatsappLink && !isValidWhatsappLink(whatsappLink)) {
+      toast.error("WhatsApp link must start with https://chat.whatsapp.com/");
+      return;
+    }
+
     let bannerImageUrl: string | null = null;
     if (bannerImage) {
       bannerImageUrl = await uploadBannerImage();
       if (!bannerImageUrl) {
+        return;
+      }
+    }
+
+    let brochureUrl: string | null = null;
+    if (brochureFile) {
+      brochureUrl = await uploadBrochure();
+      if (!brochureUrl) {
         return;
       }
     }
@@ -429,6 +551,7 @@ export default function OrganizerDashboard() {
         location,
         price,
         bannerImage: bannerImageUrl,
+        brochureUrl,
         start_datetime: scheduleData.start_datetime,
         end_datetime: scheduleData.end_datetime,
         schedule_sessions: scheduleData.schedule_sessions,
@@ -437,6 +560,12 @@ export default function OrganizerDashboard() {
         discountAmount,
         eligibleMembers,
         sponsorshipEnabled,
+        prizePoolDescription,
+        prizePoolAmount: prizePoolAmount ? Number(prizePoolAmount) : null,
+        organizerContactPhone,
+        organizerContactEmail,
+        whatsappGroupEnabled,
+        whatsappGroupLink: whatsappLink || "",
         organizerEmail: session?.user?.email,
       }),
     });
@@ -481,6 +610,13 @@ export default function OrganizerDashboard() {
       setSponsorshipEnabled(false);
       setBannerImage(null);
       setBannerImagePreview(null);
+      setBrochureFile(null);
+      setPrizePoolDescription("");
+      setPrizePoolAmount("");
+      setOrganizerContactPhone("");
+      setOrganizerContactEmail("");
+      setWhatsappGroupEnabled(false);
+      setWhatsappGroupLink("");
       eventSchedule.setEventType('single-day');
       setShowCreateForm(false);
       fetchEvents();
@@ -571,8 +707,34 @@ export default function OrganizerDashboard() {
         </div>
       </div>
 
+      {/* Desktop Tabs Bar */}
+      <div className="hidden md:block sticky top-[76px] z-30 bg-bg-card/95 backdrop-blur-md border-b border-border-default transition-all duration-medium ease-standard">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-start gap-1">
+          {[
+            { id: "dashboard", icon: Icons.Dashboard, label: "Dashboard" },
+            { id: "events", icon: Icons.Clipboard, label: "Events" },
+            { id: "analytics", icon: Icons.TrendingUp, label: "Analytics" },
+            { id: "sponsorships", icon: Icons.Handshake, label: "Sponsorships" },
+            { id: "profile", icon: Icons.User, label: "Profile" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-3 font-medium text-sm transition-all flex items-center gap-2 border-b-2 ${
+                activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6">
         {/* DASHBOARD TAB */}
         {activeTab === "dashboard" && (
           dashboardLoading ? (
@@ -678,7 +840,7 @@ export default function OrganizerDashboard() {
               </h2>
               <button
                 onClick={() => setShowCreateForm(!showCreateForm)}
-                className="px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-all font-medium shadow-md"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primaryHover transition-all font-medium shadow-md"
               >
                 {showCreateForm ? "Cancel" : "+ Create Event"}
               </button>
@@ -763,14 +925,43 @@ export default function OrganizerDashboard() {
                       onChange={(e) => setSponsorshipEnabled(e.target.checked)}
                       className="w-4 h-4 accent-brand"
                     />
-                    <span className="text-sm text-text-secondary">Enable Sponsorships</span>
+                    <span className="text-sm text-text-secondary">Enable Sponsorship Visibility</span>
                   </label>
                 </div>
 
                 {sponsorshipEnabled && (
                   <div className="bg-bg-card rounded-lg p-4 border border-border-default">
                     <p className="text-sm text-text-muted">
-                      Save the event to configure sponsorship packages.
+                      Sponsorship visibility is managed by Happenin. Sponsors pay the platform directly.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={whatsappGroupEnabled}
+                      onChange={(e) => setWhatsappGroupEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-brand"
+                    />
+                    <span className="text-sm text-text-secondary">Enable WhatsApp Group for Participants</span>
+                  </label>
+                </div>
+
+                {whatsappGroupEnabled && (
+                  <div className="bg-bg-muted rounded-lg p-4 space-y-3">
+                    <div>
+                      <label className="text-sm text-text-secondary mb-2 block">WhatsApp Group Invite Link</label>
+                      <input
+                        value={whatsappGroupLink}
+                        onChange={(e) => setWhatsappGroupLink(e.target.value)}
+                        className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                        placeholder="https://chat.whatsapp.com/..."
+                      />
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      Participants can choose to join this group. They are not added automatically.
                     </p>
                   </div>
                 )}
@@ -810,12 +1001,109 @@ export default function OrganizerDashboard() {
                   </div>
                 )}
 
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(prizePoolAmount || prizePoolDescription)}
+                      onChange={(e) => {
+                        if (!e.target.checked) {
+                          setPrizePoolAmount("");
+                          setPrizePoolDescription("");
+                        }
+                      }}
+                      className="w-4 h-4 accent-brand"
+                    />
+                    <span className="text-sm text-text-secondary">Add Prize Pool & Rewards</span>
+                  </label>
+                </div>
+
+                {(prizePoolAmount || prizePoolDescription) && (
+                  <div className="bg-bg-muted rounded-lg p-4 space-y-3">
+                    <div>
+                      <label className="text-sm text-text-secondary mb-2 block">Total Prize Pool (₹)</label>
+                      <input
+                        type="number"
+                        value={prizePoolAmount}
+                        onChange={(e) => setPrizePoolAmount(e.target.value)}
+                        className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                        placeholder="e.g., 50000"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-text-secondary mb-2 block">Prize Details & Distribution</label>
+                      <textarea
+                        value={prizePoolDescription}
+                        onChange={(e) => setPrizePoolDescription(e.target.value)}
+                        className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary resize-none"
+                        rows={3}
+                        placeholder="e.g., 1st Prize: ₹25000, 2nd Prize: ₹15000, 3rd Prize: ₹10000"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(organizerContactPhone || organizerContactEmail)}
+                      onChange={(e) => {
+                        if (!e.target.checked) {
+                          setOrganizerContactPhone("");
+                          setOrganizerContactEmail("");
+                        }
+                      }}
+                      className="w-4 h-4 accent-brand"
+                    />
+                    <span className="text-sm text-text-secondary">Add Organizer Contact Details</span>
+                  </label>
+                </div>
+
+                {(organizerContactPhone || organizerContactEmail) && (
+                  <div className="bg-bg-muted rounded-lg p-4 space-y-3">
+                    <div>
+                      <label className="text-sm text-text-secondary mb-2 block">Contact Phone</label>
+                      <input
+                        type="tel"
+                        value={organizerContactPhone}
+                        onChange={(e) => setOrganizerContactPhone(e.target.value)}
+                        className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                        placeholder="e.g., +91 9876543210"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-text-secondary mb-2 block">Contact Email</label>
+                      <input
+                        type="email"
+                        value={organizerContactEmail}
+                        onChange={(e) => setOrganizerContactEmail(e.target.value)}
+                        className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                        placeholder="e.g., contact@event.com"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block">Brochure (PDF/Image) - Optional</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setBrochureFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-text-inverse hover:file:bg-blue-800 transition-all duration-fast ease-standard"
+                  />
+                  {brochureFile && (
+                    <p className="text-xs text-success mt-2">✓ {brochureFile.name}</p>
+                  )}
+                </div>
+
                 <LoadingButton
                   onClick={handleCreateEvent}
                   disabled={uploadingImage}
                   loading={uploadingImage}
                   loadingText="Uploading image…"
-                  className="w-full bg-gradient-to-r from-brand to-pink-600 text-text-inverse py-3 rounded-lg hover:from-violet-800 hover:to-pink-500 transition-all font-semibold disabled:opacity-50"
+                  className="w-full bg-primary text-text-inverse py-3 rounded-lg hover:bg-primaryHover transition-all font-semibold disabled:opacity-50"
                 >
                   Create Event
                 </LoadingButton>
@@ -921,11 +1209,57 @@ export default function OrganizerDashboard() {
               {eventDetailView === "overview" && (
                 <div className="space-y-6">
                   {event.sponsorship_enabled && (
-                    <>
-                      <SponsorshipPackagesManager eventId={event.id} />
+                    <div className="space-y-4">
+                      <div className="bg-bg-card rounded-xl border border-border-default p-6">
+                        <h3 className="text-lg font-bold text-text-primary mb-2">Sponsorship Visibility</h3>
+                        <p className="text-sm text-text-secondary">
+                          Sponsorship packs are managed by Happenin. Visibility activates only after admin verifies payment.
+                        </p>
+                      </div>
                       <OrganizerSponsorshipDeals eventId={event.id} />
-                    </>
+                    </div>
                   )}
+                  <div className="bg-bg-card rounded-xl border border-border-default p-6 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-text-primary">WhatsApp Group</h3>
+                        <p className="text-sm text-text-secondary">
+                          Participants can choose to join this group. They are not added automatically.
+                        </p>
+                      </div>
+                      {eventWhatsappLoading && (
+                        <span className="text-xs text-text-muted">Loading...</span>
+                      )}
+                    </div>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={eventWhatsappEnabled}
+                        onChange={(e) => setEventWhatsappEnabled(e.target.checked)}
+                        className="w-4 h-4 accent-brand"
+                      />
+                      <span className="text-sm text-text-secondary">Enable WhatsApp Group for Participants</span>
+                    </label>
+
+                    <div>
+                      <label className="text-sm text-text-secondary mb-2 block">WhatsApp Group Invite Link</label>
+                      <input
+                        value={eventWhatsappLink}
+                        onChange={(e) => setEventWhatsappLink(e.target.value)}
+                        className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                        placeholder="https://chat.whatsapp.com/..."
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => saveEventWhatsappSettings(event.id)}
+                      disabled={eventWhatsappSaving}
+                      className="w-full bg-primary text-text-inverse py-2 rounded-lg hover:bg-primaryHover disabled:opacity-50"
+                    >
+                      {eventWhatsappSaving ? "Saving..." : "Save WhatsApp Settings"}
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                       <Icons.Users className="h-6 w-6 mb-2 text-text-secondary" />
@@ -1534,8 +1868,8 @@ export default function OrganizerDashboard() {
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default pb-[env(safe-area-inset-bottom)]">
+      {/* Bottom Navigation - Mobile Only */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 px-2 py-2">
           {[
             { id: "dashboard", icon: Icons.Dashboard, label: "Dashboard" },

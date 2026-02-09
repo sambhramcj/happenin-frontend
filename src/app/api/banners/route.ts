@@ -17,7 +17,17 @@ export async function GET(request: Request) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    let query = supabase.from("banners").select("*", { count: "exact" });
+    let query = supabase
+      .from("banners")
+      .select(
+        `
+        *,
+        events (id, title),
+        fests (id, title),
+        sponsorship_deals (id, visibility_active, payment_status)
+      `,
+        { count: "exact" }
+      );
 
     if (type) query = query.eq("type", type);
     if (placement) query = query.eq("placement", placement);
@@ -25,8 +35,8 @@ export async function GET(request: Request) {
 
     // Only show approved, active banners to public OR pending banners to creator/admin
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      // Show only approved active banners to non-authenticated users
+    const role = (session?.user as any)?.role as string | undefined;
+    if (!session?.user?.email || role !== "admin") {
       query = query
         .eq("status", "approved")
         .lte("start_date", "now()")
@@ -45,8 +55,16 @@ export async function GET(request: Request) {
       );
     }
 
+    let banners = data || [];
+    if (!session?.user?.email || (session?.user as any)?.role !== "admin") {
+      banners = banners.filter((banner: any) => {
+        if (banner.type !== "sponsor") return true;
+        return banner.sponsorship_deals?.visibility_active && banner.sponsorship_deals?.payment_status === "verified";
+      });
+    }
+
     return NextResponse.json({
-      banners: data || [],
+      banners,
       total: count || 0,
     });
   } catch (error) {
@@ -73,19 +91,36 @@ export async function POST(request: Request) {
       title,
       type,
       eventId,
+      festId,
       sponsorEmail,
+      sponsorshipDealId,
       imageUrl,
       placement,
       linkType,
       linkTargetId,
+      linkUrl,
       startDate,
       endDate,
     } = body;
 
     // Validate required fields
-    if (!title || !type || !imageUrl || !placement || !linkType || !linkTargetId) {
+    if (!title || !type || !imageUrl || !placement || !linkType) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    if (linkType === "internal_event" && !linkTargetId) {
+      return NextResponse.json(
+        { error: "Missing link target for internal event banner" },
+        { status: 400 }
+      );
+    }
+
+    if (linkType === "external_url" && !linkUrl) {
+      return NextResponse.json(
+        { error: "Missing link URL for external banner" },
         { status: 400 }
       );
     }
@@ -121,7 +156,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Verify sponsor owns the sponsorship
+    // Verify sponsor owns the sponsorship and link to a deal
     if (type === "sponsor" && sponsorEmail) {
       if (sponsorEmail !== session.user.email) {
         return NextResponse.json(
@@ -129,6 +164,92 @@ export async function POST(request: Request) {
           { status: 403 }
         );
       }
+
+      if (!sponsorshipDealId) {
+        return NextResponse.json(
+          { error: "Sponsorship deal is required for sponsor banners" },
+          { status: 400 }
+        );
+      }
+
+      const { data: deal, error: dealError } = await supabase
+        .from("sponsorship_deals")
+        .select("id, sponsor_email, event_id, fest_id, sponsorship_packages (type, scope)")
+        .eq("id", sponsorshipDealId)
+        .single();
+
+      if (dealError || !deal || deal.sponsor_email !== sponsorEmail) {
+        return NextResponse.json(
+          { error: "Invalid sponsorship deal" },
+          { status: 403 }
+        );
+      }
+
+      const packType = (deal as any).sponsorship_packages?.type;
+      if (deal.event_id && eventId && deal.event_id !== eventId) {
+        return NextResponse.json(
+          { error: "Event does not match sponsorship deal" },
+          { status: 400 }
+        );
+      }
+
+      if (deal.fest_id && festId && deal.fest_id !== festId) {
+        return NextResponse.json(
+          { error: "Fest does not match sponsorship deal" },
+          { status: 400 }
+        );
+      }
+
+      if (placement === "event_page" && !eventId) {
+        return NextResponse.json(
+          { error: "Event ID required for event page banner" },
+          { status: 400 }
+        );
+      }
+
+      if ((placement === "home_top" || placement === "home_mid") && !festId) {
+        return NextResponse.json(
+          { error: "Fest ID required for homepage banner" },
+          { status: 400 }
+        );
+      }
+
+      const allowedPlacements = new Set<string>();
+
+      if (packType === "digital") {
+        allowedPlacements.add("event_page");
+      }
+
+      if (packType === "app") {
+        allowedPlacements.add("event_page");
+        allowedPlacements.add("home_top");
+      }
+
+      if (packType === "fest") {
+        allowedPlacements.add("home_top");
+        allowedPlacements.add("home_mid");
+      }
+
+      if (!allowedPlacements.has(placement)) {
+        return NextResponse.json(
+          { error: "Banner placement not allowed for this pack" },
+          { status: 400 }
+        );
+      }
+    }
+
+    let bannerStartDate = startDate;
+    let bannerEndDate = endDate;
+
+    if (type === "sponsor" && festId && (placement === "home_top" || placement === "home_mid")) {
+      const { data: fest } = await supabase
+        .from("fests")
+        .select("start_date, end_date")
+        .eq("id", festId)
+        .single();
+
+      if (fest?.start_date) bannerStartDate = fest.start_date;
+      if (fest?.end_date) bannerEndDate = fest.end_date;
     }
 
     const { data, error } = await supabase
@@ -137,13 +258,16 @@ export async function POST(request: Request) {
         title,
         type,
         event_id: eventId,
+        fest_id: festId,
         sponsor_email: sponsorEmail,
+        sponsorship_deal_id: sponsorshipDealId,
         image_url: imageUrl,
         placement,
         link_type: linkType,
         link_target_id: linkTargetId,
-        start_date: startDate,
-        end_date: endDate,
+        link_url: linkUrl,
+        start_date: bannerStartDate,
+        end_date: bannerEndDate,
         created_by: session.user.email,
         status: "pending",
       })

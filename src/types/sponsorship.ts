@@ -1,10 +1,10 @@
 export interface SponsorshipPackage {
   id: string;
-  event_id: string;
-  tier: 'bronze' | 'silver' | 'gold' | 'platinum';
-  min_amount: number;
-  max_amount: number;
-  organizer_notes?: string;
+  event_id: string | null;
+  fest_id?: string | null;
+  type: 'digital' | 'app' | 'fest';
+  price: number;
+  scope: 'per_event' | 'fest';
   is_active: boolean;
   created_at: string;
 }
@@ -13,7 +13,7 @@ export interface SponsorshipDeliverable {
   id: string;
   package_id: string;
   type: 'platform_default' | 'organizer_defined';
-  category: 'certificate' | 'ticket' | 'app_banner' | 'social' | 'on_ground' | 'stall' | 'digital';
+  category: 'social' | 'on_ground' | 'stall';
   title: string;
   description?: string;
   created_at: string;
@@ -21,17 +21,17 @@ export interface SponsorshipDeliverable {
 
 export interface SponsorshipDeal {
   id: string;
-  sponsor_id: string;
-  event_id: string;
+  sponsor_email: string;
+  event_id: string | null;
+  fest_id?: string | null;
   package_id: string;
-  amount_paid: number;
-  platform_fee: number;
-  organizer_amount: number;
-  status: 'pending' | 'confirmed' | 'active' | 'completed';
-  razorpay_order_id?: string;
-  razorpay_payment_id?: string;
+  payment_status: 'pending' | 'verified' | 'rejected';
+  transaction_reference?: string;
+  payment_method?: 'UPI' | 'Bank' | 'Cash';
+  payment_date?: string;
+  verified_by_admin: boolean;
+  visibility_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface SponsorProfile {
@@ -72,33 +72,41 @@ export interface SponsorshipPayout {
 
 export interface CreatePackageRequest {
   event_id: string;
-  tier: 'bronze' | 'silver' | 'gold' | 'platinum';
-  min_amount: number;
-  max_amount: number;
-  organizer_notes?: string;
-  deliverables: Array<{
-    category: 'social' | 'on_ground' | 'stall' | 'digital';
-    title: string;
-    description: string;
-  }>;
+  type: 'digital' | 'app' | 'fest';
+  price: number;
+  scope: 'per_event' | 'fest';
 }
 
 export interface CreateDealRequest {
   event_id: string;
   package_id: string;
-  amount: number;
+  transaction_reference: string;
+  payment_method: 'UPI' | 'Bank' | 'Cash';
+  payment_date: string;
 }
 
-export const TIER_BOUNDS = {
-  bronze: { min: 5000, max: 15000 },
-  silver: { min: 15000, max: 35000 },
-  gold: { min: 35000, max: 100000 },
-  platinum: { min: 100000, max: 10000000 },
+export const SPONSORSHIP_PACKS = {
+  digital: { price: 10000, scope: 'per_event' },
+  app: { price: 25000, scope: 'per_event' },
+  fest: { price: 50000, scope: 'fest' },
 } as const;
 
-export const DELIVERABLE_CATEGORIES = [
-  { value: 'social', label: 'Social Media Promotion' },
-  { value: 'on_ground', label: 'On-ground Branding' },
-  { value: 'stall', label: 'Stall / Booth Space' },
-  { value: 'digital', label: 'Digital Promotion' },
-] as const;
+export const SPONSORSHIP_VISIBILITY = {
+  digital: [
+    'Logo on event tickets',
+    'Logo on event certificates',
+    'Event page banner',
+  ],
+  app: [
+    'Logo on event tickets',
+    'Logo on event certificates',
+    'Event page banner',
+    'Homepage rotating banner (fest days)',
+  ],
+  fest: [
+    'Logo on all fest event tickets',
+    'Logo on all fest event certificates',
+    'Homepage rotating banner (fest days)',
+    'Additional homepage banner slots',
+  ],
+} as const;

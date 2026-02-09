@@ -9,8 +9,7 @@ export const dynamic = "force-dynamic";
  * Returns: { settled: boolean }
  * 
  * PAYMENT FLOW:
- * Stage 1: Sponsor → Organizer → Organizer marks paid → status='confirmed' → settled=true
- * Stage 2: Organizer → Platform commission (tracked separately, doesn't affect features)
+ * Admin verifies payment → visibility_active=true
  */
 export async function GET(
   req: NextRequest,

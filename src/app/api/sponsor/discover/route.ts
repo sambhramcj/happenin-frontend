@@ -11,7 +11,8 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from("events")
-    .select(`
+    .select(
+      `
       id,
       title,
       description,
@@ -20,15 +21,11 @@ export async function GET(req: Request) {
       banner_image,
       college,
       organizer_email,
-      sponsorship_packages (
-        id,
-        tier,
-        min_amount,
-        max_amount,
-        is_active
-      )
-    `)
-    .not("sponsorship_packages", "is", null);
+      fest_id,
+      sponsorship_enabled
+    `
+    )
+    .eq("sponsorship_enabled", true);
 
   if (college) {
     query = query.eq("college", college);
@@ -43,22 +40,15 @@ export async function GET(req: Request) {
   let filtered = events || [];
 
   if (budget_min || budget_max) {
+    const min = budget_min ? parseFloat(budget_min) : 0;
+    const max = budget_max ? parseFloat(budget_max) : Infinity;
+
     filtered = filtered.filter((event: any) => {
-      if (!event.sponsorship_packages || event.sponsorship_packages.length === 0) return false;
-      
-      return event.sponsorship_packages.some((pkg: any) => {
-        if (!pkg.is_active) return false;
-        const min = budget_min ? parseFloat(budget_min) : 0;
-        const max = budget_max ? parseFloat(budget_max) : Infinity;
-        return pkg.min_amount >= min && pkg.max_amount <= max;
-      });
+      const prices = [10000, 25000];
+      if (event.fest_id) prices.push(50000);
+      return prices.some((price) => price >= min && price <= max);
     });
   }
-
-  filtered = filtered.filter((event: any) => 
-    event.sponsorship_packages && event.sponsorship_packages.length > 0 &&
-    event.sponsorship_packages.some((pkg: any) => pkg.is_active)
-  );
 
   return NextResponse.json({ events: filtered });
 }

@@ -7,14 +7,14 @@
  * - Only customizes participant NAME
  * - Uses pre-uploaded certificate template
  * - Embeds Google Fonts into PDF
- * - GATED: Requires sponsorship settlement (if event has sponsorships)
+ * - Sponsorship visibility is applied dynamically (does not block generation)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { generateCertificate, validateCertificateConfig } from "@/lib/pdf-utils";
-import { isSponsorshipSettled, sponsorshipNotSettledError } from "@/lib/sponsorshipAccess";
+import { isSponsorshipSettled } from "@/lib/sponsorshipAccess";
 
 export const runtime = "nodejs"; // Ensure Node.js runtime for pdf-lib
 export const dynamic = "force-dynamic";
@@ -102,14 +102,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4b. Check sponsorship settlement (GATING)
-    const settled = await isSponsorshipSettled(eventId);
-    if (!settled) {
-      return NextResponse.json(
-        { ...sponsorshipNotSettledError(), code: "CERT_LOCKED_SPONSORSHIP_PENDING" },
-        { status: 403 }
-      );
-    }
+    await isSponsorshipSettled(eventId);
 
     // 5. Build certificate configuration
     const config = {

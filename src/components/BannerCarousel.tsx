@@ -10,6 +10,9 @@ interface Banner {
   image_url: string;
   link_target_id: string;
   link_type: string;
+  link_url?: string | null;
+  events?: { title: string } | null;
+  fests?: { title: string } | null;
   type: "fest" | "event" | "sponsor";
 }
 
@@ -52,7 +55,6 @@ export function BannerCarousel({ placement, maxBanners = 3 }: BannerCarouselProp
         const { banners: data } = await response.json();
         setBanners(data || []);
 
-        // Track view for each banner
         data.forEach((banner: Banner) => {
           fetch(`/api/banners/${banner.id}/track-view`, { method: "POST" });
         });
@@ -73,6 +75,8 @@ export function BannerCarousel({ placement, maxBanners = 3 }: BannerCarouselProp
       window.location.href = `/events/${banner.link_target_id}`;
     } else if (banner.link_type === "internal_sponsor") {
       window.location.href = `/sponsor/${banner.link_target_id}`;
+    } else if (banner.link_type === "external_url" && banner.link_url) {
+      window.open(banner.link_url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -90,7 +94,8 @@ export function BannerCarousel({ placement, maxBanners = 3 }: BannerCarouselProp
     >
       {/* Banner Image */}
       <div
-        className="relative w-full aspect-video cursor-pointer group"
+        className="relative w-full cursor-pointer group"
+        style={{ aspectRatio: "16 / 5" }}
         onClick={() => handleBannerClick(currentBanner)}
       >
         <Image
@@ -100,7 +105,16 @@ export function BannerCarousel({ placement, maxBanners = 3 }: BannerCarouselProp
           className="object-cover group-hover:opacity-95 transition-opacity"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute inset-0 bg-bg-card/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {currentBanner.type === "sponsor" && (
+          <div className="absolute left-3 top-3 bg-bg-card/90 border border-border-default text-text-primary text-xs font-medium px-3 py-1 rounded-full">
+            {currentBanner.events?.title
+              ? `Sponsor of ${currentBanner.events.title}`
+              : currentBanner.fests?.title
+              ? `Fest Sponsor: ${currentBanner.fests.title}`
+              : "Sponsor"}
+          </div>
+        )}
       </div>
 
       {/* Navigation Controls */}
@@ -115,9 +129,9 @@ export function BannerCarousel({ placement, maxBanners = 3 }: BannerCarouselProp
               );
             }}
             aria-label="Previous banner"
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-bg-card/80 border border-border-default transition-colors"
           >
-            <Icons.ChevronLeft className="h-5 w-5 text-white" />
+            <Icons.ChevronLeft className="h-5 w-5 text-text-primary" />
           </button>
 
           {/* Next Button */}
@@ -127,9 +141,9 @@ export function BannerCarousel({ placement, maxBanners = 3 }: BannerCarouselProp
               setCurrentIndex((prev) => (prev + 1) % banners.length);
             }}
             aria-label="Next banner"
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-bg-card/80 border border-border-default transition-colors"
           >
-            <Icons.ChevronLeft className="h-5 w-5 text-white rotate-180" />
+            <Icons.ChevronLeft className="h-5 w-5 text-text-primary rotate-180" />
           </button>
 
           {/* Dot Indicators */}
@@ -144,8 +158,8 @@ export function BannerCarousel({ placement, maxBanners = 3 }: BannerCarouselProp
                 aria-label={`Go to banner ${idx + 1}`}
                 className={`h-2 rounded-full transition-all ${
                   idx === currentIndex
-                    ? "w-6 bg-white"
-                    : "w-2 bg-white/60 hover:bg-white/80"
+                    ? "w-6 bg-text-primary"
+                    : "w-2 bg-text-secondary"
                 }`}
               />
             ))}

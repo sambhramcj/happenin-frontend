@@ -9,9 +9,11 @@ import { useEffect, useState } from "react";
 interface PaymentLoadingProps {
   stage: "creating" | "confirming" | "pending" | "success";
   onContinue?: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
-export function PaymentLoading({ stage, onContinue }: PaymentLoadingProps) {
+export function PaymentLoading({ stage, onContinue, actionLabel, onAction }: PaymentLoadingProps) {
   const [dots, setDots] = useState("");
 
   useEffect(() => {
@@ -84,6 +86,22 @@ export function PaymentLoading({ stage, onContinue }: PaymentLoadingProps) {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Your ticket is ready
             </p>
+            {onAction && actionLabel && (
+              <button
+                onClick={onAction}
+                className="mt-2 w-full bg-primary text-white px-6 py-3 rounded-lg hover:bg-primaryHover transition-all"
+              >
+                {actionLabel}
+              </button>
+            )}
+            {onContinue && (
+              <button
+                onClick={onContinue}
+                className="mt-2 w-full bg-bg-muted text-text-primary px-6 py-3 rounded-lg border border-border-default hover:bg-bg-card transition-all"
+              >
+                View ticket
+              </button>
+            )}
           </>
         )}
       </div>
