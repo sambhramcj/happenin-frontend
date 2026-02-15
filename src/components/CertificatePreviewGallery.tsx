@@ -124,29 +124,29 @@ export default function CertificatePreviewGallery({
       <div className="border rounded-lg p-6">
         <h4 className="font-semibold mb-4">Quality Checklist</h4>
         <div className="space-y-3">
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label className="flex items-center gap-3 cursor-pointer group">
             <input
               type="checkbox"
               defaultChecked={false}
-              className="w-5 h-5 rounded border-gray-300"
+              className="w-5 h-5 text-green-600 bg-gray-50 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all checked:bg-green-600 checked:border-green-600 cursor-pointer"
             />
-            <span className="text-sm">Name fits in one line</span>
+            <span className="text-sm group-hover:text-green-600 transition-colors">Name fits in one line</span>
           </label>
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label className="flex items-center gap-3 cursor-pointer group">
             <input
               type="checkbox"
               defaultChecked={false}
-              className="w-5 h-5 rounded border-gray-300"
+              className="w-5 h-5 text-green-600 bg-gray-50 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all checked:bg-green-600 checked:border-green-600 cursor-pointer"
             />
-            <span className="text-sm">Quality looks good</span>
+            <span className="text-sm group-hover:text-green-600 transition-colors">Quality looks good</span>
           </label>
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label className="flex items-center gap-3 cursor-pointer group">
             <input
               type="checkbox"
               defaultChecked={false}
-              className="w-5 h-5 rounded border-gray-300"
+              className="w-5 h-5 text-green-600 bg-gray-50 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all checked:bg-green-600 checked:border-green-600 cursor-pointer"
             />
-            <span className="text-sm">Ready to send</span>
+            <span className="text-sm group-hover:text-green-600 transition-colors">Ready to send</span>
           </label>
         </div>
       </div>

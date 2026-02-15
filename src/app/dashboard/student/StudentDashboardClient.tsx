@@ -22,8 +22,6 @@ import { EventTimelineDisplay } from "@/components/EventTimelineDisplay";
 import { HomeExploreSkeleton, TicketCardSkeleton, Skeleton } from "@/components/skeletons";
 import { PaymentLoading } from "@/components/PaymentLoading";
 import { LoadingButton } from "@/components/LoadingButton";
-import StudentHomePage from "@/components/home/StudentHomePage";
-import { RegistrationModal } from "@/components/RegistrationModal";
 
 type Membership = {
   club: string;
@@ -99,10 +97,6 @@ export default function StudentDashboard() {
 
   // Volunteer states
   const [volunteerApplications, setVolunteerApplications] = useState<any[]>([]);
-
-  // Registration modal states
-  const [registrationModalOpen, setRegistrationModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [volunteerCertificates, setVolunteerCertificates] = useState<any[]>([]);
   const [volunteersLoading, setVolunteersLoading] = useState(false);
 
@@ -110,7 +104,6 @@ export default function StudentDashboard() {
   const [favoriteColleges, setFavoriteColleges] = useState<any[]>([]);
   const [favoriteEvents, setFavoriteEvents] = useState<any[]>([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
-  const [allColleges, setAllColleges] = useState<string[]>([]);
 
   // Explore tab filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -140,7 +133,6 @@ export default function StudentDashboard() {
     fetchTickets();
     fetchVolunteerData();
     fetchFavorites();
-    fetchAllColleges();
     
     // Fetch top 10 events
     getTop10Events().then(setTop10Events);
@@ -224,21 +216,6 @@ export default function StudentDashboard() {
       console.error("Error fetching favorites:", err);
     } finally {
       setFavoritesLoading(false);
-    }
-  }
-
-  async function fetchAllColleges() {
-    try {
-      const { data, error } = await supabase
-        .from("colleges")
-        .select("name")
-        .order("name");
-      
-      if (!error && data) {
-        setAllColleges(data.map((c: any) => c.name));
-      }
-    } catch (err) {
-      console.error("Error fetching colleges:", err);
     }
   }
 
@@ -510,19 +487,8 @@ export default function StudentDashboard() {
       return;
     }
 
-    // Open registration modal to choose individual or team
-    setSelectedEvent(event);
-    setRegistrationModalOpen(true);
-  }
-
-  async function handleRegistration(
-    mode: "individual" | "team",
-    teamData?: { size: number; members: Array<{ email: string; full_name: string }> }
-  ) {
-    if (!selectedEvent) return;
-
     try {
-      setLoadingEventId(selectedEvent.id);
+      setLoadingEventId(event.id);
       setPaymentStage("creating");
 
       const loaded = await loadRazorpayScript();
@@ -533,25 +499,12 @@ export default function StudentDashboard() {
         return;
       }
 
-      // Create order (individual or team)
-      const endpoint = mode === "team" 
-        ? "/api/payments/create-bulk-order"  
-        : "/api/payments/create-order";
-
-      const payload = mode === "team"
-        ? {
-            eventId: selectedEvent.id,
-            teamSize: teamData!.size,
-            members: teamData!.members,
-          }
-        : {
-            eventId: selectedEvent.id,
-          };
-
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          eventId: event.id,
+        }),
       });
 
       const data = await res.json();
@@ -571,37 +524,20 @@ export default function StudentDashboard() {
         amount: data.amount * 100,
         currency: "INR",
         name: "Happenin",
-        description: mode === "team" 
-          ? `Team Registration (${teamData!.size} members)` 
-          : "Event Registration",
+        description: "Event Registration",
         order_id: data.orderId,
         handler: async (response: any) => {
           setPaymentStage("confirming");
           try {
-            const verifyEndpoint = mode === "team"
-              ? "/api/payments/verify-bulk"
-              : "/api/payments/verify";
-
-            const verifyPayload = mode === "team"
-              ? {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  eventId: selectedEvent.id,
-                  teamSize: teamData!.size,
-                  members: teamData!.members,
-                }
-              : {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  eventId: selectedEvent.id,
-                };
-
-            const verifyRes = await fetch(verifyEndpoint, {
+            const verifyRes = await fetch("/api/payments/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(verifyPayload),
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                eventId: event.id,
+              }),
             });
 
             const verifyData = await verifyRes.json();
@@ -625,11 +561,9 @@ export default function StudentDashboard() {
               
               await fetchTickets();
               setLoadingEventId(null);
-              setLastRegisteredEventId(selectedEvent.id);
+              setLastRegisteredEventId(event.id);
               setPaymentStage("success");
-              toast.success(mode === "team" 
-                ? "Team registration confirmed! Tickets sent to all members." 
-                : "Registration confirmed!");
+              toast.success("Registration confirmed!");
             } else {
               console.error("Payment verification delayed:", verifyData);
               setLoadingEventId(null);
@@ -865,10 +799,168 @@ export default function StudentDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* HOME TAB */}
         {activeTab === "home" && (
-          <StudentHomePage 
-            profileCollege={profile?.college_name}
-            colleges={allColleges}
-          />
+          <>
+            {eventsLoading ? (
+              <HomeExploreSkeleton />
+            ) : (
+              <div className="space-y-8">
+                {/* Happening Today */}
+                <section>
+                  <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <Icons.Flame className="h-5 w-5 text-primary" /> Happening Today
+                  </h2>
+              {getTodayEvents().length === 0 ? (
+                <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
+                  <p className="text-text-muted">No events today</p>
+                </div>
+              ) : (
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+                  {getTodayEvents().map((event) => (
+                    <div key={event.id} className="flex-shrink-0 w-80 snap-start">
+                      <div className="bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all group transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
+                        {event.banner_image && (
+                          <img src={event.banner_image} alt={event.title} className="w-full h-48 object-cover" />
+                        )}
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-primarySoft text-primary text-xs px-2 py-1 rounded-full">Today</span>
+                            <span className="text-text-secondary text-sm font-semibold">₹{event.price}</span>
+                          </div>
+                          <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
+                          <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
+                          <LoadingButton
+                            onClick={() => handlePay(event)}
+                            disabled={!!getRegistration(event.id)}
+                            loading={loadingEventId === event.id}
+                            loadingText="Submitting…"
+                            className="w-full bg-gradient-to-r from-primary to-primaryHover text-text-inverse py-2 rounded-lg font-semibold hover:from-primaryHover hover:to-primary transition-all disabled:opacity-50"
+                          >
+                            {getRegistration(event.id) ? "Registered ✓" : "Register Now"}
+                          </LoadingButton>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Trending */}
+            <section>
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                <Icons.TrendingUp className="h-5 w-5 text-primary" /> Trending in Your College
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {getThisWeekEvents().slice(0, 6).map((event) => (
+                  <div key={event.id} className="bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
+                    {event.banner_image && (
+                      <img src={event.banner_image} alt={event.title} className="w-full h-32 object-cover" />
+                    )}
+                    <div className="p-3">
+                      <h3 className="font-semibold text-text-primary text-sm mb-1 line-clamp-1">{event.title}</h3>
+                      <p className="text-xs text-text-muted mb-2">
+                        {event.date ? new Date(event.date).toLocaleDateString() : "Date TBA"}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-text-secondary font-semibold text-sm">₹{event.price}</span>
+                        <LoadingButton
+                          onClick={() => handlePay(event)}
+                          disabled={!!getRegistration(event.id)}
+                          loading={loadingEventId === event.id}
+                          loadingText="Submitting…"
+                          className="text-xs bg-primary text-text-inverse px-3 py-1 rounded-lg hover:bg-primaryHover disabled:opacity-50 transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
+                        >
+                          {getRegistration(event.id) ? "✓" : "Register"}
+                        </LoadingButton>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Top 10 Events - Netflix Style */}
+            <section>
+              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                <Icons.Award className="h-5 w-5 text-primary" /> Top 10 Events
+              </h2>
+              {top10Events.length === 0 ? (
+                <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
+                  <p className="text-text-muted">Loading events…</p>
+                </div>
+              ) : (
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+                  {top10Events.map((event, index) => (
+                    <div key={event.id} className="flex-shrink-0 w-64 snap-start relative">
+                      {/* Netflix-style ranking number */}
+                      <div className="absolute -left-6 top-0 z-10">
+                        <svg
+                          viewBox="0 0 100 150"
+                          className="w-24 h-36 drop-shadow-2xl"
+                        >
+                          <text
+                            x="50"
+                            y="120"
+                            fontSize="140"
+                            fontWeight="900"
+                            textAnchor="middle"
+                            fill="#1a1a1a"
+                            stroke="#9333ea"
+                            strokeWidth="4"
+                            style={{
+                              fontFamily: 'Arial Black, sans-serif',
+                              paintOrder: 'stroke',
+                            }}
+                          >
+                            {index + 1}
+                          </text>
+                        </svg>
+                      </div>
+
+                      <div className="ml-8 bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all group hover:-translate-y-1 hover:shadow-xl">
+                        {event.banner_image && (
+                          <div className="relative">
+                            <img 
+                              src={event.banner_image} 
+                              alt={event.title} 
+                              className="w-full h-40 object-cover" 
+                            />
+                            {/* Top 10 badge overlay */}
+                            <div className="absolute top-2 right-2 bg-primary/90 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-xs font-bold">
+                              #{index + 1} Trending
+                            </div>
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-text-secondary text-sm font-semibold">₹{event.price}</span>
+                            {event.registrationCount > 0 && (
+                              <span className="text-xs text-text-muted">
+                                {event.registrationCount} registered
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-bold text-text-primary mb-1 text-sm line-clamp-2">{event.title}</h3>
+                          <p className="text-xs text-text-muted mb-2">{new Date(event.date).toLocaleDateString()}</p>
+                          <LoadingButton
+                            onClick={() => handlePay(event)}
+                            disabled={!!getRegistration(event.id)}
+                            loading={loadingEventId === event.id}
+                            loadingText="Submitting…"
+                            className="w-full text-xs bg-primary text-text-inverse px-3 py-2 rounded-lg hover:bg-primaryHover disabled:opacity-50 transition-all duration-fast active:scale-95"
+                          >
+                            {getRegistration(event.id) ? "Registered ✓" : "Register Now"}
+                          </LoadingButton>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+                </div>
+              )}
+            </>
         )}
 
         {/* EXPLORE TAB */}
@@ -1484,23 +1576,6 @@ export default function StudentDashboard() {
           ))}
         </div>
       </div>
-
-      {/* Registration Modal */}
-      {selectedEvent && (
-        <RegistrationModal
-          isOpen={registrationModalOpen}
-          onClose={() => {
-            setRegistrationModalOpen(false);
-            setSelectedEvent(null);
-          }}
-          event={{
-            id: selectedEvent.id,
-            title: selectedEvent.title,
-            price: Number(selectedEvent.price),
-          }}
-          onRegister={handleRegistration}
-        />
-      )}
     </div>
   );
 }

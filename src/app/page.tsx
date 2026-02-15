@@ -1,83 +1,532 @@
-'use client';
+"use client";
 
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, ChevronDown, User, Briefcase } from 'lucide-react';
-import { useTheme } from 'next-themes';
-import { BannerCarousel } from '@/components/BannerCarousel';
-import { CollegeSelector } from '@/components/CollegeSelector';
+import Link from "next/link";
+import { ArrowRight, Calendar, Users, TrendingUp, Zap, Shield, MapPin, Heart, Gift, ChevronDown, User } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { CollegeSelector } from "@/components/CollegeSelector";
+import { BannerCarousel } from "@/components/BannerCarousel";
+import { motion } from "framer-motion";
 
 interface Event {
   id: string;
   title: string;
-  club?: string;
-  college?: string;
+  description?: string;
   date: string;
-  time?: string;
-  price: number;
-  image?: string;
+  location?: string;
+  price?: number;
   registrations?: number;
+  image?: string;
+  club?: string;
+  time?: string;
+  college?: string;
 }
 
-// Event Card Component
+// Simple Event Card Component
 function EventCard({ event, onClick }: { event: Event; onClick: () => void }) {
-  const router = useRouter();
-  const { data: session } = useSession();
-
-  const handleRegister = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!session?.user) {
-      router.push('/auth');
-    } else {
-      router.push(`/events/${event.id}/register`);
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return dateStr;
     }
   };
 
   return (
-    <motion.div
-      whileHover={{ y: -4, boxShadow: '0 20px 40px rgba(147, 51, 234, 0.15)' }}
-      className="bg-white rounded-2xl overflow-hidden border-2 border-gray-200 hover:border-purple-300 cursor-pointer transition-all"
+    <div
       onClick={onClick}
+      className="bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-purple-400 transition-all cursor-pointer hover:shadow-lg"
     >
-      <div className="aspect-video bg-gray-100 relative">
-        {event.image ? (
-          <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <Calendar className="w-12 h-12" />
-          </div>
-        )}
-      </div>
+      {event.image && (
+        <img
+          src={event.image}
+          alt={event.title}
+          className="w-full h-40 object-cover"
+        />
+      )}
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">{event.title}</h3>
-        {event.club && <p className="text-sm text-gray-600 mb-2">{event.club}</p>}
-        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+        <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{event.title}</h3>
+        {event.description && (
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{event.description}</p>
+        )}
+        <div className="flex items-center justify-between text-sm text-gray-500">
           <span className="flex items-center gap-1">
             <Calendar className="w-4 h-4" />
-            {new Date(event.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+            {formatDate(event.date)}
           </span>
-          {event.time && (
-            <span className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {event.time}
+          {event.price !== undefined && (
+            <span className="font-semibold text-purple-600">
+              {event.price === 0 ? "Free" : `₹${event.price}`}
             </span>
           )}
         </div>
-        <div className="flex items-center justify-between">
-          <span className={`font-semibold ${event.price === 0 ? 'text-green-600' : 'text-gray-900'}`}>
-            {event.price === 0 ? 'FREE' : `₹${event.price}`}
-          </span>
-          <button
-            onClick={handleRegister}
-            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm font-semibold rounded-lg hover:shadow-lg hover:shadow-purple-500/30 hover:scale-105 transition-all"
-          >
-            Register
-          </button>
-        </div>
+        {event.location && (
+          <div className="flex items-center gap-1 text-sm text-gray-500 mt-2">
+            <MapPin className="w-4 h-4" />
+            {event.location}
+          </div>
+        )}
       </div>
-    </motion.div>
+    </div>
+  );
+}
+
+// Landing Page Component (Not used - kept for reference)
+function LandingPageOld() {
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Happenin
+            </div>
+            <div className="hidden md:flex items-center gap-6">
+              <a href="#features" className="text-gray-600 hover:text-gray-900">Features</a>
+              <a href="#clubs" className="text-gray-600 hover:text-gray-900">For Clubs</a>
+              <a href="#faq" className="text-gray-600 hover:text-gray-900">FAQ</a>
+              <Link href="/auth" className="text-purple-600 hover:text-purple-700 font-medium">
+                Log In
+              </Link>
+              <Link
+                href="/auth"
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 font-medium"
+              >
+                Sign Up
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-purple-50 to-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <div className="space-y-6">
+              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight">
+                Discover Every College Event.{" "}
+                <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  In One Place.
+                </span>
+              </h1>
+              <p className="text-xl text-gray-600">
+                Book tickets, explore fests, and never miss campus action again.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link
+                  href="/auth"
+                  className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 font-semibold text-lg flex items-center justify-center gap-2 shadow-lg"
+                >
+                  Explore Events
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  href="/auth"
+                  className="px-8 py-4 bg-white text-purple-600 border-2 border-purple-600 rounded-xl hover:bg-purple-50 font-semibold text-lg flex items-center justify-center gap-2"
+                >
+                  Host Your Event
+                  <Zap className="w-5 h-5" />
+                </Link>
+              </div>
+              <p className="text-sm text-gray-500">
+                Trusted by <span className="font-bold">1000+ students</span> across{" "}
+                <span className="font-bold">10+ colleges</span>
+              </p>
+            </div>
+
+            {/* Right Visual */}
+            <div className="relative">
+              <div className="w-full aspect-square bg-gradient-to-br from-purple-100 to-pink-100 rounded-3xl p-8 flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <Calendar className="w-32 h-32 text-purple-600 mx-auto" />
+                  <p className="text-2xl font-bold text-gray-900">
+                    Your Campus Events Hub
+                  </p>
+                </div>
+              </div>
+              {/* Floating Cards */}
+              <div className="absolute -top-4 -right-4 bg-white p-4 rounded-xl shadow-xl border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-green-600" />
+                  <span className="text-sm font-medium">500+ Events</span>
+                </div>
+              </div>
+              <div className="absolute -bottom-4 -left-4 bg-white p-4 rounded-xl shadow-xl border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium">Live Now</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Problem Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              College life is chaotic. Event discovery shouldn't be.
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+                <MapPin className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Events scattered across WhatsApp
+              </h3>
+              <p className="text-gray-600">
+                Juggling multiple group chats and losing track of event details
+              </p>
+            </div>
+            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                <Calendar className="w-6 h-6 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Missed registrations
+              </h3>
+              <p className="text-gray-600">
+                Registration deadlines pass by before you even know about the event
+              </p>
+            </div>
+            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+                <Shield className="w-6 h-6 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Complicated ticket systems
+              </h3>
+              <p className="text-gray-600">
+                Confusing Google Forms and uncertain payment confirmations
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Solution Section */}
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              What Happenin Does
+            </h2>
+            <p className="text-xl text-gray-600">
+              Everything you need for campus events in one powerful platform
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mx-auto">
+                <Heart className="w-10 h-10 text-purple-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">Discover</h3>
+              <p className="text-gray-600">
+                Browse inter-college and intra-college events, fests, and workshops all in one feed
+              </p>
+            </div>
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-pink-100 to-pink-200 rounded-2xl flex items-center justify-center mx-auto">
+                <Zap className="w-10 h-10 text-pink-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">Register Instantly</h3>
+              <p className="text-gray-600">
+                Secure ticket booking with seamless payments via UPI, cards, and net banking
+              </p>
+            </div>
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto">
+                <TrendingUp className="w-10 h-10 text-blue-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">For Clubs</h3>
+              <p className="text-gray-600">
+                Manage registrations, analytics, and payments in one centralized dashboard
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-purple-50 to-pink-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              How It Works
+            </h2>
+            <p className="text-xl text-gray-600">
+              Get started in seconds
+            </p>
+          </div>
+          <div className="relative">
+            {/* Timeline Line */}
+            <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-purple-300 to-pink-300 transform -translate-x-1/2 hidden md:block"></div>
+            
+            {/* Steps */}
+            <div className="space-y-16">
+              {[
+                {
+                  step: 1,
+                  title: "Open Happenin",
+                  description: "Browse events from colleges near you",
+                  icon: <Calendar className="w-8 h-8" />,
+                },
+                {
+                  step: 2,
+                  title: "Find an Event",
+                  description: "Filter by category, date, or college",
+                  icon: <MapPin className="w-8 h-8" />,
+                },
+                {
+                  step: 3,
+                  title: "Book & Attend",
+                  description: "Secure your spot with instant confirmation",
+                  icon: <Users className="w-8 h-8" />,
+                },
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center gap-8 ${
+                    index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
+                  }`}
+                >
+                  <div className="flex-1 text-center md:text-right">
+                    {index % 2 === 0 && (
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                          Step {item.step}: {item.title}
+                        </h3>
+                        <p className="text-gray-600">{item.description}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white shadow-lg z-10">
+                    {item.icon}
+                  </div>
+                  <div className="flex-1 text-center md:text-left">
+                    {index % 2 !== 0 && (
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                          Step {item.step}: {item.title}
+                        </h3>
+                        <p className="text-gray-600">{item.description}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            Trusted by Students Everywhere
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8 mt-12">
+            <div className="p-6">
+              <div className="text-5xl font-bold text-purple-600 mb-2">1000+</div>
+              <p className="text-gray-600">Active Students</p>
+            </div>
+            <div className="p-6">
+              <div className="text-5xl font-bold text-pink-600 mb-2">10+</div>
+              <p className="text-gray-600">Partner Colleges</p>
+            </div>
+            <div className="p-6">
+              <div className="text-5xl font-bold text-blue-600 mb-2">500+</div>
+              <p className="text-gray-600">Events Hosted</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* For Clubs Section */}
+      <section id="clubs" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-900 to-pink-900 text-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-4xl font-bold">
+                Running a Fest? We Handle Everything.
+              </h2>
+              <ul className="space-y-4">
+                {[
+                  "Sell tickets with integrated payments",
+                  "Track registrations in real-time",
+                  "Boost visibility with sponsorships",
+                  "Only 5% flat commission",
+                  "QR-based attendance scanning",
+                  "Automated certificate generation",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                    <span className="text-lg">{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/auth"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-900 rounded-xl hover:bg-gray-100 font-semibold text-lg"
+              >
+                List Your Event
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20">
+              <div className="space-y-4">
+                <div className="text-center">
+                  <TrendingUp className="w-16 h-16 text-white mx-auto mb-4" />
+                  <p className="text-2xl font-bold">All-in-One Platform</p>
+                  <p className="text-white/80">Everything you need to run successful events</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/*Rewards Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-yellow-50">
+        <div className="max-w-7xl mx-auto text-center">
+          <Gift className="w-16 h-16 text-yellow-600 mx-auto mb-4" />
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            Refer & Earn Rewards
+          </h2>
+          <p className="text-xl text-gray-600 mb-8">
+            Invite friends and get exclusive benefits, early bird discounts, and fest passes
+          </p>
+          <Link
+            href="/auth"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl hover:from-yellow-600 hover:to-orange-600 font-semibold text-lg shadow-lg"
+          >
+            Start Earning
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Frequently Asked Questions
+            </h2>
+          </div>
+          <div className="space-y-4">
+            {[
+              {
+                question: "Is Happenin free to use?",
+                answer: "Yes! Browsing and discovering events is completely free. You only pay when you register for paid events.",
+              },
+              {
+                question: "How does payment work?",
+                answer: "We use Razorpay for secure payments. You can pay via UPI, cards, or net banking. Payments are instant and you receive confirmation immediately.",
+              },
+              {
+                question: "Can any college join?",
+                answer: "Yes! We're expanding to colleges across India. If your college isn't listed, contact us to get onboarded.",
+              },
+              {
+                question: "What's your refund policy?",
+                answer: "Refund eligibility depends on the event organizer's policy. Check the event details page for specific refund terms.",
+              },
+            ].map((faq, i) => (
+              <div key={i} className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-all">
+                <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <ChevronDown className="w-5 h-5 text-purple-600" />
+                  {faq.question}
+                </h3>
+                <p className="text-gray-600 ml-7">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-900 via-purple-800 to-pink-900 text-white">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <h2 className="text-5xl font-bold">
+            Ready to Experience Campus Like Never Before?
+          </h2>
+          <p className="text-2xl text-white/90">
+            Join thousands of students discovering and attending amazing events
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/auth"
+              className="px-10 py-5 bg-white text-purple-900 rounded-xl hover:bg-gray-100 font-bold text-xl shadow-2xl"
+            >
+              Get Started Now
+            </Link>
+            <Link
+              href="/auth"
+              className="px-10 py-5 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-xl hover:bg-white/20 font-bold text-xl"
+            >
+              Host Your First Event
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="text-2xl font-bold mb-4">Happenin</div>
+              <p className="text-gray-400">
+                Your campus events platform
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Product</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white">Features</a></li>
+                <li><a href="#" className="hover:text-white">For Students</a></li>
+                <li><a href="#" className="hover:text-white">For Clubs</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Company</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white">About</a></li>
+                <li><a href="#" className="hover:text-white">Contact</a></li>
+                <li><a href="#" className="hover:text-white">Careers</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Legal</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-white">Refund Policy</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+            <p>&copy; 2026 Happenin. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
 

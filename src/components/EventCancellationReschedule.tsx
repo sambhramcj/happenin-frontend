@@ -192,7 +192,7 @@ export function EventCancellationReschedule({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Enable Automatic Refunds?
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={formData.refundProcessing}
@@ -203,9 +203,9 @@ export function EventCancellationReschedule({
                         })
                       }
                       disabled={loading}
-                      className="w-4 h-4"
+                      className="w-5 h-5 text-blue-600 bg-gray-50 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all checked:bg-blue-600 checked:border-blue-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     />
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
                       Process refunds automatically
                     </span>
                   </label>

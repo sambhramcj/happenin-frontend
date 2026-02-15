@@ -906,26 +906,26 @@ export default function OrganizerDashboard() {
                 </div>
 
                 <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={discountEnabled}
                       onChange={(e) => setDiscountEnabled(e.target.checked)}
-                      className="w-4 h-4 accent-brand"
+                      className="w-5 h-5 text-brand bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-brand focus:ring-offset-2 transition-all checked:bg-brand checked:border-brand cursor-pointer"
                     />
-                    <span className="text-sm text-text-secondary">Enable Club Discount</span>
+                    <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">Enable Club Discount</span>
                   </label>
                 </div>
 
                 <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={sponsorshipEnabled}
                       onChange={(e) => setSponsorshipEnabled(e.target.checked)}
-                      className="w-4 h-4 accent-brand"
+                      className="w-5 h-5 text-brand bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-brand focus:ring-offset-2 transition-all checked:bg-brand checked:border-brand cursor-pointer"
                     />
-                    <span className="text-sm text-text-secondary">Enable Sponsorship Visibility</span>
+                    <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">Enable Sponsorship Visibility</span>
                   </label>
                 </div>
 
@@ -938,14 +938,14 @@ export default function OrganizerDashboard() {
                 )}
 
                 <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={whatsappGroupEnabled}
                       onChange={(e) => setWhatsappGroupEnabled(e.target.checked)}
-                      className="w-4 h-4 accent-brand"
+                      className="w-5 h-5 text-brand bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-brand focus:ring-offset-2 transition-all checked:bg-brand checked:border-brand cursor-pointer"
                     />
-                    <span className="text-sm text-text-secondary">Enable WhatsApp Group for Participants</span>
+                    <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">Enable WhatsApp Group for Participants</span>
                   </label>
                 </div>
 
@@ -1002,7 +1002,7 @@ export default function OrganizerDashboard() {
                 )}
 
                 <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={Boolean(prizePoolAmount || prizePoolDescription)}
@@ -1012,9 +1012,9 @@ export default function OrganizerDashboard() {
                           setPrizePoolDescription("");
                         }
                       }}
-                      className="w-4 h-4 accent-brand"
+                      className="w-5 h-5 text-brand bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-brand focus:ring-offset-2 transition-all checked:bg-brand checked:border-brand cursor-pointer"
                     />
-                    <span className="text-sm text-text-secondary">Add Prize Pool & Rewards</span>
+                    <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">Add Prize Pool & Rewards</span>
                   </label>
                 </div>
 
@@ -1044,7 +1044,7 @@ export default function OrganizerDashboard() {
                 )}
 
                 <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={Boolean(organizerContactPhone || organizerContactEmail)}
@@ -1054,9 +1054,9 @@ export default function OrganizerDashboard() {
                           setOrganizerContactEmail("");
                         }
                       }}
-                      className="w-4 h-4 accent-brand"
+                      className="w-5 h-5 text-brand bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-brand focus:ring-offset-2 transition-all checked:bg-brand checked:border-brand cursor-pointer"
                     />
-                    <span className="text-sm text-text-secondary">Add Organizer Contact Details</span>
+                    <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">Add Organizer Contact Details</span>
                   </label>
                 </div>
 
@@ -1232,14 +1232,14 @@ export default function OrganizerDashboard() {
                       )}
                     </div>
 
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-2 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={eventWhatsappEnabled}
                         onChange={(e) => setEventWhatsappEnabled(e.target.checked)}
-                        className="w-4 h-4 accent-brand"
+                        className="w-5 h-5 text-brand bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-brand focus:ring-offset-2 transition-all checked:bg-brand checked:border-brand cursor-pointer"
                       />
-                      <span className="text-sm text-text-secondary">Enable WhatsApp Group for Participants</span>
+                      <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">Enable WhatsApp Group for Participants</span>
                     </label>
 
                     <div>

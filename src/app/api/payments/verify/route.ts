@@ -7,14 +7,12 @@ import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-// Server-only admin client (bypasses RLS). Will only be created if service key is present.
+// Server-only admin client (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const db = serviceKey
-  ? createClient(supabaseUrl, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
-  : supabase;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const db = createClient(supabaseUrl, serviceKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 export async function POST(req: Request) {
   try {

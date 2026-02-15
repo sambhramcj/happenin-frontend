@@ -50,5 +50,81 @@ export async function GET(req: NextRequest) {
     { totalClicks: 0, totalImpressions: 0 }
   );
 
-  return NextResponse.json(totals);
+  // Fetch orders for event-wise analytics
+  const { data: orders, error: ordersError } = await serviceSupabase
+    .from("sponsorship_orders")
+    .select(`
+      id,
+      amount,
+      pack_type,
+      event_id,
+      fest_id,
+      events(title),
+      fests(title)
+    `)
+    .eq("sponsor_email", email)
+    .eq("status", "paid");
+
+  let eventAnalytics: any[] = [];
+  if (orders && orders.length > 0) {
+    // Group analytics by event/fest
+    for (const order of orders) {
+      const eventName = 
+        (Array.isArray(order.events) ? order.events[0]?.title : (order.events as any)?.title) ||
+        (Array.isArray(order.fests) ? order.fests[0]?.title : (order.fests as any)?.title) ||
+        "Unknown Event";
+      
+      // Get banners for this order
+      const { data: orderBanners } = await serviceSupabase
+        .from("banners")
+        .select("id")
+        .eq("sponsor_email", email)
+        .eq(order.event_id ? "event_id" : "fest_id", order.event_id || order.fest_id);
+
+      const orderBannerIds = (orderBanners || []).map((b: any) => b.id);
+      
+      let eventClicks = 0;
+      let eventImpressions = 0;
+      
+      if (orderBannerIds.length > 0) {
+        const { data: eventAnalyticsData } = await serviceSupabase
+          .from("banner_analytics")
+          .select("event_type")
+          .in("banner_id", orderBannerIds);
+
+        eventClicks = (eventAnalyticsData || []).filter((a: any) => a.event_type === "click").length;
+        eventImpressions = (eventAnalyticsData || []).filter((a: any) => a.event_type === "view").length;
+      }
+
+      eventAnalytics.push({
+        eventName,
+        packType: order.pack_type,
+        amount: order.amount,
+        impressions: eventImpressions,
+        clicks: eventClicks,
+      });
+    }
+  }
+
+  // Generate performance data (last 7 days)
+  const performanceData = [];
+  const today = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    performanceData.push({
+      date: dateStr,
+      impressions: 0, // TODO: Group analytics by date
+      clicks: 0,
+    });
+  }
+
+  return NextResponse.json({
+    totalClicks: totals.totalClicks,
+    totalImpressions: totals.totalImpressions,
+    performanceData,
+    eventAnalytics,
+  });
 }

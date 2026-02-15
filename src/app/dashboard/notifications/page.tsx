@@ -150,7 +150,7 @@ export default function NotificationPreferencesPage() {
                 checked={preferences.push_payment}
                 onChange={(e) => updatePreference("push_payment", e.target.checked)}
                 disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary rounded disabled:opacity-50"
+                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -165,7 +165,7 @@ export default function NotificationPreferencesPage() {
                 checked={preferences.push_reminders}
                 onChange={(e) => updatePreference("push_reminders", e.target.checked)}
                 disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary rounded disabled:opacity-50"
+                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -180,7 +180,7 @@ export default function NotificationPreferencesPage() {
                 checked={preferences.push_updates}
                 onChange={(e) => updatePreference("push_updates", e.target.checked)}
                 disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary rounded disabled:opacity-50"
+                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -195,7 +195,7 @@ export default function NotificationPreferencesPage() {
                 checked={preferences.push_milestone_registrations}
                 onChange={(e) => updatePreference("push_milestone_registrations", e.target.checked)}
                 disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary rounded disabled:opacity-50"
+                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -210,7 +210,7 @@ export default function NotificationPreferencesPage() {
                 checked={preferences.push_sponsorships}
                 onChange={(e) => updatePreference("push_sponsorships", e.target.checked)}
                 disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary rounded disabled:opacity-50"
+                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -225,7 +225,7 @@ export default function NotificationPreferencesPage() {
                 checked={preferences.push_admin_alerts}
                 onChange={(e) => updatePreference("push_admin_alerts", e.target.checked)}
                 disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary rounded disabled:opacity-50"
+                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
