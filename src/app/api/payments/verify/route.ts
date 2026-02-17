@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     // 2️⃣ Fetch event
     const { data: event } = await db
       .from("events")
-      .select("id,title,price,date,location,max_attendees")
+      .select("id,title,price,date,location,max_attendees,organizer_email")
       .eq("id", eventId)
       .single();
 

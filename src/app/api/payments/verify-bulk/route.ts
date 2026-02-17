@@ -88,7 +88,7 @@ export async function POST(req: Request) {
     // 2️⃣ Fetch event
     const { data: event } = await db
       .from("events")
-      .select("id,title,price,date,location,max_attendees")
+      .select("id,title,price,date,location,max_attendees,organizer_email")
       .eq("id", eventId)
       .single();
 
@@ -246,7 +246,7 @@ export async function POST(req: Request) {
 
       // Notify all team members
       for (const member of members) {
-        const isTeamLead = member.email === leadEmail;
+        const isTeamLead = member.email === primaryEmail;
         
         // Payment notification only for team lead
         if (isTeamLead) {
