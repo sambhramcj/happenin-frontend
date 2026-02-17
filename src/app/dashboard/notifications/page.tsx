@@ -5,13 +5,6 @@ import { Icons } from "@/components/icons";
 import { toast } from "sonner";
 
 interface NotificationPreferences {
-  push_enabled: boolean;
-  push_payment: boolean;
-  push_reminders: boolean;
-  push_updates: boolean;
-  push_milestone_registrations: boolean;
-  push_sponsorships: boolean;
-  push_admin_alerts: boolean;
   in_app_enabled: boolean;
   in_app_history: boolean;
   quiet_hours_enabled: boolean;
@@ -111,123 +104,6 @@ export default function NotificationPreferencesPage() {
             <p className="text-text-secondary text-sm">
               Manage how you receive notifications
             </p>
-          </div>
-        </div>
-
-        {/* Push Notifications */}
-        <div className="bg-bg-card rounded-xl border border-border-default p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <Icons.Bell className="h-6 w-6 text-primary" />
-            <h2 className="text-lg font-semibold text-text-primary">Push Notifications</h2>
-          </div>
-
-          <div className="space-y-4">
-            {/* Master Toggle */}
-            <div className="flex items-center justify-between pb-4 border-b border-border-default">
-              <div>
-                <p className="font-medium text-text-primary">Enable Push Notifications</p>
-                <p className="text-sm text-text-secondary">Receive urgent alerts on your device</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={preferences.push_enabled}
-                  onChange={(e) => updatePreference("push_enabled", e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-
-            {/* Payment Notifications */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-text-primary">Payment Success</p>
-                <p className="text-sm text-text-secondary">Ticket & registration confirmations</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={preferences.push_payment}
-                onChange={(e) => updatePreference("push_payment", e.target.checked)}
-                disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Event Reminders */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-text-primary">Event Reminders</p>
-                <p className="text-sm text-text-secondary">24h and 2h before event starts</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={preferences.push_reminders}
-                onChange={(e) => updatePreference("push_reminders", e.target.checked)}
-                disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Event Updates */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-text-primary">Event Updates</p>
-                <p className="text-sm text-text-secondary">Cancellations, reschedules, venue changes</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={preferences.push_updates}
-                onChange={(e) => updatePreference("push_updates", e.target.checked)}
-                disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Milestone Registrations (Organizers) */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-text-primary">Milestone Registrations</p>
-                <p className="text-sm text-text-secondary">10, 50, 100, 250, 500 registrations</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={preferences.push_milestone_registrations}
-                onChange={(e) => updatePreference("push_milestone_registrations", e.target.checked)}
-                disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Sponsorships */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-text-primary">Sponsorship Alerts</p>
-                <p className="text-sm text-text-secondary">Payment confirmations & reports</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={preferences.push_sponsorships}
-                onChange={(e) => updatePreference("push_sponsorships", e.target.checked)}
-                disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Admin Alerts */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-text-primary">Admin Alerts</p>
-                <p className="text-sm text-text-secondary">Platform-wide announcements</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={preferences.push_admin_alerts}
-                onChange={(e) => updatePreference("push_admin_alerts", e.target.checked)}
-                disabled={!preferences.push_enabled}
-                className="w-5 h-5 text-primary bg-bg-muted border-2 border-border-default rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all checked:bg-primary checked:border-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
           </div>
         </div>
 

@@ -28,13 +28,6 @@ export async function GET(req: NextRequest) {
     // Return defaults if no preferences found
     if (!data) {
       return NextResponse.json({
-        push_enabled: true,
-        push_payment: true,
-        push_reminders: true,
-        push_updates: true,
-        push_milestone_registrations: true,
-        push_sponsorships: true,
-        push_admin_alerts: false,
         in_app_enabled: true,
         in_app_history: true,
         quiet_hours_enabled: false,

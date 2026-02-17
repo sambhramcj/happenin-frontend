@@ -1593,13 +1593,6 @@ _See documentation in PAYMENTS_AND_SPONSORSHIPS.md under "Legacy: Manual Sponsor
 | `id` | UUID | PRIMARY KEY | |
 | `user_email` | VARCHAR(255) | User identifier | UNIQUE |
 | `user_role` | VARCHAR(50) | User role | |
-| `push_enabled` | BOOLEAN | Push notifications | TRUE |
-| `push_payment` | BOOLEAN | Payment notifications | TRUE |
-| `push_reminders` | BOOLEAN | Event reminders | TRUE |
-| `push_updates` | BOOLEAN | Event updates | TRUE |
-| `push_milestone_registrations` | BOOLEAN | Organizer milestones | TRUE |
-| `push_sponsorships` | BOOLEAN | Sponsorship notifications | TRUE |
-| `push_admin_alerts` | BOOLEAN | Admin alerts | FALSE |
 | `in_app_enabled` | BOOLEAN | In-app notifications | TRUE |
 | `in_app_history` | BOOLEAN | Keep history | TRUE |
 | `quiet_hours_enabled` | BOOLEAN | Quiet hours | FALSE |

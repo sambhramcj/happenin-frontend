@@ -33,7 +33,7 @@ export function NotificationCenter() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch("/api/notifications/push?limit=20");
+      const response = await fetch("/api/notifications/in-app?limit=20");
       if (response.ok) {
         const { notifications: data, unreadCount: count } = await response.json();
         setNotifications(data || []);
@@ -46,7 +46,7 @@ export function NotificationCenter() {
 
   const handleMarkAsRead = async (id: string, actionUrl?: string) => {
     try {
-      const response = await fetch(`/api/notifications/push/${id}`, {
+      const response = await fetch(`/api/notifications/in-app/${id}`, {
         method: "PUT",
       });
 
@@ -68,7 +68,7 @@ export function NotificationCenter() {
   const handleMarkAllAsRead = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/notifications/push/read-all", {
+      const response = await fetch("/api/notifications/in-app/read-all", {
         method: "PUT",
       });
 
@@ -89,7 +89,7 @@ export function NotificationCenter() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/notifications/push/${id}`, {
+      const response = await fetch(`/api/notifications/in-app/${id}`, {
         method: "DELETE",
       });
 
