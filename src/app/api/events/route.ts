@@ -14,6 +14,22 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("REQUEST BODY:", body);
 
+    const maxAttendeesRaw = body.maxAttendees;
+    const maxAttendees =
+      maxAttendeesRaw === undefined || maxAttendeesRaw === null || maxAttendeesRaw === ""
+        ? null
+        : Number(maxAttendeesRaw);
+
+    if (
+      maxAttendees !== null &&
+      (!Number.isFinite(maxAttendees) || !Number.isInteger(maxAttendees) || maxAttendees <= 0)
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Max attendees must be a positive whole number" },
+        { status: 400 }
+      );
+    }
+
     const whatsappLink = typeof body.whatsappGroupLink === "string" ? body.whatsappGroupLink.trim() : "";
     const whatsappEnabled = Boolean(body.whatsappGroupEnabled);
     const whatsappPattern = /^https:\/\/chat\.whatsapp\.com\/.+/;
@@ -51,6 +67,8 @@ export async function POST(req: Request) {
 
       prize_pool_amount: body.prizePoolAmount || null,
       prize_pool_description: body.prizePoolDescription || null,
+
+      max_attendees: maxAttendees,
 
       organizer_contact_phone: body.organizerContactPhone || null,
       organizer_contact_email: body.organizerContactEmail || null,

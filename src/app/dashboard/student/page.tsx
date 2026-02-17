@@ -15,8 +15,6 @@ import { uploadProfilePhoto } from "@/lib/profileStorage";
 import TicketComponent from "@/components/TicketComponent";
 import { Icons } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { NearbyEvents } from "@/components/NearbyEvents";
-import { NearbyColleges } from "@/components/NearbyColleges";
 import CertificateComponent from "@/components/CertificateComponent";
 import { EventTimelineDisplay } from "@/components/EventTimelineDisplay";
 import { HomeExploreSkeleton, TicketCardSkeleton, Skeleton } from "@/components/skeletons";
@@ -73,7 +71,7 @@ export default function StudentDashboard() {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"home" | "explore" | "my-events" | "profile" | "volunteer">("home");
-  const [exploreSubTab, setExploreSubTab] = useState<"events" | "nearby" | "favorites">("events");
+  const [exploreSubTab, setExploreSubTab] = useState<"events" | "favorites">("events");
   const [myEventsTab, setMyEventsTab] = useState<"upcoming" | "registered" | "past">("upcoming");
 
   // Data states
@@ -889,17 +887,6 @@ export default function StudentDashboard() {
               </button>
               <button
                 type="button"
-                onClick={() => setExploreSubTab("nearby")}
-                className={`px-4 py-2 text-sm font-medium transition-all ${
-                  exploreSubTab === "nearby"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-text-secondary border-b-2 border-transparent"
-                }`}
-              >
-                Nearby
-              </button>
-              <button
-                type="button"
                 onClick={() => setExploreSubTab("favorites")}
                 className={`px-4 py-2 text-sm font-medium transition-all ${
                   exploreSubTab === "favorites"
@@ -1014,14 +1001,6 @@ export default function StudentDashboard() {
               </div>
             )}
 
-            {/* Nearby Subtab */}
-            {exploreSubTab === "nearby" && (
-              <div className="space-y-6">
-                <NearbyEvents />
-                <NearbyColleges />
-              </div>
-            )}
-
             {/* Favorites Subtab */}
             {exploreSubTab === "favorites" && (
               <div className="space-y-6">
@@ -1034,10 +1013,10 @@ export default function StudentDashboard() {
                     <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
                       <p className="text-text-muted mb-3">No favorite colleges yet</p>
                       <button
-                        onClick={() => setExploreSubTab("nearby")}
+                        onClick={() => setExploreSubTab("events")}
                         className="bg-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-primaryHover"
                       >
-                        Explore Nearby
+                        Explore Events
                       </button>
                     </div>
                   ) : (

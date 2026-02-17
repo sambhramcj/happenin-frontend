@@ -30,6 +30,7 @@ type Event = {
   date: string;
   location: string;
   price: string;
+  max_attendees?: number | null;
   organizer_email: string;
   banner_image?: string;
   discount_enabled?: boolean;
@@ -69,6 +70,7 @@ export default function OrganizerDashboard() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [price, setPrice] = useState("");
+  const [maxAttendees, setMaxAttendees] = useState("");
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discountClub, setDiscountClub] = useState("");
   const [discountAmount, setDiscountAmount] = useState<number>(0);
@@ -550,6 +552,7 @@ export default function OrganizerDashboard() {
         description,
         location,
         price,
+        maxAttendees: maxAttendees ? Number(maxAttendees) : null,
         bannerImage: bannerImageUrl,
         brochureUrl,
         start_datetime: scheduleData.start_datetime,
@@ -603,6 +606,7 @@ export default function OrganizerDashboard() {
       setDescription("");
       setLocation("");
       setPrice("");
+      setMaxAttendees("");
       setDiscountEnabled(false);
       setDiscountClub("");
       setDiscountAmount(0);
@@ -902,6 +906,18 @@ export default function OrganizerDashboard() {
                     onChange={(e) => setPrice(e.target.value)}
                     className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
                     placeholder="Enter price"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block">Max Attendees (Optional)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={maxAttendees}
+                    onChange={(e) => setMaxAttendees(e.target.value)}
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                    placeholder="Leave empty for unlimited"
                   />
                 </div>
 

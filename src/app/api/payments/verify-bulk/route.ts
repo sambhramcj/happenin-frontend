@@ -6,6 +6,13 @@ import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import {
+  notifyStudentPaymentSuccess,
+  notifyOrganizerPaymentReceived,
+  notifyOrganizerCapacityAlert,
+  notifyStudentRegistration,
+  notifyOrganizerNewRegistration,
+} from "@/lib/notifications";
 
 // Server-only admin client (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -81,7 +88,7 @@ export async function POST(req: Request) {
     // 2️⃣ Fetch event
     const { data: event } = await db
       .from("events")
-      .select("id,title,price,date,location")
+      .select("id,title,price,date,location,max_attendees")
       .eq("id", eventId)
       .single();
 
@@ -108,6 +115,29 @@ export async function POST(req: Request) {
         success: true,
         message: "Payment already processed",
       });
+    }
+
+    if (event.max_attendees) {
+      const { count, error: countError } = await db
+        .from("registrations")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId)
+        .in("status", ["confirmed", "registered", "checked_in"]);
+
+      if (countError) {
+        console.error("Capacity count error:", countError);
+        return NextResponse.json(
+          { error: "Failed to validate event capacity" },
+          { status: 500 }
+        );
+      }
+
+      if ((count || 0) + members.length > event.max_attendees) {
+        return NextResponse.json(
+          { error: "Not enough remaining capacity for this team" },
+          { status: 409 }
+        );
+      }
     }
 
     // 5️⃣ Create registrations for all team members
@@ -204,6 +234,84 @@ export async function POST(req: Request) {
         { error: "Failed to create any registrations" },
         { status: 500 }
       );
+    }
+
+    // Send notifications to all team members and organizer
+    try {
+      const { data: organizerData } = await db
+        .from("users")
+        .select("email, name")
+        .eq("email", event.organizer_email)
+        .single();
+
+      // Notify all team members
+      for (const member of members) {
+        const isTeamLead = member.email === leadEmail;
+        
+        // Payment notification only for team lead
+        if (isTeamLead) {
+          await notifyStudentPaymentSuccess(
+            member.email,
+            eventId,
+            event.title || "Event",
+            totalPrice
+          );
+        }
+
+        // Registration notification for all team members
+        await notifyStudentRegistration(
+          member.email,
+          eventId,
+          event.title || "Event",
+          "team"
+        );
+      }
+
+      // Notify organizer about team registration
+      if (organizerData?.email) {
+        await notifyOrganizerPaymentReceived(
+          organizerData.email,
+          eventId,
+          event.title || "Event",
+          `Team of ${teamSize}`,
+          totalPrice
+        );
+
+        // Notify about each team member registration
+        for (const member of members) {
+          await notifyOrganizerNewRegistration(
+            organizerData.email,
+            eventId,
+            event.title || "Event",
+            member.full_name || member.email,
+            member.email,
+            "team",
+            teamSize
+          );
+        }
+
+        // Check capacity after team registration
+        if (event.max_attendees) {
+          const { count } = await db
+            .from("registrations")
+            .select("id", { count: "exact", head: true })
+            .eq("event_id", eventId)
+            .in("status", ["confirmed", "registered", "checked_in"]);
+
+          if (count && count > 0) {
+            await notifyOrganizerCapacityAlert(
+              organizerData.email,
+              eventId,
+              event.title || "Event",
+              count,
+              event.max_attendees
+            );
+          }
+        }
+      }
+    } catch (notifErr) {
+      console.error("Notification error:", notifErr);
+      // Don't fail registration if notifications fail
     }
 
     return NextResponse.json({

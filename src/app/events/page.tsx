@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { NearbyEvents } from "@/components/NearbyEvents";
-import { NearbyColleges } from "@/components/NearbyColleges";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Skeleton } from "@/components/skeletons";
 
@@ -24,7 +22,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "free" | "paid">("all");
-  const [activeTab, setActiveTab] = useState<"all" | "nearby">("all");
+  const [activeTab, setActiveTab] = useState<"all">("all");
 
   useEffect(() => {
     fetchEvents();
@@ -101,25 +99,9 @@ export default function EventsPage() {
           >
             All Events
           </button>
-          <button
-            onClick={() => setActiveTab("nearby")}
-            className={`px-6 py-3 font-medium transition-all border-b-2 ${
-              activeTab === "nearby"
-                ? "border-purple-600 text-purple-600 dark:text-purple-400"
-                : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            Nearby
-          </button>
         </div>
 
         {/* Tab Content */}
-        {activeTab === "nearby" && (
-          <div className="space-y-10">
-            <NearbyEvents />
-            <NearbyColleges />
-          </div>
-        )}
         {activeTab === "all" && (
           <>
             {/* Filters */}

@@ -6,6 +6,13 @@ import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import {
+  notifyStudentPaymentSuccess,
+  notifyOrganizerPaymentReceived,
+  notifyOrganizerCapacityAlert,
+  notifyStudentRegistration,
+  notifyOrganizerNewRegistration,
+} from "@/lib/notifications";
 
 // Server-only admin client (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -74,7 +81,7 @@ export async function POST(req: Request) {
     // 2️⃣ Fetch event
     const { data: event } = await db
       .from("events")
-      .select("id,title,price,date,location")
+      .select("id,title,price,date,location,max_attendees")
       .eq("id", eventId)
       .single();
 
@@ -145,6 +152,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
+    if (event.max_attendees) {
+      const { count, error: countError } = await db
+        .from("registrations")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId)
+        .in("status", ["confirmed", "registered", "checked_in"]);
+
+      if (countError) {
+        console.error("Capacity count error:", countError);
+        return NextResponse.json(
+          { error: "Failed to validate event capacity" },
+          { status: 500 }
+        );
+      }
+
+      if ((count || 0) >= event.max_attendees) {
+        return NextResponse.json(
+          { error: "Event is full" },
+          { status: 409 }
+        );
+      }
+    }
+
     // 5️⃣ Save registration (using admin client to bypass RLS)
     const registrationPayload = {
       student_email: studentEmail,
@@ -204,6 +234,76 @@ export async function POST(req: Request) {
     if (ticketError) {
       console.error("Ticket creation error:", ticketError);
       // Don't fail registration if ticket creation fails - student can still access event
+    }
+
+    // 7️⃣ Send notifications to student and organizer
+    try {
+      // Get organizer info for notification
+      const { data: organizerData } = await db
+        .from("users")
+        .select("email, name")
+        .eq("email", event.organizer_email)
+        .single();
+
+      // Notify student
+      await notifyStudentPaymentSuccess(
+        studentEmail,
+        eventId,
+        event.title || "Event",
+        finalPrice
+      );
+
+      // Notify organizer
+      if (organizerData?.email) {
+        await notifyOrganizerPaymentReceived(
+          organizerData.email,
+          eventId,
+          event.title || "Event",
+          organizerData.name || studentEmail,
+          finalPrice
+        );
+
+        // Check capacity and alert if needed
+        if (event.max_attendees) {
+          const { count } = await db
+            .from("registrations")
+            .select("id", { count: "exact", head: true })
+            .eq("event_id", eventId)
+            .in("status", ["confirmed", "registered", "checked_in"]);
+
+          if (count && count > 0) {
+            await notifyOrganizerCapacityAlert(
+              organizerData.email,
+              eventId,
+              event.title || "Event",
+              count,
+              event.max_attendees
+            );
+          }
+        }
+      }
+
+      // Also notify with registration confirmation
+      await notifyStudentRegistration(
+        studentEmail,
+        eventId,
+        event.title || "Event",
+        "individual"
+      );
+
+      if (organizerData?.email) {
+        await notifyOrganizerNewRegistration(
+          organizerData.email,
+          eventId,
+          event.title || "Event",
+          organizerData.name || studentEmail,
+          studentEmail,
+          "individual"
+        );
+      }
+    } catch (notifErr) {
+      console.error("Notification error:", notifErr);
+      // Don't fail registration if notifications fail
     }
 
     return NextResponse.json({ success: true });

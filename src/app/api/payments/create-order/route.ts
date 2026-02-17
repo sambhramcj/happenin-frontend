@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
     const { data: event, error: eventError } = await adminDb
       .from("events")
-      .select("id,title,price")
+      .select("id,title,price,max_attendees")
       .eq("id", eventId)
       .single();
 
@@ -87,6 +87,29 @@ export async function POST(req: Request) {
         { error: "Event not found" },
         { status: 404 }
       );
+    }
+
+    if (event.max_attendees) {
+      const { count, error: countError } = await adminDb
+        .from("registrations")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId)
+        .in("status", ["confirmed", "registered", "checked_in"]);
+
+      if (countError) {
+        console.error("Capacity count error:", countError);
+        return NextResponse.json(
+          { error: "Failed to validate event capacity" },
+          { status: 500 }
+        );
+      }
+
+      if ((count || 0) >= event.max_attendees) {
+        return NextResponse.json(
+          { error: "Event is full" },
+          { status: 409 }
+        );
+      }
     }
 
     // 2️⃣ Enforce non-duplicate registration before payment

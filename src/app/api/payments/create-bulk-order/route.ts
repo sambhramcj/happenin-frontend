@@ -101,12 +101,35 @@ export async function POST(req: Request) {
 
     const { data: event, error: eventError } = await adminDb
       .from("events")
-      .select("id,title,price")
+      .select("id,title,price,max_attendees")
       .eq("id", eventId)
       .single();
 
     if (eventError || !event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    if (event.max_attendees) {
+      const { count, error: countError } = await adminDb
+        .from("registrations")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId)
+        .in("status", ["confirmed", "registered", "checked_in"]);
+
+      if (countError) {
+        console.error("Capacity count error:", countError);
+        return NextResponse.json(
+          { error: "Failed to validate event capacity" },
+          { status: 500 }
+        );
+      }
+
+      if ((count || 0) + teamSize > event.max_attendees) {
+        return NextResponse.json(
+          { error: "Not enough remaining capacity for this team" },
+          { status: 409 }
+        );
+      }
     }
 
     // 4️⃣ Check if team lead (primary user) already registered
