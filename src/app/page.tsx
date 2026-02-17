@@ -43,7 +43,7 @@ function LandingPage() {
               </h1>
               <p className="text-xl" style={{ color: textSecondary }}>Find inter-college fests, club meetings, and student events. Secure your spot with one click. Join thousands already using Happenin.</p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button onClick={() => router.push('/auth')} style={{ backgroundColor: primary }} className="px-8 py-3 text-white font-semibold rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition">
+                <button onClick={() => router.push('/events')} style={{ backgroundColor: primary }} className="px-8 py-3 text-white font-semibold rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition">
                   Explore Events <ArrowRight className="w-5 h-5" />
                 </button>
                 <button onClick={() => router.push('/auth')} style={{ borderColor: primary, color: primary }} className="px-8 py-3 border-2 font-semibold rounded-lg hover:bg-gray-50 transition">
@@ -314,7 +314,7 @@ function LandingPage() {
           <h2 className="text-4xl font-bold mb-4 text-white">Ready to Get Started?</h2>
           <p style={{ color: primarySoft }} className="text-lg mb-8">Join thousands of students and organizers using Happenin today.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onClick={() => router.push('/auth')} style={{ backgroundColor: 'white', color: primary }} className="px-8 py-3 font-semibold rounded-lg hover:opacity-90 transition">
+            <button onClick={() => router.push('/events')} style={{ backgroundColor: 'white', color: primary }} className="px-8 py-3 font-semibold rounded-lg hover:opacity-90 transition">
               Explore Events Now
             </button>
             <button onClick={() => router.push('/auth')} style={{ borderColor: 'white', color: 'white' }} className="px-8 py-3 border-2 font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition">
