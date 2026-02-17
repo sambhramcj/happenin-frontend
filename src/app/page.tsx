@@ -51,7 +51,7 @@ function LandingPage() {
                 </button>
               </div>
             </div>
-            <div style={{ backgroundColor: 'white' }} className="rounded-2xl p-8 border" style={{ borderColor: '#E5E7EB' }}>
+            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="rounded-2xl p-8 border">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center">
@@ -93,7 +93,7 @@ function LandingPage() {
           <p style={{ color: textSecondary }} className="text-center text-lg max-w-2xl mx-auto mb-16">Students spend too much time searching for events. Clubs struggle with registrations. Happenin solves it all.</p>
           
           <div className="grid md:grid-cols-3 gap-8">
-            <div style={{ backgroundColor: 'white' }} className="p-8 rounded-xl border" style={{ borderColor: '#E5E7EB' }}>
+            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="p-8 rounded-xl border">
               <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center mb-4">
                 <MapPin style={{ color: primary }} className="w-6 h-6" />
               </div>
@@ -101,7 +101,7 @@ function LandingPage() {
               <p style={{ color: textSecondary }}>Lost in WhatsApp groups? No single source of truth. Students miss events constantly.</p>
             </div>
 
-            <div style={{ backgroundColor: 'white' }} className="p-8 rounded-xl border" style={{ borderColor: '#E5E7EB' }}>
+            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="p-8 rounded-xl border">
               <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center mb-4">
                 <Clock style={{ color: primary }} className="w-6 h-6" />
               </div>
@@ -109,7 +109,7 @@ function LandingPage() {
               <p style={{ color: textSecondary }}>Google Forms, manual tracking, email confirmations. Confusing for everyone.</p>
             </div>
 
-            <div style={{ backgroundColor: 'white' }} className="p-8 rounded-xl border" style={{ borderColor: '#E5E7EB' }}>
+            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="p-8 rounded-xl border">
               <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center mb-4">
                 <BarChart3 style={{ color: primary }} className="w-6 h-6" />
               </div>
@@ -208,7 +208,7 @@ function LandingPage() {
             <div style={{ backgroundColor: bgMuted }} className="p-8 rounded-xl">
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                  <div style={{ backgroundColor: 'white' }} className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 border" style={{ borderColor: '#E5E7EB' }}>
+                  <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 border">
                     <Sparkles style={{ color: primary }} className="w-6 h-6" />
                   </div>
                   <div>
@@ -217,7 +217,7 @@ function LandingPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div style={{ backgroundColor: 'white' }} className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 border" style={{ borderColor: '#E5E7EB' }}>
+                  <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 border">
                     <Shield style={{ color: primary }} className="w-6 h-6" />
                   </div>
                   <div>
@@ -238,7 +238,7 @@ function LandingPage() {
           <p style={{ color: textSecondary }} className="text-lg mb-12">No hidden fees. Just success.</p>
           
           <div className="grid md:grid-cols-2 gap-8">
-            <div style={{ backgroundColor: 'white' }} className="p-8 rounded-xl border" style={{ borderColor: '#E5E7EB' }}>
+            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="p-8 rounded-xl border">
               <h3 className="text-2xl font-bold mb-4">For Students</h3>
               <div className="mb-6">
                 <p style={{ color: textSecondary }} className="text-lg">Completely Free</p>
