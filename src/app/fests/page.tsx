@@ -182,7 +182,7 @@ export default function FestsPage() {
                                 className="w-full h-64 object-cover"
                               />
                             ) : (
-                              <div className="w-full h-64 bg-gradient-to-br from-primary/20 to-pink-500/20 flex items-center justify-center">
+                              <div className="w-full h-64 bg-primary/20 flex items-center justify-center">
                                 <Icons.Flame className="h-20 w-20 text-primary/50" />
                               </div>
                             )}

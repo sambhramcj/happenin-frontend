@@ -15,8 +15,8 @@ export async function PUT(req: NextRequest) {
     }
 
     const { error } = await supabase
-      .from("push_notifications")
-      .update({ is_read: true })
+      .from("in_app_notifications")
+      .update({ is_read: true, read_at: new Date().toISOString() })
       .eq("recipient_email", session.user.email)
       .eq("is_read", false);
 

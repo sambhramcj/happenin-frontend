@@ -99,7 +99,7 @@ export default function CertificateComponent({
       {/* Certificate Preview */}
       <div
         ref={certificateRef}
-        className="relative w-full bg-gradient-to-br from-purple-50 to-purple-100 border-4 border-purple-600 rounded-lg p-12 shadow-lg"
+        className="relative w-full bg-bg-muted border-4 border-primary rounded-lg p-12 shadow-lg"
         style={{
           aspectRatio: "16 / 10",
         }}

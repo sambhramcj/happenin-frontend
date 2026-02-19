@@ -213,7 +213,7 @@ export function NotificationCenter() {
           {/* Footer */}
           <div className="sticky bottom-0 bg-bg-card border-t border-border-default p-3 text-center">
             <a
-              href="/notifications"
+              href="/dashboard/notifications"
               className="text-sm text-primary hover:text-primaryHover font-medium"
             >
               View all notifications

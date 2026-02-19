@@ -178,6 +178,15 @@ export default function EventDetailPage() {
               <p className="font-semibold text-text-primary text-sm">{event.organizer_email}</p>
             </div>
           </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={() => router.push(`/events/${event.id}/register`)}
+              className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover"
+            >
+              Register
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -284,7 +293,7 @@ export default function EventDetailPage() {
                       disabled={volunteering || !selectedRole || hasApplied}
                       loading={volunteering}
                       loadingText="Submitting application…"
-                      className="w-full bg-gradient-to-r from-primary to-primaryHover text-text-inverse py-3 rounded-lg font-semibold hover:from-primaryHover hover:to-primary transition-all disabled:opacity-50"
+                      className="w-full bg-primary text-text-inverse py-3 rounded-lg font-semibold hover:bg-primaryHover transition-all disabled:opacity-50"
                     >
                       {hasApplied ? "Application Submitted ✓" : "Submit Application"}
                     </LoadingButton>

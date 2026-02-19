@@ -42,7 +42,7 @@ export function HomepageSponsorBanner({ maxSponsors = 5 }: HomepageSponsorBanner
   }
 
   return (
-    <section className="py-12 bg-gradient-to-r from-bg-card via-bg-muted to-bg-card border-t border-b border-border-default">
+    <section className="py-12 bg-bg-muted border-t border-b border-border-default">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-text-primary mb-2">Proudly Powered By</h2>

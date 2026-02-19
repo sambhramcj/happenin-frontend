@@ -244,7 +244,7 @@ export default function FestDetails({ festId, onClose }: FestDetailsProps) {
         )}
         <div
           className={`absolute inset-0 rounded-xl ${
-            !fest.banner_image ? "bg-gradient-to-br from-primary/20 to-pink-500/20" : "bg-black/30"
+            !fest.banner_image ? "bg-primary/20" : "bg-black/30"
           }`}
         />
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">

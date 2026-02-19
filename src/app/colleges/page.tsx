@@ -65,7 +65,7 @@ export default function CollegeBrowsePage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
+          <h1 className="text-3xl font-bold text-primary mb-4">
             Browse Colleges
           </h1>
           <p className="text-text-secondary mb-4">Discover colleges hosting events near you</p>

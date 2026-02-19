@@ -32,32 +32,9 @@ export function AppSplash() {
           ease: "easeOut" 
         }}
       >
-        {/* Logo with gradient */}
+        {/* Logo */}
         <div className="relative w-20 h-20 flex items-center justify-center">
-          <svg 
-            viewBox="0 0 100 100" 
-            className="w-full h-full"
-          >
-            <defs>
-              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#7c3aed" />
-                <stop offset="100%" stopColor="#ec4899" />
-              </linearGradient>
-            </defs>
-            {/* Event platform icon - simplified */}
-            <circle 
-              cx="50" 
-              cy="35" 
-              r="15" 
-              fill="url(#logoGradient)" 
-              opacity="0.95" 
-            />
-            <path 
-              d="M25 75c3-15 15-23 25-23s22 8 25 23" 
-              fill="url(#logoGradient)" 
-              opacity="0.95" 
-            />
-          </svg>
+          <img src="/icon.svg" alt="Happenin" className="w-full h-full object-contain" />
         </div>
         
       </motion.div>

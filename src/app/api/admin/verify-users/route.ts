@@ -12,7 +12,7 @@ export async function GET() {
     const { data: users, error } = await supabase
       .from("users")
       .select("email, role, full_name")
-      .in("email", ["student@test.com", "organizer@test.com", "admin@test.com"]);
+      .in("email", ["student@test.com", "organizer@test.com", "admin@test.com", "sponsor@test.com"]);
 
     if (error) {
       return Response.json({ error: error.message }, { status: 500 });

@@ -13,21 +13,17 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password, role, collegeId } = await req.json();
 
-    // Validate required fields
-    if (!email || !password || !role) {
+    // Validate required fields (role is server-controlled)
+    if (!email || !password) {
       return NextResponse.json(
-        { error: "Email, password, and role are required" },
+        { error: "Email and password are required" },
         { status: 400 }
       );
     }
-
-    // Validate role
-    if (!["student", "organizer", "admin"].includes(role)) {
-      return NextResponse.json(
-        { error: "Invalid role. Must be student, organizer, or admin" },
-        { status: 400 }
-      );
-    }
+    //
+    // Public signup cannot choose privileged roles. Everyone starts as "student";
+    // organizer/admin upgrades are handled through a separate, protected flow.
+    const normalizedRole = "student";
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -70,7 +66,7 @@ export async function POST(req: NextRequest) {
       .insert({
         email,
         password_hash,
-        role,
+        role: normalizedRole,
         college_id: collegeId || null,
       })
       .select()

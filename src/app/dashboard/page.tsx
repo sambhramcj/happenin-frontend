@@ -23,6 +23,8 @@ export default function DashboardRedirect() {
       router.replace("/dashboard/student");
     } else if (role === "organizer") {
       router.replace("/dashboard/organizer");
+    } else if (role === "sponsor") {
+      router.replace("/dashboard/sponsor");
     } else if (role === "admin") {
       router.replace("/dashboard/admin");
     } else {

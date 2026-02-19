@@ -89,10 +89,10 @@ export default function FeaturedEvents({ selectedCollege }: FeaturedEventsProps)
           <Link
             key={event.id}
             href={`/events/${event.id}`}
-            className="group relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all border-2 border-purple-200"
+            className="group relative bg-bg-card rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-border-default"
           >
             {/* Featured Badge */}
-            <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+            <div className="absolute top-3 right-3 z-10 bg-primary text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
               <Sparkles className="w-3 h-3" />
               Featured
             </div>

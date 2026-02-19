@@ -8,6 +8,7 @@ export async function GET(req: Request) {
   const budget_min = searchParams.get("budget_min");
   const budget_max = searchParams.get("budget_max");
   const college = searchParams.get("college");
+  const category = searchParams.get("category");
 
   let query = supabase
     .from("events")
@@ -29,6 +30,10 @@ export async function GET(req: Request) {
 
   if (college) {
     query = query.eq("college", college);
+  }
+
+  if (category && category !== "all") {
+    query = query.eq("category", category);
   }
 
   const { data: events, error } = await query;

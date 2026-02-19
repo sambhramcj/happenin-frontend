@@ -5,7 +5,7 @@ export default function ContactPage() {
         <header className="border-b border-slate-200/70 bg-white/70 backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
             <a href="/" className="text-lg font-semibold tracking-tight text-slate-900">
-              <span className="bg-gradient-to-r from-purple-300 via-violet-200 to-fuchsia-300 bg-clip-text text-transparent">
+              <span className="text-primary">
                 Happenin
               </span>
             </a>

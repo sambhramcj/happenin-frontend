@@ -8,6 +8,7 @@ import { BannerUploadForm } from "@/components/BannerUploadForm";
 import { Icons } from "@/components/icons";
 import { SPONSORSHIP_VISIBILITY } from "@/types/sponsorship";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Download, TrendingUp, Eye, MousePointer, DollarSign } from "lucide-react";
 
@@ -106,6 +107,7 @@ export default function SponsorDashboard() {
     if (filters.college) params.set("college", filters.college);
     if (filters.budget_min) params.set("budget_min", filters.budget_min);
     if (filters.budget_max) params.set("budget_max", filters.budget_max);
+    if (filters.category && filters.category !== "all") params.set("category", filters.category);
 
     const res = await fetch(`/api/sponsor/discover?${params.toString()}`);
     if (res.ok) {
@@ -240,15 +242,13 @@ export default function SponsorDashboard() {
       <header className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-text-primary">Happenin Sponsor</h1>
+            <div className="flex items-center gap-3">
+              <img src="/branding/logo-wordmark-brand.svg" alt="Happenin" className="h-8 w-auto" />
+              <span className="text-sm font-semibold text-text-secondary uppercase tracking-wide">Sponsor</span>
+            </div>
             <div className="flex items-center gap-3">
               <ThemeToggle />
-              <button
-                onClick={() => toast.info("Notifications coming soon")}
-                className="p-2 hover:bg-bg-muted rounded-lg transition-colors"
-              >
-                <Icons.Bell className="h-6 w-6 text-text-secondary" />
-              </button>
+              <NotificationCenter />
               <button
                 onClick={() => signOut({ callbackUrl: "/auth" })}
                 className="px-4 py-2 bg-bg-muted hover:bg-bg-muted/80 text-text-primary rounded-lg transition-colors text-sm"
@@ -262,15 +262,15 @@ export default function SponsorDashboard() {
         {/* Tab Navigation */}
         <div className="border-t border-border-default">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto py-3">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap ${
                     activeTab === tab.id
-                      ? "border-primary text-primary"
-                      : "border-transparent text-text-secondary hover:text-text-primary"
+                      ? "bg-primary text-text-inverse"
+                      : "bg-bg-card text-text-secondary hover:bg-bg-muted"
                   }`}
                 >
                   {tab.icon}
@@ -566,7 +566,7 @@ export default function SponsorDashboard() {
               <div className="space-y-6">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                  <div className="bg-primary rounded-xl p-6 text-white">
                     <div className="flex items-center justify-between mb-2">
                       <Eye className="h-8 w-8 opacity-80" />
                       <span className="text-2xl font-bold">{analytics.totalImpressions}</span>
@@ -574,7 +574,7 @@ export default function SponsorDashboard() {
                     <div className="text-sm opacity-90">Total Impressions</div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                  <div className="bg-primary rounded-xl p-6 text-white">
                     <div className="flex items-center justify-between mb-2">
                       <MousePointer className="h-8 w-8 opacity-80" />
                       <span className="text-2xl font-bold">{analytics.totalClicks}</span>
@@ -582,7 +582,7 @@ export default function SponsorDashboard() {
                     <div className="text-sm opacity-90">Total Clicks</div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white">
+                  <div className="bg-primary rounded-xl p-6 text-white">
                     <div className="flex items-center justify-between mb-2">
                       <DollarSign className="h-8 w-8 opacity-80" />
                       <span className="text-2xl font-bold">₹{(analytics.totalSpent / 1000).toFixed(0)}k</span>
@@ -590,7 +590,7 @@ export default function SponsorDashboard() {
                     <div className="text-sm opacity-90">Total Spent</div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+                  <div className="bg-primary rounded-xl p-6 text-white">
                     <div className="flex items-center justify-between mb-2">
                       <TrendingUp className="h-8 w-8 opacity-80" />
                       <span className="text-2xl font-bold">{analytics.activeSponsorships}</span>

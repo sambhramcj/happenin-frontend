@@ -79,7 +79,7 @@ export default function FestDiscovery({ selectedCollege }: FestDiscoveryProps) {
         {fests.map((fest) => (
           <div
             key={fest.id}
-            className="relative bg-gradient-to-r from-pink-50 via-purple-50 to-blue-50 rounded-xl overflow-hidden border-2 border-pink-200 shadow-md hover:shadow-xl transition-all"
+            className="relative bg-bg-card rounded-xl overflow-hidden border border-border-default shadow-md hover:shadow-xl transition-all"
           >
             {/* Banner Background */}
             {fest.banner_image && (
@@ -164,7 +164,7 @@ export default function FestDiscovery({ selectedCollege }: FestDiscoveryProps) {
                   {/* CTA */}
                   <Link
                     href={`/fests/${fest.id}`}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all font-medium text-sm shadow-md"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primaryHover transition-all font-medium text-sm shadow-md"
                   >
                     Explore Events
                     <ArrowRight className="w-4 h-4" />

@@ -19,8 +19,8 @@ export async function PUT(
     }
 
     const { data, error } = await supabase
-      .from("push_notifications")
-      .update({ is_read: true })
+      .from("in_app_notifications")
+      .update({ is_read: true, read_at: new Date().toISOString() })
       .eq("id", id)
       .eq("recipient_email", session.user.email)
       .select();
@@ -52,7 +52,7 @@ export async function DELETE(
     }
 
     const { error } = await supabase
-      .from("push_notifications")
+      .from("in_app_notifications")
       .delete()
       .eq("id", id)
       .eq("recipient_email", session.user.email);

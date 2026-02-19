@@ -109,23 +109,23 @@ export default function CertificateGallery() {
       {/* Stats Overview */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+          <div className="bg-bg-muted p-4 rounded-lg border border-border-default">
             <p className="text-3xl font-bold text-blue-600">{stats.totalCertificates}</p>
             <p className="text-sm text-blue-700">Total Certificates</p>
           </div>
-          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 p-4 rounded-lg border border-cyan-200">
+          <div className="bg-bg-muted p-4 rounded-lg border border-border-default">
             <p className="text-3xl font-bold text-cyan-600">{stats.volunteer}</p>
             <p className="text-sm text-cyan-700">Volunteer</p>
           </div>
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+          <div className="bg-bg-muted p-4 rounded-lg border border-border-default">
             <p className="text-3xl font-bold text-purple-600">{stats.participant}</p>
             <p className="text-sm text-purple-700">Participant</p>
           </div>
-          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-lg border border-yellow-200">
+          <div className="bg-bg-muted p-4 rounded-lg border border-border-default">
             <p className="text-3xl font-bold text-yellow-600">{stats.winning}</p>
             <p className="text-sm text-yellow-700">Winning</p>
           </div>
-          <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-4 rounded-lg border border-pink-200">
+          <div className="bg-bg-muted p-4 rounded-lg border border-border-default">
             <p className="text-3xl font-bold text-pink-600">{stats.totalBadges}</p>
             <p className="text-sm text-pink-700">Badges</p>
           </div>
@@ -140,7 +140,7 @@ export default function CertificateGallery() {
             {badges.map((badge) => (
               <div
                 key={badge.id}
-                className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border-2 border-amber-300 text-center hover:shadow-lg transition-shadow"
+                className="bg-bg-muted p-6 rounded-lg border border-border-default text-center hover:shadow-lg transition-shadow"
               >
                 <div className="text-5xl mb-2">✨</div>
                 <p className="font-bold text-sm mb-1">{badge.badge_name}</p>

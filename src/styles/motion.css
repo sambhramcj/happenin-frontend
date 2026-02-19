@@ -68,22 +68,17 @@
 
 /* Skeleton Loading Animation */
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
+  0%,
   100% {
-    background-position: 200% 0;
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--skeleton-base),
-    var(--skeleton-highlight),
-    var(--skeleton-base)
-  );
-  background-size: 200% 100%;
+  background: var(--skeleton-base);
   border-radius: 8px;
   animation: shimmer var(--skeleton-duration) ease-in-out infinite;
 }

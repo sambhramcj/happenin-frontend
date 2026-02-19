@@ -125,6 +125,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as
           | "student"
           | "organizer"
+          | "sponsor"
           | "admin";
       }
       return session;

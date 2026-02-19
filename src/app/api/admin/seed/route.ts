@@ -31,13 +31,18 @@ async function seedUsers() {
         password_hash: hashedPassword,
         role: "admin",
       },
+      {
+        email: "sponsor@test.com",
+        password_hash: hashedPassword,
+        role: "sponsor",
+      },
     ];
 
     // First delete existing users
     await supabase
       .from("users")
       .delete()
-      .in("email", ["student@test.com", "organizer@test.com", "admin@test.com"]);
+      .in("email", ["student@test.com", "organizer@test.com", "admin@test.com", "sponsor@test.com"]);
 
     // Then insert fresh users
     const { data, error } = await supabase
@@ -63,6 +68,7 @@ async function seedUsers() {
         student: { email: "student@test.com", password: testPassword },
         organizer: { email: "organizer@test.com", password: testPassword },
         admin: { email: "admin@test.com", password: testPassword },
+        sponsor: { email: "sponsor@test.com", password: testPassword },
       },
     };
   } catch (error: any) {

@@ -84,8 +84,8 @@ export default function TicketComponent({
   // Design templates for tickets
   const designs = {
     modern: {
-      container: "bg-gradient-to-r from-purple-600 to-pink-600",
-      bg: "bg-gradient-to-r from-purple-600 to-pink-600",
+      container: "bg-primary",
+      bg: "bg-primary",
       text: "text-white",
       accent: "text-purple-100",
     },
@@ -102,8 +102,8 @@ export default function TicketComponent({
       accent: "text-gray-700",
     },
     colorful: {
-      container: "bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400",
-      bg: "bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400",
+      container: "bg-primarySoft",
+      bg: "bg-primarySoft",
       text: "text-white",
       accent: "text-blue-100",
     },

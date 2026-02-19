@@ -17,6 +17,8 @@ import { Icons } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DashboardEventListSkeleton, DashboardStatsSkeleton } from "@/components/skeletons";
 import { LoadingButton } from "@/components/LoadingButton";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { EventTimelineDisplay } from "@/components/EventTimelineDisplay";
 
 type EligibleMember = {
   name: string;
@@ -28,6 +30,9 @@ type Event = {
   title: string;
   description: string;
   date: string;
+  start_datetime?: string;
+  end_datetime?: string;
+  schedule_sessions?: Array<{ date: string; start_time: string; end_time: string; description: string }> | null;
   location: string;
   price: string;
   max_attendees?: number | null;
@@ -57,7 +62,7 @@ export default function OrganizerDashboard() {
 
   // Event detail view state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [eventDetailView, setEventDetailView] = useState<"overview" | "volunteers" | "certificates" | "banners">("overview");
+  const [eventDetailView, setEventDetailView] = useState<"overview" | "timeline" | "volunteers" | "certificates" | "banners">("overview");
 
   // Data states
   const [events, setEvents] = useState<Event[]>([]);
@@ -695,25 +700,18 @@ export default function OrganizerDashboard() {
       <div className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Happenin
-            </h1>
+            <img src="/branding/logo-wordmark-brand.svg" alt="Happenin" className="h-8 w-auto" />
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button
-              onClick={() => toast.info("Notifications coming soon!")}
-              className="p-2 hover:bg-bg-muted rounded-lg transition-colors transition-all duration-fast ease-standard"
-            >
-              <Icons.Bell className="h-6 w-6 text-text-secondary" />
-            </button>
+            <NotificationCenter />
           </div>
         </div>
       </div>
 
       {/* Desktop Tabs Bar */}
       <div className="hidden md:block sticky top-[76px] z-30 bg-bg-card/95 backdrop-blur-md border-b border-border-default transition-all duration-medium ease-standard">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-start gap-1">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-start gap-2 overflow-x-auto">
           {[
             { id: "dashboard", icon: Icons.Dashboard, label: "Dashboard" },
             { id: "events", icon: Icons.Clipboard, label: "Events" },
@@ -724,10 +722,10 @@ export default function OrganizerDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-3 font-medium text-sm transition-all flex items-center gap-2 border-b-2 ${
+              className={`px-4 py-2 rounded-full font-medium text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-text-secondary hover:text-text-primary"
+                  ? "bg-primary text-text-inverse"
+                  : "bg-bg-card text-text-secondary hover:bg-bg-muted"
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -1202,6 +1200,7 @@ export default function OrganizerDashboard() {
               <div className="flex gap-2 border-b border-border-default overflow-x-auto">
                 {[
                   { id: "overview", icon: Icons.Gauge, label: "Overview" },
+                  { id: "timeline", icon: Icons.Clock, label: "Timeline" },
                   { id: "banners", icon: Icons.Image, label: "Banners" },
                   { id: "volunteers", icon: Icons.Award, label: "Volunteers" },
                   { id: "certificates", icon: Icons.Award, label: "Certificates" },
@@ -1341,6 +1340,19 @@ export default function OrganizerDashboard() {
                 </div>
               )}
 
+              {/* Timeline Tab */}
+              {eventDetailView === "timeline" && (
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <h3 className="text-lg font-bold text-text-primary mb-4">Event Timeline</h3>
+                  <EventTimelineDisplay
+                    startDateTime={event.start_datetime || event.date || ""}
+                    endDateTime={event.end_datetime || event.date || ""}
+                    scheduleSessions={event.schedule_sessions ?? null}
+                    eventTitle={event.title}
+                  />
+                </div>
+              )}
+
               {/* Volunteers Tab */}
               {eventDetailView === "volunteers" && (
                 <div className="space-y-6">
@@ -1392,7 +1404,7 @@ export default function OrganizerDashboard() {
 
                     {/* Empty State */}
                     {!volunteersLoading && volunteerApplications.length === 0 && (
-                      <div className="bg-gradient-to-br from-bg-muted to-bg-card rounded-xl p-12 border-2 border-dashed border-border-default flex flex-col items-center justify-center">
+                      <div className="bg-bg-muted rounded-xl p-12 border-2 border-dashed border-border-default flex flex-col items-center justify-center">
                         <Icons.Award className="h-16 w-16 text-text-muted mb-4 opacity-50" />
                         <h4 className="text-lg font-semibold text-text-primary mb-2">No Applications Yet</h4>
                         <p className="text-text-secondary text-center max-w-md">
@@ -1502,7 +1514,7 @@ export default function OrganizerDashboard() {
                     )}
 
                     {!volunteersLoading && volunteerApplications.length > 0 && getFilteredVolunteers().length === 0 && (
-                      <div className="bg-gradient-to-br from-bg-muted to-bg-card rounded-xl p-12 border-2 border-dashed border-border-default flex flex-col items-center justify-center">
+                      <div className="bg-bg-muted rounded-xl p-12 border-2 border-dashed border-border-default flex flex-col items-center justify-center">
                         <p className="text-text-secondary text-center">No {volunteerFilterStatus === "all" ? "applications" : `${volunteerFilterStatus} applications`}</p>
                       </div>
                     )}
@@ -1730,7 +1742,7 @@ export default function OrganizerDashboard() {
                           </div>
                           <div className="h-2 bg-bg-muted rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-gradient-to-r from-primary to-pink-500 rounded-full transition-all"
+                              className="h-full bg-primary rounded-full transition-all"
                               style={{ width: `${Math.min((revenue / getTotalRevenue()) * 100 || 0, 100)}%` }}
                             />
                           </div>
@@ -1765,7 +1777,7 @@ export default function OrganizerDashboard() {
                           </div>
                           <div className="h-2 bg-bg-muted rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all"
+                              className="h-full bg-primary rounded-full transition-all"
                               style={{ width: `${(count / maxRegs) * 100}%` }}
                             />
                           </div>

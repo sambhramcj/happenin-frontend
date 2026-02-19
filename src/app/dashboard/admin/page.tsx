@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { useSession, signOut } from "next-auth/react";
-import { useRouter, redirect } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -9,8 +9,7 @@ import { Icons } from "@/components/icons";
 import { RevenueChart, UserGrowthChart } from "@/components/Charts";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AdminTableSkeleton, AdminTimelineSkeleton } from "@/components/skeletons";
-import AdminSponsorshipsPage from "@/app/dashboard/admin/sponsorships/page";
-import { AdminSponsorshipPayouts } from "@/components/AdminSponsorshipPayouts";
+import { NotificationCenter } from "@/components/NotificationCenter";
 
 interface DashboardMetrics {
   totalRevenue: number;
@@ -28,8 +27,13 @@ type Event = {
   title: string;
   description: string;
   date: string;
+  start_datetime?: string;
   location: string;
+  venue?: string;
   price: string;
+  max_registrations?: number;
+  category?: string;
+  status?: string;
   organizer_email: string;
   banner_image?: string;
   created_at: string;
@@ -38,8 +42,10 @@ type Event = {
 type Registration = {
   id: string;
   student_email: string;
+  user_email?: string;
   event_id: string;
   final_price: number;
+  status?: string;
   created_at: string;
 };
 
@@ -49,24 +55,62 @@ type User = {
   created_at: string;
 };
 
+type SponsorshipDeal = {
+  id: string;
+  sponsor_email: string;
+  event_id?: string | null;
+  fest_id?: string | null;
+  pack_type?: string;
+  amount?: number;
+  status: string;
+  visibility_active?: boolean;
+  organizer_payout_settled?: boolean;
+  organizer_payout_settled_at?: string | null;
+  created_at: string;
+  events?: { id: string; title: string; fest_id?: string | null } | null;
+  fests?: { id: string; title: string } | null;
+  sponsors_profile?: { company_name?: string; email?: string } | null;
+  sponsor_analytics?: { clicks: number; impressions: number };
+};
+
+type SponsorshipPayout = {
+  id: string;
+  organizer_email: string;
+  gross_amount: number;
+  platform_fee: number;
+  payout_amount: number;
+  payout_method?: string | null;
+  payout_status: string;
+  paid_at?: string | null;
+  created_at: string;
+};
+
+type OrganizerProfile = {
+  id: string;
+  organizer_email?: string;
+  email?: string;
+  organizer_type?: string;
+  kyc_status?: "pending" | "verified" | "rejected";
+  created_at?: string;
+};
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "colleges" | "events" | "payments" | "users" | "sponsorships" | "payouts">("overview");
-  const [usersSubTab, setUsersSubTab] = useState<"students" | "organizers">("students");
-  const [analyticsTab, setAnalyticsTab] = useState<"overview" | "revenue" | "users" | "events" | "logs" | "reports" | "disputes">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "events" | "users" | "payments" | "sponsorships">("overview");
+  const [usersSubTab, setUsersSubTab] = useState<"students" | "organizers" | "sponsors">("students");
+  const [reportsSubTab, setReportsSubTab] = useState<"reports" | "disputes">("reports");
 
   // Data states
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [sponsorships, setSponsorships] = useState<any[]>([]);
-  const [reviewingId, setReviewingId] = useState<string | null>(null);
-  const [tierOverrides, setTierOverrides] = useState<Record<string, 'title' | 'gold' | 'silver' | 'partner'>>({});
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [sponsorships, setSponsorships] = useState<SponsorshipDeal[]>([]);
+  const [payouts, setPayouts] = useState<SponsorshipPayout[]>([]);
+  const [organizerProfiles, setOrganizerProfiles] = useState<OrganizerProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Analytics states
@@ -74,12 +118,8 @@ export default function AdminDashboard() {
   const [userGrowthData, setUserGrowthData] = useState<any[]>([]);
   const [eventPerformance, setEventPerformance] = useState<any[]>([]);
   const [adminLogs, setAdminLogs] = useState<any[]>([]);
-  const [reports, setReports] = useState<{ userReports: any[], eventReports: any[] }>({ userReports: [], eventReports: [] });
+  const [reports, setReports] = useState<{ userReports: any[]; eventReports: any[] }>({ userReports: [], eventReports: [] });
   const [disputes, setDisputes] = useState<any[]>([]);
-  const [reportNotes, setReportNotes] = useState<Record<string, string>>({});
-  const [disputeNotes, setDisputeNotes] = useState<Record<string, string>>({});
-  const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
-  const [updatingDisputeId, setUpdatingDisputeId] = useState<string | null>(null);
 
   // Filters
   const [eventFilter, setEventFilter] = useState<"all" | "today" | "week" | "flagged">("all");
@@ -138,6 +178,8 @@ export default function AdminDashboard() {
       fetchRegistrations(),
       fetchUsers(),
       fetchSponsorships(),
+      fetchPayouts(),
+      fetchOrganizerProfiles(),
     ]);
   }
 
@@ -173,33 +215,32 @@ export default function AdminDashboard() {
       const res = await fetch("/api/admin/sponsorships");
       if (res.ok) {
         const json = await res.json();
-        setSponsorships(json.sponsorships || []);
+        setSponsorships(json.deals || json.sponsorships || []);
       }
-    } catch (e) {
-      // noop
+    } catch {
+      setSponsorships([]);
     }
   }
 
-  async function reviewSponsorship(id: string, action: 'approve' | 'reject') {
+  async function fetchPayouts() {
     try {
-      setReviewingId(id);
-      const tier = tierOverrides[id];
-      const res = await fetch('/api/admin/sponsorships/review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sponsorshipId: id, action, ...(tier ? { tier } : {}) }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(json.error || 'Failed to update sponsorship');
-        return;
-      }
-      toast.success(action === 'approve' ? 'Sponsorship approved' : 'Sponsorship rejected');
-      await fetchSponsorships();
-    } catch (e) {
-      toast.error('Request failed');
-    } finally {
-      setReviewingId(null);
+      const res = await fetch("/api/admin/sponsorship-payouts");
+      if (!res.ok) return;
+      const json = await res.json();
+      setPayouts(json.payouts || []);
+    } catch {
+      setPayouts([]);
+    }
+  }
+
+  async function fetchOrganizerProfiles() {
+    try {
+      const res = await fetch("/api/admin/organizers");
+      if (!res.ok) return;
+      const json = await res.json();
+      setOrganizerProfiles(json.organizers || []);
+    } catch {
+      setOrganizerProfiles([]);
     }
   }
 
@@ -214,7 +255,10 @@ export default function AdminDashboard() {
 
   function getEventsToday() {
     const today = new Date().toDateString();
-    return events.filter(e => new Date(e.date).toDateString() === today);
+    return events.filter((e) => {
+      const eventDate = e.start_datetime || e.date;
+      return eventDate && new Date(eventDate).toDateString() === today;
+    });
   }
 
   function getRegistrationsToday() {
@@ -230,6 +274,19 @@ export default function AdminDashboard() {
 
   function getTotalRevenue() {
     return registrations.reduce((sum, r) => sum + r.final_price, 0);
+  }
+
+  function formatCurrency(value: number) {
+    return `₹${Math.round(value || 0).toLocaleString()}`;
+  }
+
+  function formatPercent(value: number) {
+    return `${Math.max(0, Math.min(100, value)).toFixed(1)}%`;
+  }
+
+  function formatDate(value?: string | null) {
+    if (!value) return "-";
+    return new Date(value).toLocaleDateString();
   }
 
   function getFailedPayments() {
@@ -266,7 +323,11 @@ export default function AdminDashboard() {
   }
 
   function getFilteredUsers() {
-    let filtered = users.filter(u => u.role === usersSubTab.slice(0, -1)); // Remove 's' from end
+    let filtered = users.filter((u) => {
+      if (usersSubTab === "students") return u.role === "student";
+      if (usersSubTab === "organizers") return u.role === "organizer";
+      return u.role === "sponsor";
+    });
 
     if (searchQuery) {
       filtered = filtered.filter(u =>
@@ -278,12 +339,65 @@ export default function AdminDashboard() {
   }
 
   function getUserRegistrations(email: string) {
-    return registrations.filter(r => r.student_email === email);
+    return registrations.filter(r => (r.student_email || r.user_email) === email);
   }
 
   function getUserEvents(email: string) {
     return events.filter(e => e.organizer_email === email);
   }
+
+  const sponsorshipPaidDeals = sponsorships.filter((s) => s.status === "paid");
+  const sponsorshipPendingDeals = sponsorships.filter((s) => s.status !== "paid");
+  const sponsorshipRevenueFromDeals = sponsorshipPaidDeals.reduce((sum, deal) => sum + (deal.amount || 0), 0);
+  const totalRevenueCombined = getTotalRevenue() + (metrics?.totalSponsorshipRevenue || sponsorshipRevenueFromDeals);
+  const averageTicketValue = registrations.length ? getTotalRevenue() / registrations.length : 0;
+  const averageSponsorshipValue = sponsorshipPaidDeals.length
+    ? sponsorshipRevenueFromDeals / sponsorshipPaidDeals.length
+    : 0;
+
+  const students = users.filter((u) => u.role === "student");
+  const organizerUsers = users.filter((u) => u.role === "organizer");
+  const sponsors = users.filter((u) => u.role === "sponsor");
+
+  const checkedInCount = registrations.filter((r) => r.status === "checked_in").length;
+  const attendanceRate = registrations.length ? (checkedInCount / registrations.length) * 100 : 0;
+
+  const pendingDisputes = disputes.filter((d) => d.status === "open" || d.status === "investigating").length;
+  const unresolvedReports = (reports.userReports?.length || 0) + (reports.eventReports?.length || 0);
+
+  const payoutsPending = payouts.filter((p) => p.payout_status === "pending");
+  const payoutsPaid = payouts.filter((p) => p.payout_status === "paid");
+
+  const organizerKycPending = organizerProfiles.filter((o) => o.kyc_status === "pending").length;
+  const organizerKycVerified = organizerProfiles.filter((o) => o.kyc_status === "verified").length;
+
+  const organizerPerformanceRows = organizerUsers.map((organizer) => {
+    const organizerEvents = events.filter((e) => e.organizer_email === organizer.email);
+    const organizerEventIds = new Set(organizerEvents.map((e) => e.id));
+    const organizerRegistrations = registrations.filter((r) => organizerEventIds.has(r.event_id));
+    const ticketRevenue = organizerRegistrations.reduce((sum, r) => sum + r.final_price, 0);
+    const sponsorshipRevenue = sponsorshipPaidDeals
+      .filter((deal) => deal.event_id && organizerEventIds.has(deal.event_id))
+      .reduce((sum, deal) => sum + (deal.amount || 0), 0);
+    const profile = organizerProfiles.find(
+      (o) => (o.organizer_email || o.email) === organizer.email
+    );
+
+    return {
+      email: organizer.email,
+      events: organizerEvents.length,
+      registrations: organizerRegistrations.length,
+      ticketRevenue,
+      sponsorshipRevenue,
+      kycStatus: profile?.kyc_status || "pending",
+      organizerType: profile?.organizer_type || "club",
+      joinedAt: organizer.created_at,
+    };
+  });
+
+  const topEventsByRevenue = [...eventPerformance]
+    .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
+    .slice(0, 8);
 
   if (status === "loading") {
     return (
@@ -305,14 +419,17 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center border border-red-200 dark:border-red-800">
-              <span className="text-xl">🛡️</span>
+              <Icons.Lock className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-text-primary">Admin Control</h1>
               <p className="text-xs text-text-muted">Platform Management</p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <NotificationCenter />
+          </div>
         </div>
       </div>
 
@@ -322,12 +439,10 @@ export default function AdminDashboard() {
         <div className="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-border-default">
           {[
             { id: "overview", label: "Overview", icon: <Icons.Gauge className="h-4 w-4" /> },
-            { id: "analytics", label: "Analytics", icon: <Icons.TrendingUp className="h-4 w-4" /> },
             { id: "events", label: "Events", icon: <Icons.Calendar className="h-4 w-4" /> },
-            { id: "payments", label: "Payments", icon: <Icons.Wallet className="h-4 w-4" /> },
             { id: "users", label: "Users", icon: <Icons.Users className="h-4 w-4" /> },
+            { id: "payments", label: "Payments", icon: <Icons.Wallet className="h-4 w-4" /> },
             { id: "sponsorships", label: "Sponsorships", icon: <Icons.Handshake className="h-4 w-4" /> },
-            { id: "payouts", label: "Sponsorship Payouts", icon: <Icons.Wallet className="h-4 w-4" /> },
           ].map((t: any) => (
             <button
               key={t.id}
@@ -343,602 +458,302 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
-                {activeTab === "sponsorships" && (
-                  <div className="space-y-6">
-                    <AdminSponsorshipsPage />
-                  </div>
-                )}
-                {activeTab === "payouts" && (
-                  <div className="space-y-6">
-                    <AdminSponsorshipPayouts />
-                  </div>
-                )}
+
         {/* OVERVIEW TAB */}
         {activeTab === "overview" && (
           <div className="space-y-8">
-            {/* Analytics Metrics */}
-            {metrics && (
-              <section>
-                <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                  <Icons.TrendingUp className="h-5 w-5 text-primary" /> Analytics Overview
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <Icons.Wallet className="h-6 w-6 mb-2 text-green-500" />
-                    <div className="text-3xl font-bold text-text-primary">₹{metrics.totalRevenue.toLocaleString()}</div>
-                    <div className="text-sm text-text-muted">Total Revenue</div>
-                  </div>
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <Icons.Ticket className="h-6 w-6 mb-2 text-blue-500" />
-                    <div className="text-3xl font-bold text-text-primary">{metrics.totalTransactions}</div>
-                    <div className="text-sm text-text-muted">Transactions</div>
-                  </div>
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <Icons.Users className="h-6 w-6 mb-2 text-purple-500" />
-                    <div className="text-3xl font-bold text-text-primary">{metrics.totalUsers}</div>
-                    <div className="text-sm text-text-muted">Total Users</div>
-                  </div>
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <Icons.Calendar className="h-6 w-6 mb-2 text-orange-500" />
-                    <div className="text-3xl font-bold text-text-primary">{metrics.totalEvents}</div>
-                    <div className="text-sm text-text-muted">Total Events</div>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {metrics && (
-              <section>
-                <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                  <Icons.Wallet className="h-5 w-5 text-primary" /> Sponsorship Payouts
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <div className="text-sm text-text-muted">Total Sponsorship Revenue</div>
-                    <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalSponsorshipRevenue)}</div>
-                  </div>
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <div className="text-sm text-text-muted">Platform Earnings</div>
-                    <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalPlatformEarnings)}</div>
-                  </div>
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <div className="text-sm text-text-muted">Paid to Organizers</div>
-                    <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalPaidToOrganizers)}</div>
-                  </div>
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <div className="text-sm text-text-muted">Pending Payouts</div>
-                    <div className="text-2xl font-bold text-text-primary">{metrics.pendingPayoutsCount}</div>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Global Snapshot */}
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <Icons.Gauge className="h-5 w-5 text-primary" /> Global Snapshot
+                <Icons.TrendingUp className="h-5 w-5 text-primary" /> Platform Dashboard Metrics
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <Icons.Building2 className="h-6 w-6 mb-2 text-text-secondary" />
-                  <div className="text-3xl font-bold text-text-primary">{getTotalColleges()}</div>
-                  <div className="text-sm text-text-muted">Colleges Live</div>
+                  <div className="text-sm text-text-muted">Total Revenue (Tickets)</div>
+                  <div className="text-3xl font-bold text-text-primary">{formatCurrency(metrics?.totalRevenue || getTotalRevenue())}</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <Icons.Calendar className="h-6 w-6 mb-2 text-text-secondary" />
-                  <div className="text-3xl font-bold text-text-primary">{getEventsToday().length}</div>
-                  <div className="text-sm text-text-muted">Events Today</div>
+                  <div className="text-sm text-text-muted">Total Sponsorship Revenue</div>
+                  <div className="text-3xl font-bold text-text-primary">{formatCurrency(metrics?.totalSponsorshipRevenue || sponsorshipRevenueFromDeals)}</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <Icons.Ticket className="h-6 w-6 mb-2 text-text-secondary" />
-                  <div className="text-3xl font-bold text-text-primary">{getRegistrationsToday().length}</div>
-                  <div className="text-sm text-text-muted">Regs Today</div>
+                  <div className="text-sm text-text-muted">Total Platform Earnings</div>
+                  <div className="text-3xl font-bold text-text-primary">{formatCurrency(metrics?.totalPlatformEarnings || 0)}</div>
                 </div>
                 <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <Icons.Wallet className="h-6 w-6 mb-2 text-text-secondary" />
-                  <div className="text-3xl font-bold text-text-primary">₹{getRevenueToday()}</div>
-                  <div className="text-sm text-text-muted">Revenue Today</div>
-                </div>
-                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <Icons.AlertTriangle className="h-6 w-6 mb-2 text-text-secondary" />
-                  <div className="text-3xl font-bold text-error">{getFailedPayments()}</div>
-                  <div className="text-sm text-text-muted">Failed Payments</div>
+                  <div className="text-sm text-text-muted">Total Paid to Organizers</div>
+                  <div className="text-3xl font-bold text-text-primary">{formatCurrency(metrics?.totalPaidToOrganizers || 0)}</div>
                 </div>
               </div>
             </section>
 
-            {/* Activity Timeline */}
             <section>
-              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <Icons.TrendingUp className="h-5 w-5 text-primary" /> Recent Activity (24h)
-              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <div className="text-sm text-text-muted">Total Users</div>
+                  <div className="text-2xl font-bold text-text-primary">{users.length || metrics?.totalUsers || 0}</div>
+                </div>
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <div className="text-sm text-text-muted">Total Events</div>
+                  <div className="text-2xl font-bold text-text-primary">{events.length || metrics?.totalEvents || 0}</div>
+                </div>
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <div className="text-sm text-text-muted">ADU (Estimated)</div>
+                  <div className="text-2xl font-bold text-text-primary">{Math.round((metrics?.totalUsers || users.length) * 0.15)}</div>
+                </div>
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <div className="text-sm text-text-muted">MAU (Estimated)</div>
+                  <div className="text-2xl font-bold text-text-primary">{Math.round((metrics?.totalUsers || users.length) * 0.35)}</div>
+                </div>
+                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                  <div className="text-sm text-text-muted">Pending Payouts</div>
+                  <div className="text-2xl font-bold text-text-primary">{metrics?.pendingPayoutsCount || payoutsPending.length}</div>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Revenue Trend (30 Days)</h3>
+                <RevenueChart data={revenueData} />
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">User Growth (30 Days)</h3>
+                <UserGrowthChart data={userGrowthData} />
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Revenue Mix</h3>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-text-secondary">Ticket Revenue Share</span>
+                      <span className="text-text-primary">{formatPercent(totalRevenueCombined ? (getTotalRevenue() / totalRevenueCombined) * 100 : 0)}</span>
+                    </div>
+                    <div className="h-2 bg-bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary"
+                        style={{ width: `${totalRevenueCombined ? (getTotalRevenue() / totalRevenueCombined) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-text-secondary">Sponsorship Revenue Share</span>
+                      <span className="text-text-primary">{formatPercent(totalRevenueCombined ? ((metrics?.totalSponsorshipRevenue || sponsorshipRevenueFromDeals) / totalRevenueCombined) * 100 : 0)}</span>
+                    </div>
+                    <div className="h-2 bg-bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-success"
+                        style={{ width: `${totalRevenueCombined ? ((metrics?.totalSponsorshipRevenue || sponsorshipRevenueFromDeals) / totalRevenueCombined) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Pending Actions</h3>
                 <div className="space-y-3">
-                  {events.slice(0, 5).map((event) => (
-                    <div key={event.id} className="flex items-center gap-3 p-3 bg-bg-muted rounded-lg">
-                      <span className="text-2xl">✨</span>
-                      <div className="flex-1">
-                        <p className="text-text-primary font-medium">{event.title}</p>
-                        <p className="text-xs text-text-muted">Created by {event.organizer_email}</p>
-                      </div>
-                      <span className="text-xs text-text-muted">
-                        {new Date(event.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  ))}
-                  {events.length === 0 && (
-                    <p className="text-text-muted text-center py-8">No recent activity</p>
-                  )}
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Open Disputes</span>
+                    <span className="font-semibold text-text-primary">{pendingDisputes}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Pending Reports</span>
+                    <span className="font-semibold text-text-primary">{unresolvedReports}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Pending Sponsorship Payouts</span>
+                    <span className="font-semibold text-text-primary">{payoutsPending.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Organizer KYC Pending</span>
+                    <span className="font-semibold text-text-primary">{organizerKycPending}</span>
+                  </div>
                 </div>
               </div>
             </section>
 
-            {/* Alerts */}
             <section>
-              <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-                <Icons.AlertTriangle className="h-5 w-5 text-primary" /> Critical Alerts
-              </h2>
-              <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
-                <div className="text-5xl mb-3">✔️</div>
-                <p className="text-text-secondary">All systems operational</p>
-                <p className="text-sm text-text-muted mt-2">No critical alerts at this time</p>
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Recent Activity Timeline</h3>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default space-y-3">
+                {events.slice(0, 6).map((event) => (
+                  <div key={event.id} className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <div>
+                      <p className="text-text-primary font-medium">{event.title}</p>
+                      <p className="text-xs text-text-muted">Organizer: {event.organizer_email}</p>
+                    </div>
+                    <span className="text-xs text-text-muted">{formatDate(event.created_at)}</span>
+                  </div>
+                ))}
+                {events.length === 0 && <p className="text-text-muted text-center py-8">No recent activity</p>}
               </div>
             </section>
           </div>
         )}
 
-        {/* ANALYTICS TAB */}
-        {activeTab === "analytics" && (
+        {/* REPORTS SECTION (within payments context) */}
+        {activeTab === "payments" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-              <Icons.TrendingUp className="h-5 w-5" /> Advanced Analytics
-            </h2>
+            <h2 className="text-2xl font-bold text-text-primary">Reports and Disputes</h2>
 
-            {/* Analytics Sub-tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {[
-                { id: 'overview', label: 'Overview' },
-                { id: 'revenue', label: 'Revenue' },
-                { id: 'users', label: 'User Growth' },
-                { id: 'events', label: 'Event Performance' },
-                { id: 'logs', label: 'Admin Logs' },
-                { id: 'reports', label: 'Reports' },
-                { id: 'disputes', label: 'Disputes' },
-              ].map((tab: any) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setAnalyticsTab(tab.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                    analyticsTab === tab.id
-                      ? 'bg-primary text-white'
-                      : 'bg-bg-muted text-text-secondary hover:bg-bg-elevated'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setReportsSubTab("reports")}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  reportsSubTab === "reports"
+                    ? "bg-primary text-text-inverse"
+                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
+                }`}
+              >
+                Reports ({(reports.userReports?.length || 0) + (reports.eventReports?.length || 0)})
+              </button>
+              <button
+                onClick={() => setReportsSubTab("disputes")}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  reportsSubTab === "disputes"
+                    ? "bg-primary text-text-inverse"
+                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
+                }`}
+              >
+                Disputes ({disputes.length})
+              </button>
             </div>
 
-            {/* Overview Sub-tab */}
-            {analyticsTab === 'overview' && metrics && (
-              <div className="space-y-6">
-                {/* Revenue Overview */}
-                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">Revenue Overview</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-bg-muted rounded-lg">
-                      <div className="text-sm text-text-muted mb-1">Total Revenue</div>
-                      <div className="text-2xl font-bold text-text-primary">₹{metrics.totalRevenue.toLocaleString()}</div>
-                    </div>
-                    <div className="p-4 bg-bg-muted rounded-lg">
-                      <div className="text-sm text-text-muted mb-1">Total Transactions</div>
-                      <div className="text-2xl font-bold text-text-primary">{metrics.totalTransactions}</div>
-                    </div>
-                    <div className="p-4 bg-bg-muted rounded-lg">
-                      <div className="text-sm text-text-muted mb-1">Avg Transaction Value</div>
-                      <div className="text-2xl font-bold text-text-primary">
-                        ₹{metrics.totalTransactions > 0 ? Math.round(metrics.totalRevenue / metrics.totalTransactions).toLocaleString() : 0}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Platform Stats */}
-                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">Platform Statistics</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-bg-muted rounded-lg flex items-center gap-4">
-                      <Icons.Users className="h-8 w-8 text-purple-500" />
-                      <div>
-                        <div className="text-sm text-text-muted">Total Users</div>
-                        <div className="text-xl font-bold text-text-primary">{metrics.totalUsers}</div>
-                      </div>
-                    </div>
-                    <div className="p-4 bg-bg-muted rounded-lg flex items-center gap-4">
-                      <Icons.Calendar className="h-8 w-8 text-orange-500" />
-                      <div>
-                        <div className="text-sm text-text-muted">Total Events</div>
-                        <div className="text-xl font-bold text-text-primary">{metrics.totalEvents}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">Sponsorship Payouts</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="p-4 bg-bg-muted rounded-lg">
-                      <div className="text-sm text-text-muted mb-1">Total Sponsorship Revenue</div>
-                      <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalSponsorshipRevenue)}</div>
-                    </div>
-                    <div className="p-4 bg-bg-muted rounded-lg">
-                      <div className="text-sm text-text-muted mb-1">Platform Earnings</div>
-                      <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalPlatformEarnings)}</div>
-                    </div>
-                    <div className="p-4 bg-bg-muted rounded-lg">
-                      <div className="text-sm text-text-muted mb-1">Paid to Organizers</div>
-                      <div className="text-2xl font-bold text-text-primary">₹{Math.round(metrics.totalPaidToOrganizers)}</div>
-                    </div>
-                    <div className="p-4 bg-bg-muted rounded-lg">
-                      <div className="text-sm text-text-muted mb-1">Pending Payouts</div>
-                      <div className="text-2xl font-bold text-text-primary">{metrics.pendingPayoutsCount}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <div className="text-sm text-text-muted mb-2">Pending Reports</div>
-                    <div className="text-3xl font-bold text-orange-500">
-                      {reports.userReports?.length + reports.eventReports?.length || 0}
-                    </div>
-                  </div>
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <div className="text-sm text-text-muted mb-2">Pending Disputes</div>
-                    <div className="text-3xl font-bold text-red-500">{disputes.length}</div>
-                  </div>
-                  <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                    <div className="text-sm text-text-muted mb-2">Recent Admin Actions</div>
-                    <div className="text-3xl font-bold text-blue-500">{adminLogs.length}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Revenue Sub-tab */}
-            {analyticsTab === 'revenue' && (
-              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Revenue Trend (Last 30 Days)</h3>
-                {revenueData.length > 0 ? (
-                  <RevenueChart data={revenueData} type="bar" />
-                ) : (
-                  <div className="text-center py-8 text-text-muted">No revenue data available</div>
-                )}
-              </div>
-            )}
-
-            {/* User Growth Sub-tab */}
-            {analyticsTab === 'users' && (
-              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">User Growth (Last 30 Days)</h3>
-                {userGrowthData.length > 0 ? (
-                  <UserGrowthChart data={userGrowthData} />
-                ) : (
-                  <div className="text-center py-8 text-text-muted">No user growth data available</div>
-                )}
-              </div>
-            )}
-
-            {/* Event Performance Sub-tab */}
-            {analyticsTab === 'events' && (
-              <div className="space-y-6">
-                {/* Event Performance Table */}
-                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">Top Performing Events</h3>
-                  {eventPerformance.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead className="border-b border-border-default">
-                          <tr className="text-left text-text-secondary">
-                            <th className="px-4 py-3">Event</th>
-                            <th className="px-4 py-3">Registrations</th>
-                            <th className="px-4 py-3">Fill Rate</th>
-                            <th className="px-4 py-3">Revenue</th>
-                            <th className="px-4 py-3">Avg/Reg</th>
+            {reportsSubTab === "reports" && (
+              <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-bg-muted">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Type</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Reason</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-default">
+                      {[...(reports.userReports || []).map((r: any) => ({ ...r, _kind: "user" })), ...(reports.eventReports || []).map((r: any) => ({ ...r, _kind: "event" }))]
+                        .slice(0, 20)
+                        .map((report: any) => (
+                          <tr key={`${report._kind}-${report.id}`} className="hover:bg-bg-muted">
+                            <td className="px-6 py-4 text-sm text-text-primary capitalize">{report._kind} report</td>
+                            <td className="px-6 py-4 text-sm text-text-secondary">{report.reason || report.message || "-"}</td>
+                            <td className="px-6 py-4 text-sm text-text-secondary">{report.status || "pending"}</td>
+                            <td className="px-6 py-4 text-sm text-text-muted">{formatDate(report.created_at)}</td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {eventPerformance.slice(0, 10).map((event: any) => (
-                            <tr key={event.eventId} className="border-b border-border-default">
-                              <td className="px-4 py-3 text-text-primary">{event.eventTitle}</td>
-                              <td className="px-4 py-3">{event.registrations}/{event.maxRegistrations}</td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-20 h-2 bg-bg-muted rounded-full overflow-hidden">
-                                    <div 
-                                      className="h-full bg-primary" 
-                                      style={{ width: `${event.registrationRate}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-text-secondary">{event.registrationRate}%</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 font-medium">₹{event.revenue.toLocaleString()}</td>
-                              <td className="px-4 py-3 text-text-secondary">₹{Math.round(event.avgRevenuePerRegistration)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-text-muted">No event performance data available</div>
-                  )}
+                        ))}
+                    </tbody>
+                  </table>
                 </div>
-
               </div>
             )}
 
-            {/* Admin Logs Sub-tab */}
-            {analyticsTab === 'logs' && (
-              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Recent Admin Actions</h3>
-                {adminLogs.length > 0 ? (
-                  <div className="space-y-3">
-                    {adminLogs.map((log: any) => (
-                      <div key={log.id} className="p-4 bg-bg-muted rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="font-medium text-text-primary">{log.action}</div>
-                            <div className="text-sm text-text-muted mt-1">
-                              By {log.admin_email} • {new Date(log.created_at).toLocaleString()}
-                            </div>
-                            {log.details && (
-                              <div className="text-xs text-text-secondary mt-2 font-mono">
-                                {JSON.stringify(log.details, null, 2)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-text-muted">No admin logs available</div>
-                )}
-              </div>
-            )}
-
-            {/* Reports Sub-tab */}
-            {analyticsTab === 'reports' && (
-              <div className="space-y-6">
-                {/* User Reports */}
-                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">User Reports</h3>
-                  {reports.userReports?.length > 0 ? (
-                    <div className="space-y-3">
-                      {reports.userReports.map((report: any) => (
-                        <div key={report.id} className="p-4 bg-bg-muted rounded-lg">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="font-medium text-text-primary">Reported User: {report.reported_user_email}</div>
-                              <div className="text-sm text-text-secondary mt-1">Reason: {report.reason}</div>
-                              <div className="text-xs text-text-muted mt-2">
-                                Reported by {report.reported_by_email} • {new Date(report.created_at).toLocaleString()}
-                              </div>
-                              {report.status !== 'pending' && (
-                                <div className="text-xs text-text-secondary mt-2 font-mono">
-                                  Status: {report.status} | Action: {report.action_taken || 'N/A'}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              <select 
-                                value={report.status}
-                                onChange={async (e) => {
-                                  setUpdatingReportId(report.id);
-                                  try {
-                                    await fetch('/api/admin/reports', {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        reportId: report.id,
-                                        type: 'user',
-                                        status: e.target.value,
-                                        actionTaken: reportNotes[report.id] || null
-                                      })
-                                    });
-                                    toast.success('Report updated');
-                                    fetchAnalyticsData();
-                                  } catch (error) {
-                                    toast.error('Failed to update report');
-                                  } finally {
-                                    setUpdatingReportId(null);
-                                  }
-                                }}
-                                disabled={updatingReportId === report.id}
-                                className="px-3 py-1 bg-bg-muted border border-border-default rounded-lg text-xs"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="reviewed">Reviewed</option>
-                                <option value="dismissed">Dismissed</option>
-                                <option value="action_taken">Action Taken</option>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
+            {reportsSubTab === "disputes" && (
+              <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-bg-muted">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Dispute ID</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Payment ID</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Amount</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-default">
+                      {disputes.slice(0, 20).map((dispute: any) => (
+                        <tr key={dispute.id} className="hover:bg-bg-muted">
+                          <td className="px-6 py-4 text-sm text-text-primary">{dispute.id}</td>
+                          <td className="px-6 py-4 text-sm text-text-secondary">{dispute.payment_id || "-"}</td>
+                          <td className="px-6 py-4 text-sm text-text-secondary">{dispute.status}</td>
+                          <td className="px-6 py-4 text-sm text-text-primary font-semibold">{formatCurrency(dispute.amount || 0)}</td>
+                          <td className="px-6 py-4 text-sm text-text-muted">{formatDate(dispute.created_at)}</td>
+                        </tr>
                       ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-text-muted">No pending user reports</div>
-                  )}
-                </div>
-
-                {/* Event Reports */}
-                <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">Event Reports</h3>
-                  {reports.eventReports?.length > 0 ? (
-                    <div className="space-y-3">
-                      {reports.eventReports.map((report: any) => (
-                        <div key={report.id} className="p-4 bg-bg-muted rounded-lg">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="font-medium text-text-primary">Event ID: {report.event_id}</div>
-                              <div className="text-sm text-text-secondary mt-1">Reason: {report.reason}</div>
-                              <div className="text-xs text-text-muted mt-2">
-                                Reported by {report.reported_by_email} • {new Date(report.created_at).toLocaleString()}
-                              </div>
-                              {report.status !== 'pending' && (
-                                <div className="text-xs text-text-secondary mt-2 font-mono">
-                                  Status: {report.status} | Action: {report.action_taken || 'N/A'}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              <select 
-                                value={report.status}
-                                onChange={async (e) => {
-                                  setUpdatingReportId(report.id);
-                                  try {
-                                    await fetch('/api/admin/reports', {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        reportId: report.id,
-                                        type: 'event',
-                                        status: e.target.value,
-                                        actionTaken: reportNotes[report.id] || null
-                                      })
-                                    });
-                                    toast.success('Report updated');
-                                    fetchAnalyticsData();
-                                  } catch (error) {
-                                    toast.error('Failed to update report');
-                                  } finally {
-                                    setUpdatingReportId(null);
-                                  }
-                                }}
-                                disabled={updatingReportId === report.id}
-                                className="px-3 py-1 bg-bg-muted border border-border-default rounded-lg text-xs"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="reviewed">Reviewed</option>
-                                <option value="dismissed">Dismissed</option>
-                                <option value="action_taken">Action Taken</option>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-text-muted">No pending event reports</div>
-                  )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
-
-            {/* Disputes Sub-tab */}
-            {analyticsTab === 'disputes' && (
-              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Payment Disputes</h3>
-                {disputes.length > 0 ? (
-                  <div className="space-y-3">
-                    {disputes.map((dispute: any) => (
-                      <div key={dispute.id} className="p-4 bg-bg-muted rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium text-text-primary">Payment ID: {dispute.payment_id}</div>
-                            <div className="text-sm text-text-secondary mt-1">Reason: {dispute.reason}</div>
-                            <div className="text-sm text-text-secondary">Amount: ₹{dispute.amount}</div>
-                            <div className="text-xs text-text-muted mt-2">
-                              By {dispute.student_email} • {new Date(dispute.created_at).toLocaleString()}
-                            </div>
-                            <div className="mt-2 flex gap-1">
-                              <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${
-                                dispute.status === 'open' ? 'bg-yellow-900/20 text-yellow-400 border-yellow-700/50' :
-                                dispute.status === 'investigating' ? 'bg-blue-900/20 text-blue-400 border-blue-700/50' :
-                                dispute.status === 'resolved' ? 'bg-green-900/20 text-green-400 border-green-700/50' :
-                                dispute.status === 'refunded' ? 'bg-green-900/30 text-green-300 border-green-700/50' :
-                                'bg-gray-800 text-gray-300 border-gray-700'
-                              }`}>
-                                {dispute.status}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <select 
-                              value={dispute.status}
-                              onChange={async (e) => {
-                                setUpdatingDisputeId(dispute.id);
-                                try {
-                                  await fetch('/api/admin/disputes', {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      disputeId: dispute.id,
-                                      status: e.target.value,
-                                      adminNotes: disputeNotes[dispute.id] || null
-                                    })
-                                  });
-                                  toast.success(`Dispute updated to ${e.target.value}`);
-                                  fetchAnalyticsData();
-                                } catch (error) {
-                                  toast.error('Failed to update dispute');
-                                }
-                              }}
-                              disabled={updatingDisputeId === dispute.id}
-                              className="px-3 py-1 bg-bg-muted border border-border-default rounded-lg text-xs"
-                            >
-                              <option value="open">Open</option>
-                              <option value="investigating">Investigating</option>
-                              <option value="resolved">Resolved</option>
-                              <option value="refunded">Refunded</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-text-muted">No pending disputes</div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* COLLEGES TAB */}
-        {activeTab === "colleges" && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-              <span>🏫</span> Colleges ({getTotalColleges()})
-            </h2>
-
-            <div className="bg-bg-card rounded-xl p-8 text-center border border-border-default">
-              <div className="text-5xl mb-3">🏭</div>
-              <p className="text-text-secondary">College management coming soon</p>
-              <p className="text-sm text-text-muted mt-2">View and manage registered colleges</p>
-            </div>
           </div>
         )}
 
         {/* EVENTS TAB */}
         {activeTab === "events" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-                <span>�</span> All Events ({events.length})
-              </h2>
+            <h2 className="text-2xl font-bold text-text-primary">Event Performance Metrics</h2>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Total Events</div>
+                <div className="text-2xl font-bold text-text-primary">{events.length}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Events Today</div>
+                <div className="text-2xl font-bold text-text-primary">{getEventsToday().length}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Avg Registration Rate</div>
+                <div className="text-2xl font-bold text-text-primary">
+                  {formatPercent(
+                    eventPerformance.length
+                      ? eventPerformance.reduce((sum, row) => sum + (row.registrationRate || 0), 0) / eventPerformance.length
+                      : 0
+                  )}
+                </div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Attendance Rate</div>
+                <div className="text-2xl font-bold text-text-primary">{formatPercent(attendanceRate)}</div>
+              </div>
             </div>
 
-            {/* Filters */}
+            <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
+              <div className="px-6 py-4 border-b border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary">Top Performing Events</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Event</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Registrations</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Capacity</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Fill Rate</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Revenue</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Avg / Registration</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-default">
+                    {topEventsByRevenue.map((row: any) => (
+                      <tr key={row.eventId} className="hover:bg-bg-muted">
+                        <td className="px-6 py-4 text-sm text-text-primary">{row.eventTitle}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{row.registrations}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{row.maxRegistrations || "-"}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{formatPercent(row.registrationRate || 0)}</td>
+                        <td className="px-6 py-4 text-sm text-text-primary font-semibold">{formatCurrency(row.revenue || 0)}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{formatCurrency(row.avgRevenuePerRegistration || 0)}</td>
+                      </tr>
+                    ))}
+                    {topEventsByRevenue.length === 0 && (
+                      <tr>
+                        <td className="px-6 py-8 text-center text-text-muted" colSpan={6}>No event performance data available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div className="flex gap-2 overflow-x-auto pb-2">
               {["all", "today", "week"].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setEventFilter(filter as any)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
                     eventFilter === filter
                       ? "bg-primary text-text-inverse"
                       : "bg-bg-card text-text-secondary hover:bg-bg-muted"
@@ -949,11 +764,12 @@ export default function AdminDashboard() {
               ))}
             </div>
 
-            {/* Event List */}
             <div className="space-y-4">
               {getFilteredEvents().map((event) => {
                 const regCount = getEventRegistrationCount(event.id);
                 const revenue = getEventRevenue(event.id);
+                const capacity = Number(event.max_registrations || 0);
+                const fillRate = capacity > 0 ? (regCount / capacity) * 100 : 0;
 
                 return (
                   <div key={event.id} className="bg-bg-card rounded-xl p-6 border border-border-default">
@@ -962,24 +778,32 @@ export default function AdminDashboard() {
                         <h3 className="text-xl font-bold text-text-primary mb-2">{event.title}</h3>
                         <p className="text-sm text-text-muted mb-3 line-clamp-2">{event.description}</p>
                         <div className="flex flex-wrap gap-4 text-sm text-text-secondary">
-                          <span>� {event.organizer_email}</span>
-                          <span>📋 {new Date(event.date).toLocaleDateString()}</span>
-                          <span>📍 {event.location}</span>
-                          <span>💵 ₹{event.price}</span>
+                          <span>{event.organizer_email}</span>
+                          <span>{formatDate(event.start_datetime || event.date)}</span>
+                          <span>{event.location || event.venue || "TBA"}</span>
+                          <span>{formatCurrency(Number(event.price || 0))}</span>
                         </div>
                       </div>
-                      <span className="px-3 py-1 bg-green-900/30 text-success rounded-full text-xs font-semibold border border-success">
-                        🟢 Active
+                      <span className="px-3 py-1 bg-primarySoft text-primary rounded-full text-xs font-semibold border border-border-default">
+                        {event.status || "active"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-6 pt-4 border-t border-border-default">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border-default">
                       <div>
                         <div className="text-2xl font-bold text-text-primary">{regCount}</div>
                         <div className="text-xs text-text-muted">Registrations</div>
                       </div>
                       <div>
-                        <div className="text-2xl font-bold text-text-primary">₹{revenue}</div>
+                        <div className="text-2xl font-bold text-text-primary">{formatCurrency(revenue)}</div>
                         <div className="text-xs text-text-muted">Revenue</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-text-primary">{capacity || "-"}</div>
+                        <div className="text-xs text-text-muted">Capacity</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-text-primary">{formatPercent(fillRate)}</div>
+                        <div className="text-xs text-text-muted">Fill Rate</div>
                       </div>
                     </div>
                   </div>
@@ -992,60 +816,347 @@ export default function AdminDashboard() {
         {/* PAYMENTS TAB */}
         {activeTab === "payments" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-              <span>💰</span> Payments
-            </h2>
+            <h2 className="text-2xl font-bold text-text-primary">Payments and Sponsorships</h2>
 
-            {/* Payment Overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <div className="text-sm text-text-muted mb-2">Total Revenue</div>
-                <div className="text-2xl font-bold text-text-primary">₹{getTotalRevenue()}</div>
+                <div className="text-sm text-text-muted mb-2">Ticket Revenue</div>
+                <div className="text-2xl font-bold text-text-primary">{formatCurrency(getTotalRevenue())}</div>
               </div>
               <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <div className="text-sm text-text-muted mb-2">Transactions</div>
-                <div className="text-2xl font-bold text-text-primary">{registrations.length}</div>
+                <div className="text-sm text-text-muted mb-2">Sponsorship Revenue</div>
+                <div className="text-2xl font-bold text-text-primary">{formatCurrency(metrics?.totalSponsorshipRevenue || sponsorshipRevenueFromDeals)}</div>
               </div>
               <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <div className="text-sm text-text-muted mb-2">Today</div>
-                <div className="text-2xl font-bold text-text-primary">₹{getRevenueToday()}</div>
+                <div className="text-sm text-text-muted mb-2">Total Transactions</div>
+                <div className="text-2xl font-bold text-text-primary">{registrations.length + sponsorshipPaidDeals.length}</div>
               </div>
               <div className="bg-bg-card rounded-xl p-6 border border-border-default">
-                <div className="text-sm text-text-muted mb-2">Failed</div>
-                <div className="text-2xl font-bold text-error">{getFailedPayments()}</div>
+                <div className="text-sm text-text-muted mb-2">Average Transaction Value</div>
+                <div className="text-2xl font-bold text-text-primary">{formatCurrency((averageTicketValue + averageSponsorshipValue) / (averageSponsorshipValue > 0 ? 2 : 1))}</div>
               </div>
             </div>
 
-            {/* Transaction Table */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Settlement Tracking</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Paid Payouts</span>
+                    <span className="font-semibold text-text-primary">{payoutsPaid.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Pending Payouts</span>
+                    <span className="font-semibold text-text-primary">{payoutsPending.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Platform Earnings</span>
+                    <span className="font-semibold text-text-primary">{formatCurrency(metrics?.totalPlatformEarnings || 0)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Paid to Organizers</span>
+                    <span className="font-semibold text-text-primary">{formatCurrency(metrics?.totalPaidToOrganizers || 0)}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Payment Risk Snapshot</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Open Disputes</span>
+                    <span className="font-semibold text-text-primary">{pendingDisputes}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Failed Payments</span>
+                    <span className="font-semibold text-text-primary">{getFailedPayments()}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Pending Sponsorship Orders</span>
+                    <span className="font-semibold text-text-primary">{sponsorshipPendingDeals.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-muted rounded-lg">
+                    <span className="text-text-secondary">Revenue Today</span>
+                    <span className="font-semibold text-text-primary">{formatCurrency(getRevenueToday())}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
+              <div className="px-6 py-4 border-b border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary">Ticket Transactions</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Student</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Event</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-default">
+                    {registrations.slice(0, 12).map((reg) => {
+                      const event = events.find((e) => e.id === reg.event_id);
+                      return (
+                        <tr key={reg.id} className="hover:bg-bg-muted">
+                          <td className="px-6 py-4 text-sm text-text-primary">{reg.student_email || reg.user_email || "-"}</td>
+                          <td className="px-6 py-4 text-sm text-text-secondary">{event?.title || "Unknown"}</td>
+                          <td className="px-6 py-4 text-sm text-text-primary font-semibold">{formatCurrency(reg.final_price)}</td>
+                          <td className="px-6 py-4 text-sm text-text-secondary">{reg.status || "registered"}</td>
+                          <td className="px-6 py-4 text-sm text-text-muted">{formatDate(reg.created_at)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
+              <div className="px-6 py-4 border-b border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary">Sponsorship Transactions</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Sponsor</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Target</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Pack</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-default">
+                    {sponsorships.slice(0, 12).map((deal) => (
+                      <tr key={deal.id} className="hover:bg-bg-muted">
+                        <td className="px-6 py-4 text-sm text-text-primary">{deal.sponsor_email}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{deal.events?.title || deal.fests?.title || "Platform"}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary uppercase">{deal.pack_type || "-"}</td>
+                        <td className="px-6 py-4 text-sm text-text-primary font-semibold">{formatCurrency(deal.amount || 0)}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{deal.status}</td>
+                        <td className="px-6 py-4 text-sm text-text-muted">{formatDate(deal.created_at)}</td>
+                      </tr>
+                    ))}
+                    {sponsorships.length === 0 && (
+                      <tr>
+                        <td className="px-6 py-8 text-center text-text-muted" colSpan={6}>No sponsorship transactions found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* SPONSORSHIPS TAB */}
+        {activeTab === "sponsorships" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-text-primary">Sponsorship Operations</h2>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Paid Deals</div>
+                <div className="text-2xl font-bold text-text-primary">{sponsorshipPaidDeals.length}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Pending Deals</div>
+                <div className="text-2xl font-bold text-text-primary">{sponsorshipPendingDeals.length}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Total Sponsorship Revenue</div>
+                <div className="text-2xl font-bold text-text-primary">{formatCurrency(metrics?.totalSponsorshipRevenue || sponsorshipRevenueFromDeals)}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Pending Payouts</div>
+                <div className="text-2xl font-bold text-text-primary">{payoutsPending.length}</div>
+              </div>
+            </div>
+
+            <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
+              <div className="px-6 py-4 border-b border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary">Sponsorship Transactions</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Sponsor</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Target</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Pack</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-default">
+                    {sponsorships.slice(0, 20).map((deal) => (
+                      <tr key={deal.id} className="hover:bg-bg-muted">
+                        <td className="px-6 py-4 text-sm text-text-primary">{deal.sponsor_email}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{deal.events?.title || deal.fests?.title || "Platform"}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary uppercase">{deal.pack_type || "-"}</td>
+                        <td className="px-6 py-4 text-sm text-text-primary font-semibold">{formatCurrency(deal.amount || 0)}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{deal.status}</td>
+                        <td className="px-6 py-4 text-sm text-text-muted">{formatDate(deal.created_at)}</td>
+                      </tr>
+                    ))}
+                    {sponsorships.length === 0 && (
+                      <tr>
+                        <td className="px-6 py-8 text-center text-text-muted" colSpan={6}>No sponsorship transactions found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
+              <div className="px-6 py-4 border-b border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary">Payout Tracking</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Organizer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Gross</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Platform Fee</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Payout</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-default">
+                    {payouts.slice(0, 20).map((payout) => (
+                      <tr key={payout.id} className="hover:bg-bg-muted">
+                        <td className="px-6 py-4 text-sm text-text-primary">{payout.organizer_email}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{formatCurrency(payout.gross_amount)}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{formatCurrency(payout.platform_fee)}</td>
+                        <td className="px-6 py-4 text-sm text-text-primary font-semibold">{formatCurrency(payout.payout_amount)}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary capitalize">{payout.payout_status}</td>
+                        <td className="px-6 py-4 text-sm text-text-muted">{formatDate(payout.created_at)}</td>
+                      </tr>
+                    ))}
+                    {payouts.length === 0 && (
+                      <tr>
+                        <td className="px-6 py-8 text-center text-text-muted" colSpan={6}>No payout data available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* USERS TAB */}
+        {activeTab === "users" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-text-primary">User Analytics</h2>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Students</div>
+                <div className="text-2xl font-bold text-text-primary">{students.length}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Organizers</div>
+                <div className="text-2xl font-bold text-text-primary">{organizerUsers.length}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Sponsors</div>
+                <div className="text-2xl font-bold text-text-primary">{sponsors.length}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Attendance Rate</div>
+                <div className="text-2xl font-bold text-text-primary">{formatPercent(attendanceRate)}</div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setUsersSubTab("students")}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  usersSubTab === "students"
+                    ? "bg-primary text-text-inverse"
+                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
+                }`}
+              >
+                Students ({students.length})
+              </button>
+              <button
+                onClick={() => setUsersSubTab("organizers")}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  usersSubTab === "organizers"
+                    ? "bg-primary text-text-inverse"
+                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
+                }`}
+              >
+                Organizers ({organizerUsers.length})
+              </button>
+              <button
+                onClick={() => setUsersSubTab("sponsors")}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  usersSubTab === "sponsors"
+                    ? "bg-primary text-text-inverse"
+                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
+                }`}
+              >
+                Sponsors ({sponsors.length})
+              </button>
+            </div>
+
+            <div>
+              <input
+                type="text"
+                placeholder="Search by email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-3 text-text-primary placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+
             <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-bg-muted">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                        Student
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                        Event
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                        Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                        Date
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Role</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Joined</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Registrations</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Events Created</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Financial Summary</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {registrations.slice(0, 10).map((reg) => {
-                      const event = events.find(e => e.id === reg.event_id);
+                  <tbody className="divide-y divide-border-default">
+                    {getFilteredUsers().map((user) => {
+                      const userRegs = getUserRegistrations(user.email);
+                      const userEvents = getUserEvents(user.email);
+                      const userSpend = userRegs.reduce((sum, reg) => sum + (reg.final_price || 0), 0);
+                      const sponsorshipSpend = sponsorships
+                        .filter((deal) => deal.sponsor_email === user.email)
+                        .reduce((sum, deal) => sum + (deal.amount || 0), 0);
+
                       return (
-                        <tr key={reg.id} className="hover:bg-bg-muted transition-all duration-fast ease-standard">
-                          <td className="px-6 py-4 text-sm text-text-primary">{reg.student_email}</td>
-                          <td className="px-6 py-4 text-sm text-text-secondary">{event?.title || 'Unknown'}</td>
-                          <td className="px-6 py-4 text-sm text-text-primary font-semibold">₹{reg.final_price}</td>
-                          <td className="px-6 py-4 text-sm text-text-muted">
-                            {new Date(reg.created_at).toLocaleDateString()}
+                        <tr key={user.email} className="hover:bg-bg-muted">
+                          <td className="px-6 py-4 text-sm text-text-primary">{user.email}</td>
+                          <td className="px-6 py-4 text-sm text-text-secondary capitalize">{user.role}</td>
+                          <td className="px-6 py-4 text-sm text-text-muted">{formatDate(user.created_at)}</td>
+                          <td className="px-6 py-4 text-sm text-text-secondary">{userRegs.length}</td>
+                          <td className="px-6 py-4 text-sm text-text-secondary">{userEvents.length}</td>
+                          <td className="px-6 py-4 text-sm text-text-primary font-semibold">
+                            {usersSubTab === "students"
+                              ? formatCurrency(userSpend)
+                              : usersSubTab === "organizers"
+                              ? formatCurrency(userEvents.reduce((sum, evt) => sum + getEventRevenue(evt.id), 0))
+                              : formatCurrency(sponsorshipSpend)}
                           </td>
                         </tr>
                       );
@@ -1057,94 +1168,81 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* USERS TAB */}
-        {activeTab === "users" && (
+        {/* ORGANIZER MANAGEMENT (within users) */}
+        {activeTab === "users" && usersSubTab === "organizers" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-              <span>👥</span> Users
-            </h2>
+            <h2 className="text-2xl font-bold text-text-primary">Organizers Management</h2>
 
-            {/* Sub-tabs */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setUsersSubTab("students")}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  usersSubTab === "students"
-                    ? "bg-primary text-text-inverse"
-                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
-                }`}
-              >
-                Students ({users.filter(u => u.role === "student").length})
-              </button>
-              <button
-                onClick={() => setUsersSubTab("organizers")}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  usersSubTab === "organizers"
-                    ? "bg-primary text-text-inverse"
-                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
-                }`}
-              >
-                Organizers ({users.filter(u => u.role === "organizer").length})
-              </button>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">Total Organizers</div>
+                <div className="text-2xl font-bold text-text-primary">{organizerUsers.length}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">KYC Verified</div>
+                <div className="text-2xl font-bold text-text-primary">{organizerKycVerified}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">KYC Pending</div>
+                <div className="text-2xl font-bold text-text-primary">{organizerKycPending}</div>
+              </div>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <div className="text-sm text-text-muted">College Partners</div>
+                <div className="text-2xl font-bold text-text-primary">{getTotalColleges()}</div>
+              </div>
             </div>
 
-            {/* Search */}
-            <div>
-              <input
-                type="text"
-                placeholder="Search by email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-3 text-text-primary placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-              />
-            </div>
-
-            {/* User List */}
-            <div className="space-y-3">
-              {getFilteredUsers().map((user) => {
-                const userRegs = getUserRegistrations(user.email);
-                const userEvents = getUserEvents(user.email);
-
-                return (
-                  <div
-                    key={user.email}
-                    onClick={() => setSelectedUser(user)}
-                    className="bg-bg-card rounded-xl p-6 border border-border-default hover:border-violet-700 cursor-pointer transition-all"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-text-primary mb-2">{user.email}</h3>
-                        <div className="flex gap-4 text-sm text-text-muted">
-                          <span>📅 Joined {new Date(user.created_at).toLocaleDateString()}</span>
-                          {usersSubTab === "students" && (
-                            <span>🎟 {userRegs.length} registrations</span>
-                          )}
-                          {usersSubTab === "organizers" && (
-                            <span>📅 {userEvents.length} events</span>
-                          )}
-                        </div>
-                      </div>
-                      <span className="px-3 py-1 bg-primarySoft text-primary rounded-full text-xs font-semibold border border-border-default">
-                        {user.role}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
+              <div className="px-6 py-4 border-b border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary">Organizer Performance Table</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Organizer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">KYC Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Events</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Registrations</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Ticket Revenue</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase">Sponsorship Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-default">
+                    {organizerPerformanceRows.map((row) => (
+                      <tr key={row.email} className="hover:bg-bg-muted">
+                        <td className="px-6 py-4 text-sm text-text-primary">{row.email}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary capitalize">{row.organizerType}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary capitalize">{row.kycStatus}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{row.events}</td>
+                        <td className="px-6 py-4 text-sm text-text-secondary">{row.registrations}</td>
+                        <td className="px-6 py-4 text-sm text-text-primary font-semibold">{formatCurrency(row.ticketRevenue)}</td>
+                        <td className="px-6 py-4 text-sm text-text-primary font-semibold">{formatCurrency(row.sponsorshipRevenue)}</td>
+                      </tr>
+                    ))}
+                    {organizerPerformanceRows.length === 0 && (
+                      <tr>
+                        <td className="px-6 py-8 text-center text-text-muted" colSpan={7}>No organizer data available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default pb-[env(safe-area-inset-bottom)]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-card/95 backdrop-blur-md border-t border-border-default pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 px-2 py-2">
           {[
-            { id: "overview", icon: "📊", label: "Overview" },
-            { id: "colleges", icon: "🏫", label: "Colleges" },
-            { id: "events", icon: "📅", label: "Events" },
-            { id: "payments", icon: "💰", label: "Payments" },
-            { id: "users", icon: "👥", label: "Users" },
+            { id: "overview", icon: <Icons.Gauge className="h-5 w-5" />, label: "Overview" },
+            { id: "events", icon: <Icons.Calendar className="h-5 w-5" />, label: "Events" },
+            { id: "users", icon: <Icons.Users className="h-5 w-5" />, label: "Users" },
+            { id: "payments", icon: <Icons.Wallet className="h-5 w-5" />, label: "Payments" },
+            { id: "sponsorships", icon: <Icons.Handshake className="h-5 w-5" />, label: "Sponsor" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1155,7 +1253,7 @@ export default function AdminDashboard() {
                   : "text-text-muted hover:text-text-primary"
               }`}
             >
-              <span className="text-2xl">{tab.icon}</span>
+              <span className="text-text-primary">{tab.icon}</span>
               <span className="text-[11px] font-medium truncate">{tab.label}</span>
             </button>
           ))}

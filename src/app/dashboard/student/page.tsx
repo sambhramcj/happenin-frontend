@@ -22,6 +22,7 @@ import { PaymentLoading } from "@/components/PaymentLoading";
 import { LoadingButton } from "@/components/LoadingButton";
 import StudentHomePage from "@/components/home/StudentHomePage";
 import { RegistrationModal } from "@/components/RegistrationModal";
+import { NotificationCenter } from "@/components/NotificationCenter";
 
 type Membership = {
   club: string;
@@ -48,6 +49,8 @@ type Event = {
   discount_club?: string;
   discount_amount?: number;
   eligible_members?: EligibleMember[];
+  needs_volunteers?: boolean;
+  volunteer_roles?: Array<{ role: string; title?: string; description?: string }> | null;
 };
 
 type Registration = {
@@ -71,8 +74,9 @@ export default function StudentDashboard() {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"home" | "explore" | "my-events" | "profile" | "volunteer">("home");
-  const [exploreSubTab, setExploreSubTab] = useState<"events" | "favorites">("events");
-  const [myEventsTab, setMyEventsTab] = useState<"upcoming" | "registered" | "past">("upcoming");
+  const [exploreSubTab, setExploreSubTab] = useState<"events" | "nearby" | "favorites">("events");
+  const [myEventsTab, setMyEventsTab] = useState<"upcoming" | "past" | "certificates">("upcoming");
+  const [volunteerSubTab, setVolunteerSubTab] = useState<"opportunities" | "applications" | "certificates">("opportunities");
 
   // Data states
   const [club, setClub] = useState("");
@@ -196,6 +200,26 @@ export default function StudentDashboard() {
       console.error("Error fetching volunteer data:", err);
     } finally {
       setVolunteersLoading(false);
+    }
+  }
+
+  async function applyForVolunteer(event: Event, roleName: string) {
+    try {
+      const res = await fetch("/api/volunteers/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: event.id, role: roleName, message: "Interested to volunteer" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to apply");
+        return;
+      }
+      toast.success("Volunteer application submitted");
+      fetchVolunteerData();
+      setVolunteerSubTab("applications");
+    } catch {
+      toast.error("Failed to apply");
     }
   }
 
@@ -732,12 +756,25 @@ export default function StudentDashboard() {
   }
 
   function getTicketsForTab() {
-    if (myEventsTab === "registered") return tickets;
+    if (myEventsTab === "certificates") return [];
     const now = new Date();
     return tickets.filter((t) => {
       const eventDate = new Date(t.event_date);
       return myEventsTab === "upcoming" ? eventDate >= now : eventDate < now;
     });
+  }
+
+  function getNearbyEvents() {
+    const collegeHint = (profile?.college_name || "").toLowerCase().trim();
+    return getFilteredEvents().filter((event) => {
+      if (!collegeHint) return true;
+      const locationText = `${event.location || ""} ${event.description || ""}`.toLowerCase();
+      return locationText.includes(collegeHint);
+    });
+  }
+
+  function getVolunteerOpportunities() {
+    return events.filter((event) => event.needs_volunteers);
   }
 
   // Get top 10 trending events (by registration count)
@@ -817,24 +854,17 @@ export default function StudentDashboard() {
       <div className="sticky top-0 z-40 bg-bg-card/95 backdrop-blur-md border-b border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Happenin
-            </h1>
+            <img src="/branding/logo-wordmark-brand.svg" alt="Happenin" className="h-8 w-auto" />
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button
-              onClick={() => toast.info("Notifications coming soon!")}
-              className="p-2 hover:bg-bg-muted rounded-lg transition-colors transition-all duration-fast ease-standard"
-            >
-              <Icons.Bell className="h-6 w-6 text-text-secondary" />
-            </button>
+            <NotificationCenter />
           </div>
         </div>
 
         {/* Tab Navigation */}
         <div className="border-t border-border-default overflow-x-auto hidden md:block">
-          <div className="max-w-7xl mx-auto px-4 flex gap-1 text-sm font-medium">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex gap-2 text-sm font-medium">
             {[
               { id: "home", label: "Home", icon: Icons.Home },
               { id: "explore", label: "Explore", icon: Icons.Search },
@@ -845,10 +875,10 @@ export default function StudentDashboard() {
               <button
                 key={id}
                 onClick={() => setActiveTab(id as any)}
-                className={`px-4 py-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-full transition-all whitespace-nowrap flex items-center gap-2 ${
                   activeTab === id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-text-secondary hover:text-text-primary"
+                    ? "bg-primary text-text-inverse"
+                    : "bg-bg-card text-text-secondary hover:bg-bg-muted"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -887,6 +917,17 @@ export default function StudentDashboard() {
               </button>
               <button
                 type="button"
+                onClick={() => setExploreSubTab("nearby")}
+                className={`px-4 py-2 text-sm font-medium transition-all ${
+                  exploreSubTab === "nearby"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-text-secondary border-b-2 border-transparent"
+                }`}
+              >
+                Nearby
+              </button>
+              <button
+                type="button"
                 onClick={() => setExploreSubTab("favorites")}
                 className={`px-4 py-2 text-sm font-medium transition-all ${
                   exploreSubTab === "favorites"
@@ -899,8 +940,10 @@ export default function StudentDashboard() {
             </div>
 
             {/* Events Subtab */}
-            {exploreSubTab === "events" && (
+            {(exploreSubTab === "events" || exploreSubTab === "nearby") && (
               <div className="space-y-6">
+                {exploreSubTab === "events" && (
+                <>
                 {/* Search */}
             <div className="sticky top-20 z-30 bg-bg-card/95 backdrop-blur-md p-4 rounded-xl border border-border-default transition-all duration-medium ease-standard hover:-translate-y-1 hover:shadow-lg transition-all duration-medium ease-standard">
               <input
@@ -996,6 +1039,35 @@ export default function StudentDashboard() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+                </>
+                )}
+
+            {/* Nearby Subtab */}
+            {exploreSubTab === "nearby" && (
+              <div className="space-y-4">
+                {getNearbyEvents().length === 0 ? (
+                  <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
+                    <p className="text-text-muted mb-3">No nearby events found right now</p>
+                    <button
+                      onClick={() => setExploreSubTab("events")}
+                      className="bg-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-primaryHover"
+                    >
+                      Browse All Events
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {getNearbyEvents().map((event) => (
+                      <div key={event.id} className="bg-bg-card rounded-lg p-4 border border-border-default">
+                        <h3 className="font-semibold text-text-primary">{event.title}</h3>
+                        <p className="text-sm text-text-secondary mt-1 line-clamp-2">{event.description}</p>
+                        <div className="mt-2 text-xs text-text-muted">{event.location}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
               </div>
@@ -1096,17 +1168,6 @@ export default function StudentDashboard() {
               </button>
               <button
                 type="button"
-                onClick={() => setMyEventsTab("registered")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
-                  myEventsTab === "registered"
-                    ? "text-primary border-primary"
-                    : "text-text-secondary border-transparent"
-                }`}
-              >
-                Registered ({getRegisteredEvents().length})
-              </button>
-              <button
-                type="button"
                 onClick={() => setMyEventsTab("past")}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
                   myEventsTab === "past"
@@ -1116,9 +1177,41 @@ export default function StudentDashboard() {
               >
                 Past ({getPastEvents().length})
               </button>
+              <button
+                type="button"
+                onClick={() => setMyEventsTab("certificates")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+                  myEventsTab === "certificates"
+                    ? "text-primary border-primary"
+                    : "text-text-secondary border-transparent"
+                }`}
+              >
+                Certificates ({volunteerCertificates.length})
+              </button>
             </div>
 
-              {ticketsLoading ? (
+            {myEventsTab === "certificates" ? (
+              volunteerCertificates.length === 0 ? (
+                <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
+                  <p className="text-text-muted">No certificates yet</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {volunteerCertificates.map((cert: any) => (
+                    <div key={cert.id || cert.certificate_id} className="bg-bg-card rounded-lg p-4 border border-border-default">
+                      <CertificateComponent
+                        id={cert.id || cert.certificate_id || ""}
+                        certificateTitle={cert.certificate_title || cert.type || "Participation Certificate"}
+                        volunteerRole={cert.role || cert.certificate_type || "Participant"}
+                        eventName={cert.event_name || cert.eventName || ""}
+                        issuedDate={cert.date || cert.created_at || ""}
+                        issuedBy={cert.organization || cert.issued_by || "Organizer"}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : ticketsLoading ? (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-500 text-center">Getting your tickets…</p>
                   {[1, 2, 3].map((i) => (
@@ -1208,7 +1301,7 @@ export default function StudentDashboard() {
                 </div>
                 <div className="w-full bg-border-default rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all"
+                    className="bg-primary h-2 rounded-full transition-all"
                     style={{ width: `${profileCompletion}%` }}
                   />
                 </div>
@@ -1288,7 +1381,7 @@ export default function StudentDashboard() {
               {editingProfile && (
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-primary to-primaryHover text-text-inverse py-3 rounded-lg hover:from-primaryHover hover:to-primary transition-all font-semibold"
+                  className="w-full bg-primary text-text-inverse py-3 rounded-lg hover:bg-primaryHover transition-all font-semibold"
                 >
                   Save Profile
                 </button>
@@ -1362,7 +1455,77 @@ export default function StudentDashboard() {
         {/* VOLUNTEER TAB */}
         {activeTab === "volunteer" && (
           <div className="space-y-6 overflow-x-hidden">
+            <div className="flex gap-2 border-b border-border-default pb-2">
+              <button
+                type="button"
+                onClick={() => setVolunteerSubTab("opportunities")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+                  volunteerSubTab === "opportunities"
+                    ? "text-primary border-primary"
+                    : "text-text-secondary border-transparent"
+                }`}
+              >
+                Opportunities
+              </button>
+              <button
+                type="button"
+                onClick={() => setVolunteerSubTab("applications")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+                  volunteerSubTab === "applications"
+                    ? "text-primary border-primary"
+                    : "text-text-secondary border-transparent"
+                }`}
+              >
+                Applications
+              </button>
+              <button
+                type="button"
+                onClick={() => setVolunteerSubTab("certificates")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-all ${
+                  volunteerSubTab === "certificates"
+                    ? "text-primary border-primary"
+                    : "text-text-secondary border-transparent"
+                }`}
+              >
+                Certificates
+              </button>
+            </div>
+
+            {volunteerSubTab === "opportunities" && (
+              <section>
+                <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <Icons.Handshake className="h-5 w-5 text-primary" /> Volunteer Opportunities
+                </h2>
+                {getVolunteerOpportunities().length === 0 ? (
+                  <div className="bg-bg-card rounded-lg p-8 text-center border border-border-default">
+                    <p className="text-text-muted">No volunteer opportunities available</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {getVolunteerOpportunities().map((event) => (
+                      <div key={event.id} className="bg-bg-card rounded-lg p-4 border border-border-default">
+                        <h3 className="font-semibold text-text-primary">{event.title}</h3>
+                        <p className="text-sm text-text-secondary mt-1 line-clamp-2">{event.description}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {(event.volunteer_roles || []).map((roleObj: any, idx: number) => (
+                            <button
+                              key={`${event.id}-${idx}`}
+                              onClick={() => applyForVolunteer(event, roleObj.role || roleObj.title || "Volunteer")}
+                              className="px-3 py-1.5 bg-primarySoft text-primary rounded-lg text-xs font-medium hover:bg-primary hover:text-text-inverse transition-all"
+                            >
+                              Apply: {roleObj.title || roleObj.role || "Volunteer"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
             {/* My Applications */}
+            {volunteerSubTab === "applications" && (
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <Icons.Handshake className="h-5 w-5 text-primary" /> My Applications
@@ -1404,8 +1567,10 @@ export default function StudentDashboard() {
                 </div>
               )}
             </section>
+            )}
 
             {/* Certificates */}
+            {volunteerSubTab === "certificates" && (
             <section>
               <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
                 <Icons.Handshake className="h-5 w-5 text-primary" /> My Certificates
@@ -1431,6 +1596,7 @@ export default function StudentDashboard() {
                 </div>
               )}
             </section>
+            )}
           </div>
         )}
 

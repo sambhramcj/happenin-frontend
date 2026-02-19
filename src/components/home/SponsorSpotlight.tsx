@@ -99,7 +99,7 @@ export default function SponsorSpotlight({ selectedCollege }: SponsorSpotlightPr
         </span>
       </div>
 
-      <div className="relative bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl overflow-hidden border border-yellow-200">
+      <div className="relative bg-bg-card rounded-xl overflow-hidden border border-border-default">
         <div className="relative h-[200px] overflow-hidden">
           {/* Sponsor Banner */}
           {currentDeal.sponsors_profile.banner_url && (
@@ -112,7 +112,7 @@ export default function SponsorSpotlight({ selectedCollege }: SponsorSpotlightPr
           )}
 
           {/* Content Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center p-6">
+          <div className="absolute inset-0 bg-black/50 flex items-center p-6">
             <div className="flex items-center gap-6 text-white">
               {/* Sponsor Logo */}
               {currentDeal.sponsors_profile.logo_url && (

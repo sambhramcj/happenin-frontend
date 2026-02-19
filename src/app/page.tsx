@@ -1,6 +1,5 @@
-﻿'use client';
-
-import { ArrowRight, Calendar, Users, Zap, CheckCircle2, Sparkles, BarChart3, Shield, Heart, TrendingUp, MapPin, Clock } from 'lucide-react';
+'use client';
+import { ArrowRight, Calendar, Users, Zap, CheckCircle2, TrendingUp, MapPin, Clock, Search, CreditCard, QrCode, BarChart } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -9,353 +8,334 @@ import { useTheme } from 'next-themes';
 function LandingPage() {
   const router = useRouter();
   const primary = '#6D28D9';
-  const primaryHover = '#5B21B6';
   const primarySoft = '#EDE9FE';
   const textPrimary = '#111827';
   const textSecondary = '#6B7280';
   const bgMuted = '#F9FAFB';
 
   return (
-    <div style={{ backgroundColor: '#FFFFFF', color: textPrimary }} className="min-h-screen">
+    <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white border-b" style={{ borderColor: '#E5E7EB' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-16 flex items-center justify-between">
-            <div className="text-2xl font-bold" style={{ color: primary }}>Happenin</div>
-            <div className="flex gap-3 items-center">
-              <button onClick={() => router.push('/auth')} style={{ color: textSecondary }} className="hover:font-semibold transition">Log In</button>
-              <button onClick={() => router.push('/auth')} style={{ backgroundColor: primary, color: 'white' }} className="px-5 py-2 rounded-lg font-semibold hover:opacity-90 transition">Sign Up</button>
-            </div>
+      <nav className="fixed top-0 w-full z-50 bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="text-2xl font-bold" style={{ color: primary }}>Happenin</div>
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.push('/auth')} className="text-gray-600 hover:text-gray-900 font-medium">Login</button>
+            <button onClick={() => router.push('/auth')} style={{ backgroundColor: primary }} className="px-6 py-2 text-white font-semibold rounded-lg hover:opacity-90 transition">Get Started</button>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-24 px-4" style={{ backgroundColor: bgMuted }}>
+      <section className="pt-28 pb-20 px-4" style={{ backgroundColor: bgMuted }}>
         <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <div className="inline-block px-4 py-2 rounded-full" style={{ backgroundColor: primarySoft }}>
-                <span style={{ color: primary }} className="text-sm font-semibold">✨ The All-in-One Event Platform</span>
+          <div className="space-y-8">
+              <div className="inline-block px-4 py-2 rounded-full border" style={{ backgroundColor: 'white', borderColor: primary }}>
+                <span style={{ color: primary }} className="text-sm font-semibold">Campus Events Made Simple</span>
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold leading-tight" style={{ color: textPrimary }}>
-                Discover Campus Events. Register Instantly.
+              <h1 className="text-5xl lg:text-7xl font-bold leading-tight" style={{ color: textPrimary }}>
+                Your Campus Events, All in One Place
               </h1>
-              <p className="text-xl" style={{ color: textSecondary }}>Find inter-college fests, club meetings, and student events. Secure your spot with one click. Join thousands already using Happenin.</p>
+              <p className="text-xl lg:text-2xl leading-relaxed" style={{ color: textSecondary }}>
+                Discover inter-college fests, workshops, and cultural events. Register with one click. Never miss what's happening on campus.
+              </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button onClick={() => router.push('/events')} style={{ backgroundColor: primary }} className="px-8 py-3 text-white font-semibold rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition">
-                  Explore Events <ArrowRight className="w-5 h-5" />
+                <button 
+                  onClick={() => router.push('/events')} 
+                  style={{ backgroundColor: primary }} 
+                  className="px-10 py-4 text-white text-lg font-semibold rounded-xl flex items-center justify-center gap-3 hover:opacity-90 transition shadow-lg"
+                >
+                  Browse Events <ArrowRight className="w-6 h-6" />
                 </button>
-                <button onClick={() => router.push('/auth')} style={{ borderColor: primary, color: primary }} className="px-8 py-3 border-2 font-semibold rounded-lg hover:bg-gray-50 transition">
-                  Host an Event
+                <button 
+                  onClick={() => router.push('/auth')} 
+                  style={{ borderColor: primary, color: primary }} 
+                  className="px-10 py-4 border-2 text-lg font-semibold rounded-xl hover:bg-white transition"
+                >
+                  Create Event
                 </button>
               </div>
+              
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-8 pt-8">
+                <div>
+                  <div className="text-3xl font-bold" style={{ color: primary }}>1000+</div>
+                  <div className="text-sm" style={{ color: textSecondary }}>Active Students</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold" style={{ color: primary }}>500+</div>
+                  <div className="text-sm" style={{ color: textSecondary }}>Events Listed</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold" style={{ color: primary }}>10+</div>
+                  <div className="text-sm" style={{ color: textSecondary }}>Colleges</div>
+                </div>
+              </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-24 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" style={{ color: textPrimary }}>Everything you need in one app</h2>
+            <p className="text-xl" style={{ color: textSecondary }}>Simplified event discovery and management for students and organizers</p>
+          </div>
+
+          {/* Feature 1 - Browse Events */}
+          <div className="max-w-3xl mx-auto mb-20">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: primarySoft }}>
+                <Search className="w-4 h-4" style={{ color: primary }} />
+                <span style={{ color: primary }} className="text-sm font-semibold">Discover</span>
+              </div>
+              <h3 className="text-3xl md:text-4xl font-bold" style={{ color: textPrimary }}>Find Events That Matter</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                Browse through hundreds of campus events, filter by college, category, and date. Get personalized recommendations based on your interests.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>Search across all colleges and events</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>Filter by category, price, and location</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>See what's trending and happening today</span>
+                </li>
+              </ul>
             </div>
-            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="rounded-2xl p-8 border">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center">
-                    <Users style={{ color: primary }} className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-bold">1000+ Students</div>
-                    <div style={{ color: textSecondary }} className="text-sm">Active members</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center">
-                    <Calendar style={{ color: primary }} className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-bold">500+ Events</div>
-                    <div style={{ color: textSecondary }} className="text-sm">Listed this year</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center">
-                    <TrendingUp style={{ color: primary }} className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-bold">10+ Colleges</div>
-                    <div style={{ color: textSecondary }} className="text-sm">Partner institutions</div>
-                  </div>
-                </div>
+          </div>
+
+          {/* Feature 2 - Quick Registration */}
+          <div className="max-w-3xl mx-auto mb-20">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: primarySoft }}>
+                <Zap className="w-4 h-4" style={{ color: primary }} />
+                <span style={{ color: primary }} className="text-sm font-semibold">Register</span>
               </div>
+              <h3 className="text-3xl md:text-4xl font-bold" style={{ color: textPrimary }}>One-Click Registration</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                No more form filling hassles. Register for events instantly with secure payments and get your tickets delivered immediately.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>Secure Razorpay payment integration</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>Instant ticket generation with QR codes</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>Email confirmations and reminders</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Feature 3 - Manage Events */}
+          <div className="max-w-3xl mx-auto">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: primarySoft }}>
+                <BarChart className="w-4 h-4" style={{ color: primary }} />
+                <span style={{ color: primary }} className="text-sm font-semibold">Organize</span>
+              </div>
+              <h3 className="text-3xl md:text-4xl font-bold" style={{ color: textPrimary }}>Built for Organizers</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                Powerful dashboard to create events, manage registrations, track sales, and analyze attendee data. Everything you need to run successful events.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>Create and customize event pages</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>Real-time registration tracking</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: primary }} />
+                  <span style={{ color: textSecondary }}>QR code check-in system</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
       {/* Problem Section */}
-      <section className="py-24 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-4">Why Happenin?</h2>
-          <p style={{ color: textSecondary }} className="text-center text-lg max-w-2xl mx-auto mb-16">Students spend too much time searching for events. Clubs struggle with registrations. Happenin solves it all.</p>
-          
+      <section className="py-24 px-4" style={{ backgroundColor: bgMuted }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" style={{ color: textPrimary }}>The Old Way is Broken</h2>
+            <p className="text-xl max-w-3xl mx-auto" style={{ color: textSecondary }}>
+              Finding and registering for campus events shouldn't be this complicated
+            </p>
+          </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="p-8 rounded-xl border">
-              <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <MapPin style={{ color: primary }} className="w-6 h-6" />
+            <div className="p-8 rounded-2xl border-2 border-gray-200 bg-white hover:border-purple-200 transition">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: primarySoft }}>
+                <MapPin style={{ color: primary }} className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Events Scattered Everywhere</h3>
-              <p style={{ color: textSecondary }}>Lost in WhatsApp groups? No single source of truth. Students miss events constantly.</p>
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textPrimary }}>Scattered Information</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                WhatsApp groups, Instagram stories, and random posters. Where do you even start looking?
+              </p>
             </div>
-
-            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="p-8 rounded-xl border">
-              <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Clock style={{ color: primary }} className="w-6 h-6" />
+            <div className="p-8 rounded-2xl border-2 border-gray-200 bg-white hover:border-purple-200 transition">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: primarySoft }}>
+                <Clock style={{ color: primary }} className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Complicated Registrations</h3>
-              <p style={{ color: textSecondary }}>Google Forms, manual tracking, email confirmations. Confusing for everyone.</p>
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textPrimary }}>Messy Registration</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                Google Forms, manual entries, payment screenshot chaos. Registration takes forever.
+              </p>
             </div>
-
-            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="p-8 rounded-xl border">
-              <div style={{ backgroundColor: primarySoft }} className="w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <BarChart3 style={{ color: primary }} className="w-6 h-6" />
+            <div className="p-8 rounded-2xl border-2 border-gray-200 bg-white hover:border-purple-200 transition">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: primarySoft }}>
+                <Users style={{ color: primary }} className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold mb-3">No Analytics or Insights</h3>
-              <p style={{ color: textSecondary }}>Clubs can't track attendance or measure event success properly.</p>
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textPrimary }}>Missing Out</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                By the time you hear about the event, registrations are already closed or full.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Solution Section */}
-      <section style={{ backgroundColor: bgMuted }} className="py-24 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-4">How Happenin Works</h2>
-          <p style={{ color: textSecondary }} className="text-center text-lg mx-auto mb-16 max-w-2xl">Designed for simplicity. Built for scale.</p>
-          
-          <div className="grid md:grid-cols-3 gap-8">
+      {/* How It Works */}
+      <section className="py-24 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" style={{ color: textPrimary }}>How Happenin Works</h2>
+            <p className="text-xl max-w-3xl mx-auto" style={{ color: textSecondary }}>
+              Three simple steps to never miss an event again
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-12">
             <div className="text-center">
-              <div style={{ backgroundColor: primary }} className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-white font-bold text-2xl">1</div>
-              <h3 className="text-2xl font-bold mb-3">Students Discover</h3>
-              <p style={{ color: textSecondary }}>Browse all college and inter-college events in one app. Filter by club, date, or type.</p>
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: primary }}>
+                <span className="text-3xl font-bold text-white">1</span>
+              </div>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: primarySoft }}>
+                <Search style={{ color: primary }} className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textPrimary }}>Browse Events</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                Discover events from all colleges in one feed. Filter by interest, date, and location.
+              </p>
             </div>
-
             <div className="text-center">
-              <div style={{ backgroundColor: primary }} className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-white font-bold text-2xl">2</div>
-              <h3 className="text-2xl font-bold mb-3">One-Click Registration</h3>
-              <p style={{ color: textSecondary }}>Register instantly with saved payment details. Get instant confirmation.</p>
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: primary }}>
+                <span className="text-3xl font-bold text-white">2</span>
+              </div>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: primarySoft }}>
+                <CreditCard style={{ color: primary }} className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textPrimary }}>Register Instantly</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                One-click registration with secure payment. Get your ticket instantly via email.
+              </p>
             </div>
-
             <div className="text-center">
-              <div style={{ backgroundColor: primary }} className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-white font-bold text-2xl">3</div>
-              <h3 className="text-2xl font-bold mb-3">Show Up & Enjoy</h3>
-              <p style={{ color: textSecondary }}>Present your QR code at the event. Automatic certificate generation.</p>
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: primary }}>
+                <span className="text-3xl font-bold text-white">3</span>
+              </div>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: primarySoft }}>
+                <QrCode style={{ color: primary }} className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textPrimary }}>Attend Event</h3>
+              <p className="text-lg leading-relaxed" style={{ color: textSecondary }}>
+                Show your QR code ticket at the venue for instant check-in. That's it!
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* For Clubs */}
-      <section className="py-24 px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-4xl font-bold mb-4">For Club Organizers</h2>
-                <p style={{ color: textSecondary }} className="text-lg">Stop using spreadsheets. Get powerful tools to manage events end-to-end.</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div style={{ backgroundColor: primarySoft }} className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 style={{ color: primary }} className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="font-bold">Accept Payments</div>
-                    <div style={{ color: textSecondary }} className="text-sm">Razorpay integration for instant settlements</div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div style={{ backgroundColor: primarySoft }} className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 style={{ color: primary }} className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="font-bold">Track Registrations</div>
-                    <div style={{ color: textSecondary }} className="text-sm">Real-time dashboard with attendee analytics</div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div style={{ backgroundColor: primarySoft }} className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 style={{ color: primary }} className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="font-bold">Manage Sponsors</div>
-                    <div style={{ color: textSecondary }} className="text-sm">Sponsorship packages and verified payments</div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div style={{ backgroundColor: primarySoft }} className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 style={{ color: primary }} className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="font-bold">Auto Certificates</div>
-                    <div style={{ color: textSecondary }} className="text-sm">Generate and distribute certificates instantly</div>
-                  </div>
-                </div>
-              </div>
-
-              <button onClick={() => router.push('/auth')} style={{ backgroundColor: primary }} className="px-8 py-3 text-white font-semibold rounded-lg hover:opacity-90 transition inline-flex items-center gap-2">
-                Start Listing Events <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div style={{ backgroundColor: bgMuted }} className="p-8 rounded-xl">
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 border">
-                    <Sparkles style={{ color: primary }} className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-bold">99% Uptime SLA</div>
-                    <div style={{ color: textSecondary }} className="text-sm">Enterprise-grade reliability</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 border">
-                    <Shield style={{ color: primary }} className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-bold">Bank-Level Security</div>
-                    <div style={{ color: textSecondary }} className="text-sm">PCI-DSS compliant payments</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section style={{ backgroundColor: bgMuted }} className="py-24 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-4">Transparent Pricing</h2>
-          <p style={{ color: textSecondary }} className="text-lg mb-12">No hidden fees. Just success.</p>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <div style={{ backgroundColor: 'white', borderColor: '#E5E7EB' }} className="p-8 rounded-xl border">
-              <h3 className="text-2xl font-bold mb-4">For Students</h3>
-              <div className="mb-6">
-                <p style={{ color: textSecondary }} className="text-lg">Completely Free</p>
-              </div>
-              <ul style={{ color: textSecondary }} className="space-y-2 text-left">
-                <li className="flex gap-2"><CheckCircle2 style={{ color: primary }} className="w-5 h-5 flex-shrink-0" /> Discover all events</li>
-                <li className="flex gap-2"><CheckCircle2 style={{ color: primary }} className="w-5 h-5 flex-shrink-0" /> Book tickets instantly</li>
-                <li className="flex gap-2"><CheckCircle2 style={{ color: primary }} className="w-5 h-5 flex-shrink-0" /> Get certificates</li>
-              </ul>
-            </div>
-
-            <div style={{ backgroundColor: primary }} className="p-8 rounded-xl">
-              <h3 className="text-2xl font-bold mb-4 text-white">For Organizers</h3>
-              <div className="mb-6">
-                <p className="text-white text-lg">5% Commission</p>
-                <p style={{ color: primarySoft }} className="text-sm">Per successful ticket sale</p>
-              </div>
-              <ul style={{ color: primarySoft }} className="space-y-2 text-left text-sm">
-                <li className="flex gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0" /> Instant settlements</li>
-                <li className="flex gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0" /> No setup fees</li>
-                <li className="flex gap-2"><CheckCircle2 className="w-5 h-5 flex-shrink-0" /> 24/7 support</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-24 px-4">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-4">Frequently Asked</h2>
-          <p style={{ color: textSecondary }} className="text-center mb-12">Get answers to common questions</p>
-
-          <div className="space-y-4">
-            <details style={{ backgroundColor: bgMuted }} className="rounded-lg p-6 cursor-pointer group">
-              <summary className="font-semibold flex items-center justify-between">
-                Is there a fee for students?
-                <span className="group-open:rotate-180 transition">▼</span>
-              </summary>
-              <p style={{ color: textSecondary }} className="mt-4 text-sm">No, Happenin is completely free for students. There are no hidden charges for discovering or registering for events.</p>
-            </details>
-
-            <details style={{ backgroundColor: bgMuted }} className="rounded-lg p-6 cursor-pointer group">
-              <summary className="font-semibold flex items-center justify-between">
-                How long does refund processing take?
-                <span className="group-open:rotate-180 transition">▼</span>
-              </summary>
-              <p style={{ color: textSecondary }} className="mt-4 text-sm">Refunds are processed within 7-10 business days. Organizers set their own cancellation and refund policies for each event.</p>
-            </details>
-
-            <details style={{ backgroundColor: bgMuted }} className="rounded-lg p-6 cursor-pointer group">
-              <summary className="font-semibold flex items-center justify-between">
-                Can my club list events?
-                <span className="group-open:rotate-180 transition">▼</span>
-              </summary>
-              <p style={{ color: textSecondary }} className="mt-4 text-sm">Yes! Any registered club or student organization can list events. Sign up and start in minutes.</p>
-            </details>
-
-            <details style={{ backgroundColor: bgMuted }} className="rounded-lg p-6 cursor-pointer group">
-              <summary className="font-semibold flex items-center justify-between">
-                Which payment methods are supported?
-                <span className="group-open:rotate-180 transition">▼</span>
-              </summary>
-              <p style={{ color: textSecondary }} className="mt-4 text-sm">We support UPI, credit/debit cards, net banking, and digital wallets via Razorpay integration.</p>
-            </details>
-          </div>
-        </div>
-      </section>
+      {/* Solution Section - removed, replaced by features above */}
 
       {/* CTA Section */}
-      <section style={{ backgroundColor: primary }} className="py-20 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-4 text-white">Ready to Get Started?</h2>
-          <p style={{ color: primarySoft }} className="text-lg mb-8">Join thousands of students and organizers using Happenin today.</p>
+      <section className="py-32 px-4" style={{ backgroundColor: primary }}>
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+            Ready to Transform Your Campus Experience?
+          </h2>
+          <p className="text-xl mb-10 text-purple-100">
+            Join thousands of students already using Happenin to discover and attend amazing events
+          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onClick={() => router.push('/events')} style={{ backgroundColor: 'white', color: primary }} className="px-8 py-3 font-semibold rounded-lg hover:opacity-90 transition">
-              Explore Events Now
+            <button 
+              onClick={() => router.push('/events')} 
+              className="px-10 py-4 bg-white text-lg font-semibold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-100 transition shadow-lg"
+              style={{ color: primary }}
+            >
+              Browse Events <ArrowRight className="w-6 h-6" />
             </button>
-            <button onClick={() => router.push('/auth')} style={{ borderColor: 'white', color: 'white' }} className="px-8 py-3 border-2 font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition">
-              List Your Event
+            <button 
+              onClick={() => router.push('/auth')} 
+              className="px-10 py-4 bg-transparent border-2 border-white text-white text-lg font-semibold rounded-xl hover:bg-white/10 transition"
+            >
+              Create Account
             </button>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{ backgroundColor: textPrimary, color: 'white' }} className="py-12 px-4">
+      <footer className="py-16 px-4 bg-gray-900">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="text-xl font-bold mb-3">Happenin</div>
-              <p className="text-sm opacity-70">Making campus events accessible to everyone.</p>
+          <div className="grid md:grid-cols-4 gap-12 mb-12">
+            <div className="md:col-span-2">
+              <div className="text-3xl font-bold mb-4" style={{ color: primary }}>Happenin</div>
+              <p className="text-gray-400 text-lg mb-6">
+                The all-in-one platform for discovering and managing campus events across India.
+              </p>
+              <div className="flex gap-4">
+                <button className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition">
+                  <span className="text-gray-400">X</span>
+                </button>
+                <button className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition">
+                  <span className="text-gray-400">in</span>
+                </button>
+                <button className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition">
+                  <span className="text-gray-400">ig</span>
+                </button>
+              </div>
             </div>
             <div>
-              <div className="font-bold mb-3 text-sm">Company</div>
-              <ul className="text-sm opacity-70 space-y-1">
-                <li><button onClick={() => router.push('/about')} className="hover:opacity-100">About</button></li>
-                <li><button onClick={() => router.push('/contact')} className="hover:opacity-100">Contact</button></li>
+              <h4 className="text-white font-semibold text-lg mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><button onClick={() => router.push('/events')} className="text-gray-400 hover:text-white transition">Browse Events</button></li>
+                <li><button onClick={() => router.push('/auth')} className="text-gray-400 hover:text-white transition">Create Event</button></li>
+                <li><button onClick={() => router.push('/auth')} className="text-gray-400 hover:text-white transition">Pricing</button></li>
               </ul>
             </div>
             <div>
-              <div className="font-bold mb-3 text-sm">Legal</div>
-              <ul className="text-sm opacity-70 space-y-1">
-                <li><button onClick={() => router.push('/privacy')} className="hover:opacity-100">Privacy</button></li>
-                <li><button onClick={() => router.push('/terms')} className="hover:opacity-100">Terms</button></li>
+              <h4 className="text-white font-semibold text-lg mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><button onClick={() => router.push('/about')} className="text-gray-400 hover:text-white transition">About</button></li>
+                <li><button onClick={() => router.push('/contact')} className="text-gray-400 hover:text-white transition">Contact</button></li>
+                <li><button onClick={() => router.push('/contact')} className="text-gray-400 hover:text-white transition">Support</button></li>
               </ul>
             </div>
             <div>
-              <div className="font-bold mb-3 text-sm">Social</div>
-              <ul className="text-sm opacity-70 space-y-1">
-                <li><a href="#" className="hover:opacity-100">Twitter</a></li>
-                <li><a href="#" className="hover:opacity-100">Instagram</a></li>
+              <h4 className="text-white font-semibold text-lg mb-4">Legal</h4>
+              <ul className="space-y-3">
+                <li><button onClick={() => router.push('/terms')} className="text-gray-400 hover:text-white transition">Terms</button></li>
+                <li><button onClick={() => router.push('/privacy')} className="text-gray-400 hover:text-white transition">Privacy</button></li>
               </ul>
             </div>
           </div>
-          <div style={{ borderColor: 'rgba(255,255,255,0.1)' }} className="border-t pt-8 text-center text-sm opacity-70">
-            <p>© 2026 Happenin. Making campus events accessible.</p>
+          <div className="pt-8 border-t border-gray-800 text-center">
+            <p className="text-gray-500">© 2026 Happenin. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -373,22 +353,23 @@ export default function HomePage() {
   }, [setTheme]);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      const userRole = (session.user as any).role;
-      if (userRole === 'organizer') {
-        router.push('/dashboard/organizer');
-      } else if (userRole === 'admin') {
-        router.push('/dashboard/admin');
-      } else if (userRole === 'sponsor') {
-        router.push('/dashboard/sponsor');
-      } else {
-        router.push('/dashboard/student');
-      }
+    if (status === 'loading') return;
+    
+    if (session?.user) {
+      const role = (session.user as any).role;
+      if (role === 'student') router.push('/dashboard/student');
+      else if (role === 'organizer') router.push('/dashboard/organizer');
+      else if (role === 'admin') router.push('/dashboard/admin');
+      else if (role === 'sponsor') router.push('/dashboard/sponsor');
     }
-  }, [status, session, router]);
+  }, [session, status, router]);
 
   if (status === 'loading' || session?.user) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-700"></div>
+      </div>
+    );
   }
 
   return <LandingPage />;

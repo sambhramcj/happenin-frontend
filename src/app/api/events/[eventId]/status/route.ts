@@ -171,16 +171,17 @@ export async function PATCH(
       .eq("event_id", eventId);
 
     if (!regError && registrations && registrations.length > 0) {
-      // Send notifications to all registered participants
+      // Create in-app notifications for all registered participants
       const notificationPromises = registrations.map((reg: any) =>
-        supabase.from("push_notifications").insert({
+        supabase.from("in_app_notifications").insert({
           recipient_email: reg.student_email,
+          recipient_role: "student",
           title: `Event Rescheduled: ${event.title || "Your Event"}`,
           body: `The event has been rescheduled to ${newDate}${newTime ? ` at ${newTime}` : ""}. ${reason ? `Reason: ${reason}` : ""}`,
           event_id: eventId,
-          sent_by: session.user.email,
           notification_type: "reschedule",
           action_url: `/events/${eventId}`,
+          icon_type: "update",
         })
       );
 
@@ -293,16 +294,17 @@ export async function DELETE(
       .eq("event_id", eventId);
 
     if (!regError && registrations && registrations.length > 0) {
-      // Send cancellation notifications to all participants
+      // Create in-app cancellation notifications for all participants
       const notificationPromises = registrations.map((reg: any) =>
-        supabase.from("push_notifications").insert({
+        supabase.from("in_app_notifications").insert({
           recipient_email: reg.student_email,
+          recipient_role: "student",
           title: `Event Cancelled: ${event.title || "Your Event"}`,
           body: `This event has been cancelled. Reason: ${cancellationReason}${refundProcessing ? " Refunds will be processed within 5-7 business days." : ""}`,
           event_id: eventId,
-          sent_by: session.user.email,
           notification_type: "cancellation",
           action_url: `/my-registrations`,
+          icon_type: "payment",
         })
       );
 

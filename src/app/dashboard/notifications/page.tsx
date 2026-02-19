@@ -71,7 +71,7 @@ export default function NotificationPreferencesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+      <div className="min-h-screen bg-bg-muted flex items-center justify-center">
         <Icons.Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -79,7 +79,7 @@ export default function NotificationPreferencesPage() {
 
   if (!preferences) {
     return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center p-6">
+      <div className="min-h-screen bg-bg-muted flex items-center justify-center p-6">
         <div className="text-center">
           <Icons.AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-3" />
           <p className="text-text-muted">Failed to load preferences</p>
@@ -89,7 +89,7 @@ export default function NotificationPreferencesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary">
+    <div className="min-h-screen bg-bg-muted">
       <div className="max-w-3xl mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -181,7 +181,7 @@ export default function NotificationPreferencesPage() {
                     type="time"
                     value={preferences.quiet_hours_start || "22:00"}
                     onChange={(e) => updatePreference("quiet_hours_start", e.target.value)}
-                    className="w-full px-4 py-2 bg-bg-primary border border-border-default rounded-lg text-text-primary"
+                    className="w-full px-4 py-2 bg-bg-muted border border-border-default rounded-lg text-text-primary"
                   />
                 </div>
                 <div>
@@ -192,7 +192,7 @@ export default function NotificationPreferencesPage() {
                     type="time"
                     value={preferences.quiet_hours_end || "08:00"}
                     onChange={(e) => updatePreference("quiet_hours_end", e.target.value)}
-                    className="w-full px-4 py-2 bg-bg-primary border border-border-default rounded-lg text-text-primary"
+                    className="w-full px-4 py-2 bg-bg-muted border border-border-default rounded-lg text-text-primary"
                   />
                 </div>
               </div>

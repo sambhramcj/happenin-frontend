@@ -36,7 +36,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - Network first, fallback to cache
+// Fetch event - Network first, fallback to cache (no push notifications)
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
@@ -80,80 +80,11 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Return offline page if needed
+          // Return offline page if available
           if (request.destination === 'document') {
             return caches.match('/offline.html');
           }
         });
-    })
-  );
-});
-
-// Background sync for offline notifications
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-notifications') {
-    event.waitUntil(syncNotifications());
-  }
-});
-
-async function syncNotifications() {
-  try {
-    // This would sync any pending notifications when back online
-    const response = await fetch('/api/notifications/sync');
-    return response.json();
-  } catch (error) {
-    console.log('Notification sync failed:', error);
-  }
-}
-
-// Handle push notifications
-self.addEventListener('push', (event) => {
-  let notificationData = {
-    title: 'Happenin',
-    body: 'New update available',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    tag: 'happenin-notification',
-  };
-
-  if (event.data) {
-    try {
-      notificationData = event.data.json();
-    } catch (e) {
-      notificationData.body = event.data.text();
-    }
-  }
-
-  event.waitUntil(
-    self.registration.showNotification(notificationData.title, {
-      body: notificationData.body,
-      icon: notificationData.icon,
-      badge: notificationData.badge,
-      tag: notificationData.tag,
-      data: {
-        url: notificationData.url || '/',
-      },
-    })
-  );
-});
-
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if window already exists
-      for (let i = 0; i < clientList.length; i++) {
-        const client = clientList[i];
-        if (client.url === event.notification.data.url && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // Open new window if doesn't exist
-      if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url || '/');
-      }
     })
   );
 });

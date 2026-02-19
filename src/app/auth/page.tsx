@@ -135,13 +135,33 @@ function AuthPageContent() {
         password,
         redirect: false,
       });
-      if (result?.error) {
+      
+      console.log("SignIn result:", result);
+      
+      if (!result) {
+        setError("Login failed. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (result.error) {
         setError("Invalid email or password");
         setIsLoading(false);
-      } else if (result?.ok) {
-        router.push("/dashboard");
+        return;
       }
+      
+      if (result.ok) {
+        // Successful login - redirect to dashboard
+        setIsLoading(false);
+        router.push("/dashboard");
+        return;
+      }
+      
+      // Fallback if result doesn't match expected structure
+      setError("Login failed. Please check your email and password.");
+      setIsLoading(false);
     } catch (err) {
+      console.error("Login error:", err);
       setError("An error occurred. Please try again.");
       setIsLoading(false);
     }
@@ -153,9 +173,9 @@ function AuthPageContent() {
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200">
           {/* Header */}
           <div className="text-center pt-8 pb-6 px-8">
-            <h1 className="text-4xl font-bold text-purple-600 mb-2">
-              Happenin
-            </h1>
+            <div className="flex justify-center mb-2">
+              <img src="/branding/logo-wordmark-brand.svg" alt="Happenin" className="h-10 w-auto" />
+            </div>
             <p className="text-gray-600 text-sm">Login to continue</p>
           </div>
 

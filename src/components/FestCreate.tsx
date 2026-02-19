@@ -245,7 +245,7 @@ export default function FestCreate({ onSuccess, onClose }: FestCreateProps) {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-gradient-to-r from-primary to-pink-500 text-text-inverse py-2 rounded-lg hover:from-primaryHover hover:to-pink-600 transition-all font-medium disabled:opacity-50"
+            className="flex-1 bg-primary text-text-inverse py-2 rounded-lg hover:bg-primaryHover transition-all font-medium disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create Fest"}
           </button>

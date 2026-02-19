@@ -61,7 +61,7 @@ export function EventTimeline({
 
   if (items.length === 0) {
     return (
-      <div className="bg-gradient-to-br from-bg-card to-bg-muted rounded-xl p-8 border-2 border-dashed border-border-default text-center">
+      <div className="bg-bg-card rounded-xl p-8 border-2 border-dashed border-border-default text-center">
         <Icons.Calendar className="h-12 w-12 text-text-muted opacity-50 mx-auto mb-3" />
         <p className="text-text-muted mb-4">No timeline items yet</p>
         {isEditable && onAdd && (
@@ -89,7 +89,7 @@ export function EventTimeline({
 
       <div className="relative">
         {/* Timeline line */}
-        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/50 to-primary/10"></div>
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-primary/40"></div>
 
         {/* Timeline items */}
         <div className="space-y-6">

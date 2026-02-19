@@ -21,9 +21,9 @@ export default function DashboardHeader() {
           <div className="flex items-center">
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent hover:from-purple-300 hover:to-pink-300 transition-all"
+              className="hover:opacity-80 transition-all"
             >
-              Happenin
+              <img src="/branding/logo-wordmark-brand.svg" alt="Happenin" className="h-8 w-auto" />
             </button>
           </div>
 
@@ -33,9 +33,7 @@ export default function DashboardHeader() {
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 transition-all"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm">
-                {session?.user?.email?.charAt(0).toUpperCase() || "U"}
-              </div>
+              <img src="/icon.svg" alt="Happenin" className="w-8 h-8 rounded-full object-contain bg-bg-muted border border-border-default p-1" />
               <span className="text-purple-200 text-sm font-medium hidden sm:block">
                 {session?.user?.email?.split("@")[0] || "User"}
               </span>

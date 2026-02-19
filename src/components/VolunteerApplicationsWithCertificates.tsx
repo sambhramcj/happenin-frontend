@@ -174,7 +174,7 @@ export default function VolunteerApplicationsWithCertificates({ eventId }: Compo
               {/* Header */}
               <div
                 onClick={() => setExpandedApp(expandedApp === app.id ? null : app.id)}
-                className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 cursor-pointer flex items-center justify-between"
+                className="bg-bg-muted p-4 cursor-pointer flex items-center justify-between"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
