@@ -89,6 +89,11 @@ export async function POST(
       );
     }
 
+    await supabase
+      .from("registrations")
+      .update({ status: "checked_in" })
+      .eq("id", registrationId);
+
     return NextResponse.json({ attendance }, { status: 201 });
   } catch (err) {
     console.error("POST attendance error:", err);

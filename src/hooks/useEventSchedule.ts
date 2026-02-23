@@ -1,10 +1,10 @@
 // Hook: useEventSchedule
-// Purpose: Manage multi-day event scheduling with per-day timeline
+// Purpose: Manage event date with timeline sessions (from/to/description)
 
 import { useState } from 'react';
 
 export interface ScheduleSession {
-  date: string; // "2026-02-10"
+  date?: string;
   start_time: string; // "14:00"
   end_time: string; // "20:00"
   description: string; // Activity description
@@ -18,81 +18,104 @@ export interface EventSchedule {
 
 export function useEventSchedule() {
   const [eventType, setEventType] = useState<'single-day' | 'multi-day'>('single-day');
+  const [eventDate, setEventDate] = useState<string>('');
   const [startDateTime, setStartDateTime] = useState<string>('');
   const [endDateTime, setEndDateTime] = useState<string>('');
   const [scheduleSessions, setScheduleSessions] = useState<ScheduleSession[]>([]);
 
-  // For single-day events
-  const setSingleDayEvent = (date: string, startTime: string, endTime: string) => {
-    const startDT = `${date}T${startTime}:00Z`;
-    const endDT = `${date}T${endTime}:00Z`;
-    setStartDateTime(startDT);
-    setEndDateTime(endDT);
-    setScheduleSessions([]);
+  const toIsoDateTime = (session: ScheduleSession, fallbackDate?: string) => {
+    const date = session.date || fallbackDate;
+    if (!date || !session.start_time || !session.end_time) return null;
+    return {
+      start: new Date(`${date}T${session.start_time}:00`),
+      end: new Date(`${date}T${session.end_time}:00`),
+    };
   };
 
-  // For multi-day events
+  const recalculateDateTimes = (
+    date: string,
+    sessions: ScheduleSession[],
+    type: 'single-day' | 'multi-day'
+  ) => {
+    if (sessions.length === 0) {
+      setStartDateTime('');
+      setEndDateTime('');
+      return;
+    }
+
+    if (type === 'single-day' && !date) {
+      setStartDateTime('');
+      setEndDateTime('');
+      return;
+    }
+
+    const resolvedSessions = sessions
+      .map((session) => toIsoDateTime(session, type === 'single-day' ? date : undefined))
+      .filter((value): value is { start: Date; end: Date } => Boolean(value));
+
+    if (resolvedSessions.length === 0) {
+      setStartDateTime('');
+      setEndDateTime('');
+      return;
+    }
+
+    const sortedByStart = [...resolvedSessions].sort(
+      (a, b) => a.start.getTime() - b.start.getTime()
+    );
+    const sortedByEnd = [...resolvedSessions].sort(
+      (a, b) => a.end.getTime() - b.end.getTime()
+    );
+
+    const first = sortedByStart[0];
+    const last = sortedByEnd[sortedByEnd.length - 1];
+    setStartDateTime(first.start.toISOString());
+    setEndDateTime(last.end.toISOString());
+  };
+
   const addScheduleSession = (session: ScheduleSession) => {
     const newSessions = [...scheduleSessions, session];
     setScheduleSessions(newSessions);
-    
-    // Auto-update start/end datetime based on all sessions
-    if (newSessions.length > 0) {
-      const dates = newSessions.map(s => s.date).sort();
-      const firstDate = dates[0];
-      const lastDate = dates[dates.length - 1];
-      const firstSession = newSessions.find(s => s.date === firstDate)!;
-      const lastSession = newSessions.find(s => s.date === lastDate)!;
-      
-      setStartDateTime(`${firstDate}T${firstSession.start_time}:00Z`);
-      setEndDateTime(`${lastDate}T${lastSession.end_time}:00Z`);
-    }
+
+    recalculateDateTimes(eventDate, newSessions, eventType);
   };
 
-  // Update specific session
   const updateScheduleSession = (index: number, session: ScheduleSession) => {
     const newSessions = [...scheduleSessions];
     newSessions[index] = session;
     setScheduleSessions(newSessions);
-    
-    // Recalculate start/end datetime
-    if (newSessions.length > 0) {
-      const dates = newSessions.map(s => s.date).sort();
-      const firstDate = dates[0];
-      const lastDate = dates[dates.length - 1];
-      const firstSession = newSessions.find(s => s.date === firstDate)!;
-      const lastSession = newSessions.find(s => s.date === lastDate)!;
-      
-      setStartDateTime(`${firstDate}T${firstSession.start_time}:00Z`);
-      setEndDateTime(`${lastDate}T${lastSession.end_time}:00Z`);
-    }
+
+    recalculateDateTimes(eventDate, newSessions, eventType);
   };
 
-  // Remove session
   const removeScheduleSession = (index: number) => {
     const newSessions = scheduleSessions.filter((_, i) => i !== index);
     setScheduleSessions(newSessions);
-    
-    if (newSessions.length > 0) {
-      const dates = newSessions.map(s => s.date).sort();
-      const firstDate = dates[0];
-      const lastDate = dates[dates.length - 1];
-      const firstSession = newSessions.find(s => s.date === firstDate)!;
-      const lastSession = newSessions.find(s => s.date === lastDate)!;
-      
-      setStartDateTime(`${firstDate}T${firstSession.start_time}:00Z`);
-      setEndDateTime(`${lastDate}T${lastSession.end_time}:00Z`);
-    }
+
+    recalculateDateTimes(eventDate, newSessions, eventType);
   };
 
-  // Get event schedule data for API
+  const setEventDateAndRecalculate = (date: string) => {
+    setEventDate(date);
+    recalculateDateTimes(date, scheduleSessions, eventType);
+  };
+
+  const setEventTypeAndRecalculate = (type: 'single-day' | 'multi-day') => {
+    setEventType(type);
+    recalculateDateTimes(eventDate, scheduleSessions, type);
+  };
+
   const getEventScheduleData = (): EventSchedule => ({
     start_datetime: startDateTime,
     end_datetime: endDateTime,
-    schedule_sessions: eventType === 'multi-day' && scheduleSessions.length > 0 ? scheduleSessions : null,
+    schedule_sessions:
+      scheduleSessions.length > 0
+        ? scheduleSessions.map((session) => ({
+            ...session,
+            date: eventType === 'single-day' ? eventDate : session.date,
+          }))
+        : null,
   });
 
-  // Calculate total event duration in hours
   const getTotalDurationHours = (): number => {
     if (!startDateTime || !endDateTime) return 0;
     const start = new Date(startDateTime);
@@ -102,7 +125,9 @@ export function useEventSchedule() {
 
   return {
     eventType,
-    setEventType,
+    setEventType: setEventTypeAndRecalculate,
+    eventDate,
+    setEventDate: setEventDateAndRecalculate,
     startDateTime,
     setStartDateTime,
     endDateTime,
@@ -111,7 +136,6 @@ export function useEventSchedule() {
     addScheduleSession,
     updateScheduleSession,
     removeScheduleSession,
-    setSingleDayEvent,
     getEventScheduleData,
     getTotalDurationHours,
   };

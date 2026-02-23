@@ -13,6 +13,11 @@ import {
   notifyStudentRegistration,
   notifyOrganizerNewRegistration,
 } from "@/lib/notifications";
+import {
+  calculateStudentEventPrice,
+  getStudentEligibilityContext,
+  isStudentEligibleForEvent,
+} from "@/lib/registration-eligibility";
 
 // Server-only admin client (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -88,7 +93,7 @@ export async function POST(req: Request) {
     // 2️⃣ Fetch event
     const { data: event } = await db
       .from("events")
-      .select("id,title,price,date,location,max_attendees,organizer_email")
+      .select("id,title,price,date,location,max_attendees,organizer_email,discount_enabled,discount_club,discount_amount,eligible_members")
       .eq("id", eventId)
       .single();
 
@@ -96,9 +101,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // 3️⃣ Calculate final price per person
-    const pricePerPerson = Math.max(0, Number(event.price));
-    const totalPrice = pricePerPerson * teamSize;
+    const ineligibleMembers: string[] = [];
+    const memberPricing = new Map<string, number>();
+    let totalPrice = 0;
+
+    for (const member of members) {
+      const memberContext = await getStudentEligibilityContext(db, member.email);
+      const eligible = await isStudentEligibleForEvent(
+        db,
+        eventId,
+        member.email,
+        memberContext
+      );
+      if (!eligible) {
+        ineligibleMembers.push(member.email);
+        continue;
+      }
+      const finalMemberPrice = calculateStudentEventPrice(event, memberContext);
+      memberPricing.set(member.email, finalMemberPrice);
+      totalPrice += finalMemberPrice;
+    }
+
+    if (ineligibleMembers.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Some team members are not eligible for this event",
+          ineligibleMembers,
+        },
+        { status: 403 }
+      );
+    }
 
     // 4️⃣ Check if payment already processed
     const { data: existingPayment } = await db
@@ -165,7 +197,7 @@ export async function POST(req: Request) {
       const registrationPayload = {
         student_email: member.email,
         event_id: eventId,
-        final_price: isTeamLead ? totalPrice : 0, // Only lead pays, others show 0
+        final_price: isTeamLead ? totalPrice : memberPricing.get(member.email) || 0,
         razorpay_order_id: isTeamLead ? razorpay_order_id : null,
         razorpay_payment_id: isTeamLead ? razorpay_payment_id : null,
         razorpay_signature: isTeamLead ? razorpay_signature : null,

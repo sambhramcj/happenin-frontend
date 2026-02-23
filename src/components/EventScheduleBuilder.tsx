@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Icons } from './icons';
 
 interface ScheduleSession {
-  date: string;
+  date?: string;
   start_time: string;
   end_time: string;
   description: string;
@@ -16,10 +16,8 @@ interface ScheduleSession {
 interface EventScheduleBuilderProps {
   eventType: 'single-day' | 'multi-day';
   onEventTypeChange: (type: 'single-day' | 'multi-day') => void;
-  startDateTime: string;
-  endDateTime: string;
-  onStartDateTimeChange: (dt: string) => void;
-  onEndDateTimeChange: (dt: string) => void;
+  eventDate: string;
+  onEventDateChange: (date: string) => void;
   scheduleSessions: ScheduleSession[];
   onAddSession: (session: ScheduleSession) => void;
   onUpdateSession: (index: number, session: ScheduleSession) => void;
@@ -29,10 +27,8 @@ interface EventScheduleBuilderProps {
 export function EventScheduleBuilder({
   eventType,
   onEventTypeChange,
-  startDateTime,
-  endDateTime,
-  onStartDateTimeChange,
-  onEndDateTimeChange,
+  eventDate,
+  onEventDateChange,
   scheduleSessions,
   onAddSession,
   onUpdateSession,
@@ -47,221 +43,190 @@ export function EventScheduleBuilder({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const handleAddSession = () => {
-    if (!newSession.date || !newSession.start_time || !newSession.end_time) {
+    const needsDate = eventType === 'single-day' ? !eventDate : !newSession.date;
+    if (needsDate || !newSession.start_time || !newSession.end_time || !newSession.description.trim()) {
       alert('Please fill in all session details');
       return;
     }
 
+    const sessionToSave: ScheduleSession = {
+      ...newSession,
+      date: eventType === 'single-day' ? eventDate : newSession.date,
+    };
+
     if (editingIndex !== null) {
-      onUpdateSession(editingIndex, newSession);
+      onUpdateSession(editingIndex, sessionToSave);
       setEditingIndex(null);
     } else {
-      onAddSession(newSession);
+      onAddSession(sessionToSave);
     }
 
     setNewSession({ date: '', start_time: '10:00', end_time: '18:00', description: '' });
   };
 
-  const startDate = startDateTime ? new Date(startDateTime).toISOString().split('T')[0] : '';
-  const startTime = startDateTime ? new Date(startDateTime).toISOString().split('T')[1].substring(0, 5) : '';
-  const endDate = endDateTime ? new Date(endDateTime).toISOString().split('T')[0] : '';
-  const endTime = endDateTime ? new Date(endDateTime).toISOString().split('T')[1].substring(0, 5) : '';
-
   return (
     <div className="space-y-6 bg-bg-card rounded-xl p-6 border border-border-default">
       <div>
         <h3 className="text-lg font-semibold text-text-primary mb-4">Event Schedule</h3>
+        <p className="text-sm text-text-secondary mb-4">Add your event timeline (e.g., 9:00 AM inauguration, 1:00 PM lunch).</p>
 
-        {/* Event Type Selection */}
-        <div className="flex gap-4 mb-6">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="eventType"
-              value="single-day"
-              checked={eventType === 'single-day'}
-              onChange={(e) => onEventTypeChange(e.target.value as 'single-day' | 'multi-day')}
-              className="w-4 h-4 accent-primary"
-            />
-            <span className="text-text-primary">Single Day</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="eventType"
-              value="multi-day"
-              checked={eventType === 'multi-day'}
-              onChange={(e) => onEventTypeChange(e.target.value as 'single-day' | 'multi-day')}
-              className="w-4 h-4 accent-primary"
-            />
-            <span className="text-text-primary">Multi-Day</span>
-          </label>
-        </div>
+        <div className="space-y-4">
+          <div className="bg-bg-muted p-4 rounded-lg border border-border-default">
+            <label className="text-sm text-text-secondary block mb-2">Event Duration Type</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={eventType === 'single-day'}
+                  onChange={() => onEventTypeChange('single-day')}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-text-secondary">Single Day</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={eventType === 'multi-day'}
+                  onChange={() => onEventTypeChange('multi-day')}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-text-secondary">Multi Day</span>
+              </label>
+            </div>
+          </div>
 
-        {/* Single Day */}
-        {eventType === 'single-day' && (
-          <div className="space-y-4 bg-bg-muted p-4 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-bg-muted p-4 rounded-lg border border-border-default">
+            {eventType === 'single-day' ? (
+              <>
+                <label className="text-sm text-text-secondary block mb-2">Event Date</label>
+                <input
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => onEventDateChange(e.target.value)}
+                  className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                />
+              </>
+            ) : (
+              <p className="text-sm text-text-secondary">
+                Multi-day mode enabled. Choose date per timeline entry below.
+              </p>
+            )}
+          </div>
+
+          <div className="bg-bg-muted p-4 rounded-lg border border-border-default space-y-4">
+            <h4 className="font-semibold text-text-primary">
+              {editingIndex !== null ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
+            </h4>
+
+            {eventType === 'multi-day' && (
               <div>
                 <label className="text-sm text-text-secondary block mb-2">Date</label>
                 <input
                   type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    onStartDateTimeChange(`${e.target.value}T${startTime || '10:00'}:00Z`);
-                    onEndDateTimeChange(`${e.target.value}T${endTime || '18:00'}:00Z`);
-                  }}
+                  value={newSession.date || ''}
+                  onChange={(e) => setNewSession({ ...newSession, date: e.target.value })}
                   className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-sm text-text-secondary block mb-2">Start Time</label>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => onStartDateTimeChange(`${startDate}T${e.target.value}:00Z`)}
-                    className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-text-secondary block mb-2">End Time</label>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => onEndDateTimeChange(`${endDate}T${e.target.value}:00Z`)}
-                    className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Multi-Day */}
-        {eventType === 'multi-day' && (
-          <div className="space-y-4">
-            {/* Add Session Form */}
-            <div className="bg-bg-muted p-4 rounded-lg space-y-4">
-              <h4 className="font-semibold text-text-primary">
-                {editingIndex !== null ? 'Edit Session' : 'Add Session'}
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-text-secondary block mb-2">Date</label>
-                  <input
-                    type="date"
-                    value={newSession.date}
-                    onChange={(e) => setNewSession({ ...newSession, date: e.target.value })}
-                    className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-sm text-text-secondary block mb-2">Start</label>
-                    <input
-                      type="time"
-                      value={newSession.start_time}
-                      onChange={(e) => setNewSession({ ...newSession, start_time: e.target.value })}
-                      className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-text-secondary block mb-2">End</label>
-                    <input
-                      type="time"
-                      value={newSession.end_time}
-                      onChange={(e) => setNewSession({ ...newSession, end_time: e.target.value })}
-                      className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-text-secondary block mb-2">Activity/Description</label>
+                <label className="text-sm text-text-secondary block mb-2">From</label>
                 <input
-                  type="text"
-                  placeholder="e.g., Opening Ceremony, Main Competition"
-                  value={newSession.description}
-                  onChange={(e) => setNewSession({ ...newSession, description: e.target.value })}
-                  className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary placeholder-text-muted"
+                  type="time"
+                  value={newSession.start_time}
+                  onChange={(e) => setNewSession({ ...newSession, start_time: e.target.value })}
+                  className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
                 />
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleAddSession}
-                  className="flex-1 bg-primary text-text-inverse py-2 rounded-lg hover:bg-primaryHover transition-all font-medium"
-                >
-                  {editingIndex !== null ? 'Update Session' : 'Add Session'}
-                </button>
-                {editingIndex !== null && (
-                  <button
-                    onClick={() => {
-                      setEditingIndex(null);
-                      setNewSession({ date: '', start_time: '10:00', end_time: '18:00', description: '' });
-                    }}
-                    className="px-4 py-2 bg-bg-muted text-text-secondary rounded-lg hover:bg-border-default transition-all"
-                  >
-                    Cancel
-                  </button>
-                )}
+              <div>
+                <label className="text-sm text-text-secondary block mb-2">To</label>
+                <input
+                  type="time"
+                  value={newSession.end_time}
+                  onChange={(e) => setNewSession({ ...newSession, end_time: e.target.value })}
+                  className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                />
               </div>
             </div>
+            <div>
+              <label className="text-sm text-text-secondary block mb-2">Description</label>
+              <input
+                type="text"
+                placeholder="e.g., 09:00 AM Inauguration"
+                value={newSession.description}
+                onChange={(e) => setNewSession({ ...newSession, description: e.target.value })}
+                className="w-full bg-bg-card border border-border-default rounded-lg px-4 py-2 text-text-primary placeholder-text-muted"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddSession}
+                className="flex-1 bg-primary text-text-inverse py-2 rounded-lg hover:bg-primaryHover transition-all font-medium"
+              >
+                {editingIndex !== null ? 'Update Entry' : 'Add Entry'}
+              </button>
+              {editingIndex !== null && (
+                <button
+                  onClick={() => {
+                    setEditingIndex(null);
+                    setNewSession({ date: '', start_time: '10:00', end_time: '18:00', description: '' });
+                  }}
+                  className="px-4 py-2 bg-bg-muted text-text-secondary rounded-lg hover:bg-border-default transition-all"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
 
-            {/* Schedule Timeline */}
-            {scheduleSessions.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-text-primary">Event Timeline</h4>
-                {scheduleSessions.map((session, idx) => (
-                  <div key={idx} className="bg-bg-muted p-4 rounded-lg border border-border-default hover:border-primary transition-colors">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Icons.Calendar className="h-4 w-4 text-primary" />
-                          <span className="font-semibold text-text-primary">{session.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Icons.Clock className="h-4 w-4 text-text-secondary" />
-                          <span className="text-text-secondary">
-                            {session.start_time} - {session.end_time}
-                          </span>
-                        </div>
-                        {session.description && (
-                          <p className="text-sm text-text-muted">{session.description}</p>
-                        )}
+          {scheduleSessions.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="font-semibold text-text-primary">Timeline Preview</h4>
+              {scheduleSessions.map((session, idx) => (
+                <div key={idx} className="bg-bg-muted p-4 rounded-lg border border-border-default hover:border-primary transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Icons.Clock className="h-4 w-4 text-text-secondary" />
+                        <span className="text-text-secondary">
+                          {session.date ? `${session.date} • ` : ''}{session.start_time} - {session.end_time}
+                        </span>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingIndex(idx);
-                            setNewSession(session);
-                          }}
-                          className="p-2 text-text-secondary hover:text-primary transition-colors"
-                          title="Edit session"
-                        >
-                          ✎
-                        </button>
-                        <button
-                          onClick={() => onRemoveSession(idx)}
-                          className="p-2 text-text-secondary hover:text-error transition-colors"
-                          title="Delete session"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                      <p className="text-sm text-text-muted">{session.description}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingIndex(idx);
+                          setNewSession(session);
+                        }}
+                        className="p-2 text-text-secondary hover:text-primary transition-colors"
+                        title="Edit entry"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={() => onRemoveSession(idx)}
+                        className="p-2 text-text-secondary hover:text-error transition-colors"
+                        title="Delete entry"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
+          )}
 
-            {scheduleSessions.length === 0 && (
-              <div className="text-center py-8 text-text-muted">
-                <p>No sessions added yet. Add sessions to create your event timeline.</p>
-              </div>
-            )}
-          </div>
-        )}
+          {scheduleSessions.length === 0 && (
+            <div className="text-center py-8 text-text-muted bg-bg-muted rounded-lg border border-border-default">
+              <p>No timeline entries yet. Add From/To time and description.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

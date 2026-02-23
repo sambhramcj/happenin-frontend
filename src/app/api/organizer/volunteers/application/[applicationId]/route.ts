@@ -10,6 +10,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+type SessionUser = {
+  email?: string | null;
+  role?: string;
+};
+
+type ApplicationWithEvent = {
+  id: string;
+  event_id: string;
+  student_email: string;
+  role: string;
+  events: {
+    id: string;
+    organizer_email: string;
+    title: string;
+  } | null;
+};
+
 // PATCH: Accept or reject volunteer application
 export async function PATCH(
   req: NextRequest,
@@ -17,11 +34,12 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const user = session?.user as SessionUser | undefined;
+    if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if ((session.user as any).role !== "organizer") {
+    if (user.role !== "organizer") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -35,7 +53,7 @@ export async function PATCH(
       );
     }
 
-    const organizerEmail = session.user.email;
+    const organizerEmail = user.email;
 
     // Get application with event details
     const { data: application, error: appError } = await supabase
@@ -51,7 +69,9 @@ export async function PATCH(
       .eq("id", applicationId)
       .single();
 
-    if (appError || !application) {
+    const typedApplication = application as ApplicationWithEvent | null;
+
+    if (appError || !typedApplication) {
       return NextResponse.json(
         { error: "Application not found" },
         { status: 404 }
@@ -59,7 +79,7 @@ export async function PATCH(
     }
 
     // Verify organizer owns the event
-    if ((application.events as any).organizer_email !== organizerEmail) {
+    if (typedApplication.events?.organizer_email !== organizerEmail) {
       return NextResponse.json(
         { error: "You don't have permission to review this application" },
         { status: 403 }
@@ -91,9 +111,9 @@ export async function PATCH(
       const { error: assignError } = await supabase
         .from("volunteer_assignments")
         .insert({
-          event_id: application.event_id,
-          student_email: application.student_email,
-          role: application.role,
+          event_id: typedApplication.event_id,
+          student_email: typedApplication.student_email,
+          role: typedApplication.role,
           assigned_by: organizerEmail,
         });
 

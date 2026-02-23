@@ -53,7 +53,7 @@ export async function GET(
     // Fetch registrations for this event
     const { data: registrations, error: registrationsError } = await supabase
       .from("registrations")
-      .select("student_email, final_price, created_at")
+      .select("student_email, final_price, created_at, status")
       .eq("event_id", eventId)
       .order("created_at", { ascending: false });
 

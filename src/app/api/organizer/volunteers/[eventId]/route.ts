@@ -10,6 +10,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+type SessionUser = {
+  email?: string | null;
+  role?: string;
+};
+
 // GET: Get volunteer applications for event
 export async function GET(
   req: NextRequest,
@@ -17,16 +22,17 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const user = session?.user as SessionUser | undefined;
+    if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if ((session.user as any).role !== "organizer") {
+    if (user.role !== "organizer") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { eventId } = await params;
-    const organizerEmail = session.user.email;
+    const organizerEmail = user.email;
 
     // Verify organizer owns this event
     const { data: event, error: eventError } = await supabase
@@ -51,7 +57,7 @@ export async function GET(
         student_profiles (
           full_name,
           phone_number,
-          profile_photo,
+          profile_photo_url,
           college_name
         )
       `)
@@ -70,10 +76,12 @@ export async function GET(
     const applicationsWithCerts = await Promise.all(
       applications.map(async (app) => {
         const { data: certificates } = await supabase
-          .from("volunteer_certificates")
+          .from("student_certificates")
           .select("*")
           .eq("student_email", app.student_email)
-          .order("date", { ascending: false });
+          .eq("event_id", app.event_id)
+          .eq("certificate_type", "volunteer")
+          .order("sent_date", { ascending: false });
 
         return {
           ...app,

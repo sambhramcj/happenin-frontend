@@ -45,6 +45,16 @@ interface SponsorshipPayoutProps {
   organizerEmail: string;
 }
 
+const EMPTY_PAYOUT_SUMMARY: OrganizerPayoutSummary = {
+  bankAccount: null,
+  totals: {
+    totalEarnings: 0,
+    paidToOrganizer: 0,
+    pendingPayouts: 0,
+  },
+  payouts: [],
+};
+
 export function SponsorshipPayout({ organizerEmail }: SponsorshipPayoutProps) {
   const [payoutData, setPayoutData] = useState<OrganizerPayoutSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,11 +88,11 @@ export function SponsorshipPayout({ organizerEmail }: SponsorshipPayoutProps) {
         const data = await res.json();
         setPayoutData(data);
       } else {
-        toast.error('Failed to fetch payout data');
+        setPayoutData(EMPTY_PAYOUT_SUMMARY);
       }
     } catch (error) {
       console.error('Error fetching payout:', error);
-      toast.error('Failed to load payout information');
+      setPayoutData(EMPTY_PAYOUT_SUMMARY);
     } finally {
       setLoading(false);
     }
@@ -129,7 +139,7 @@ export function SponsorshipPayout({ organizerEmail }: SponsorshipPayoutProps) {
   }
 
   if (!payoutData) {
-    return null;
+    return <div className="py-4 text-text-secondary">Unable to load payout information right now.</div>;
   }
 
   const bankAccount = payoutData.bankAccount;

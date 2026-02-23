@@ -1,7 +1,7 @@
 // Component: Bulk Ticket Manager for Organizers
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit2 } from "lucide-react";
 
@@ -66,6 +66,11 @@ export function BulkTicketManager({
     }
   };
 
+  useEffect(() => {
+    if (!eventId) return;
+    fetchPacks();
+  }, [eventId]);
+
   // Create or update bulk pack
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,8 +80,12 @@ export function BulkTicketManager({
       return;
     }
 
-    if (formData.bulkPrice > formData.basePrice) {
-      toast.error("Bulk price cannot be higher than base price");
+    // Calculate total bulk price
+    const totalBulkPrice = formData.bulkPrice;
+    const bulkPricePerTicket = totalBulkPrice / formData.quantity;
+
+    if (bulkPricePerTicket > formData.basePrice) {
+      toast.error("Bulk price per ticket cannot be higher than base price");
       return;
     }
 
@@ -88,7 +97,14 @@ export function BulkTicketManager({
         body: JSON.stringify({
           eventId,
           organizerEmail,
-          ...formData,
+          name: formData.name,
+          description: formData.description,
+          quantity: formData.quantity,
+          basePrice: formData.basePrice,
+          bulkPrice: totalBulkPrice, // Send total bulk price
+          offerTitle: formData.offerTitle,
+          offerDescription: formData.offerDescription,
+          offerExpiryDate: formData.offerExpiryDate,
         }),
       });
 
@@ -140,13 +156,13 @@ export function BulkTicketManager({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-gray-900">Bulk Ticket Packs</h3>
+        <h3 className="text-xl font-bold text-text-primary">Bulk Ticket Packs</h3>
         <button
           onClick={() => {
             setShowForm(!showForm);
             setEditingPack(null);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover transition"
         >
           <Plus className="w-4 h-4" />
           Create Bulk Pack
@@ -157,7 +173,7 @@ export function BulkTicketManager({
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white border border-gray-200 rounded-lg p-6 space-y-4"
+          className="bg-bg-card border border-border-default rounded-lg p-6 space-y-4"
         >
           <div className="grid grid-cols-2 gap-4">
             <input
@@ -168,7 +184,7 @@ export function BulkTicketManager({
                 setFormData({ ...formData, name: e.target.value })
               }
               required
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="px-4 py-2 bg-bg-muted border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
             />
             <input
               type="number"
@@ -179,7 +195,7 @@ export function BulkTicketManager({
               }
               min="1"
               required
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="px-4 py-2 bg-bg-muted border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
             />
           </div>
 
@@ -189,7 +205,7 @@ export function BulkTicketManager({
             onChange={(e) =>
               setFormData({ ...formData, description: e.target.value })
             }
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-4 py-2 bg-bg-muted border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
             rows={2}
           />
 
@@ -204,11 +220,11 @@ export function BulkTicketManager({
               step="0.01"
               min="0"
               required
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="px-4 py-2 bg-bg-muted border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
             />
             <input
               type="number"
-              placeholder="Bulk price per ticket"
+              placeholder="Total bulk price for pack"
               value={formData.bulkPrice}
               onChange={(e) =>
                 setFormData({ ...formData, bulkPrice: parseFloat(e.target.value) })
@@ -216,13 +232,23 @@ export function BulkTicketManager({
               step="0.01"
               min="0"
               required
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="px-4 py-2 bg-bg-muted border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
             />
           </div>
+          {formData.bulkPrice > 0 && formData.quantity > 0 && (
+            <p className="text-sm text-text-muted">
+              Price per ticket: ₹{(formData.bulkPrice / formData.quantity).toFixed(2)}
+              {formData.basePrice > 0 && (formData.bulkPrice / formData.quantity) < formData.basePrice && (
+                <span className="text-success ml-2">
+                  ({Math.round(((formData.basePrice - (formData.bulkPrice / formData.quantity)) / formData.basePrice) * 100)}% discount)
+                </span>
+              )}
+            </p>
+          )}
 
           {/* Offer Fields */}
-          <div className="space-y-4 bg-purple-50 p-4 rounded-lg border border-purple-200">
-            <h4 className="font-semibold text-gray-900">Offer Details (Optional)</h4>
+          <div className="space-y-4 bg-bg-muted p-4 rounded-lg border border-border-default">
+            <h4 className="font-semibold text-text-primary">Offer Details (Optional)</h4>
             <input
               type="text"
               placeholder="Offer title (e.g., 'Early Bird 20% Off')"
@@ -230,7 +256,7 @@ export function BulkTicketManager({
               onChange={(e) =>
                 setFormData({ ...formData, offerTitle: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-4 py-2 bg-bg-card border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
             />
             <textarea
               placeholder="Offer description"
@@ -238,7 +264,7 @@ export function BulkTicketManager({
               onChange={(e) =>
                 setFormData({ ...formData, offerDescription: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-4 py-2 bg-bg-card border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
               rows={2}
             />
             <input
@@ -248,7 +274,7 @@ export function BulkTicketManager({
               onChange={(e) =>
                 setFormData({ ...formData, offerExpiryDate: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-4 py-2 bg-bg-card border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
             />
           </div>
 
@@ -256,7 +282,7 @@ export function BulkTicketManager({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
+              className="flex-1 px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover disabled:opacity-50 transition"
             >
               {loading ? "Creating..." : "Create Bulk Pack"}
             </button>
@@ -266,7 +292,7 @@ export function BulkTicketManager({
                 setShowForm(false);
                 setEditingPack(null);
               }}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-50 transition"
+              className="flex-1 px-4 py-2 border border-border-default text-text-primary rounded-lg hover:bg-bg-muted transition"
             >
               Cancel
             </button>
@@ -277,23 +303,23 @@ export function BulkTicketManager({
       {/* Bulk Packs List */}
       <div className="space-y-3">
         {packs.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-text-secondary">
             <p>No bulk ticket packs yet. Create one to get started!</p>
           </div>
         ) : (
           packs.map((pack) => (
             <div
               key={pack.id}
-              className="bg-white border border-gray-200 rounded-lg p-6 space-y-3"
+              className="bg-bg-card border border-border-default rounded-lg p-6 space-y-3"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h4 className="font-bold text-gray-900">{pack.name}</h4>
+                  <h4 className="font-bold text-text-primary">{pack.name}</h4>
                   {pack.description && (
-                    <p className="text-sm text-gray-600 mt-1">{pack.description}</p>
+                    <p className="text-sm text-text-secondary mt-1">{pack.description}</p>
                   )}
                   {pack.offer_title && (
-                    <p className="text-sm font-semibold text-purple-600 mt-1">
+                    <p className="text-sm font-semibold text-primary mt-1">
                       🎉 {pack.offer_title}
                     </p>
                   )}
@@ -313,18 +339,18 @@ export function BulkTicketManager({
 
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-600">Quantity</p>
-                  <p className="font-semibold text-gray-900">{pack.quantity}</p>
+                  <p className="text-text-secondary">Quantity</p>
+                  <p className="font-semibold text-text-primary">{pack.quantity}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Discount</p>
+                  <p className="text-text-secondary">Discount</p>
                   <p className="font-semibold text-green-600">
                     {pack.discount_percentage}% off
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Available</p>
-                  <p className="font-semibold text-gray-900">
+                  <p className="text-text-secondary">Available</p>
+                  <p className="font-semibold text-text-primary">
                     {pack.available_count} / {pack.quantity}
                   </p>
                 </div>
@@ -332,7 +358,7 @@ export function BulkTicketManager({
 
               <div className="flex gap-2 pt-3">
                 <button
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border-default text-text-secondary rounded-lg hover:bg-bg-muted transition"
                   disabled
                 >
                   <Edit2 className="w-4 h-4" />

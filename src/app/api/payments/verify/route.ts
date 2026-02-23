@@ -13,6 +13,11 @@ import {
   notifyStudentRegistration,
   notifyOrganizerNewRegistration,
 } from "@/lib/notifications";
+import {
+  calculateStudentEventPrice,
+  getStudentEligibilityContext,
+  isStudentEligibleForEvent,
+} from "@/lib/registration-eligibility";
 
 // Server-only admin client (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -81,7 +86,7 @@ export async function POST(req: Request) {
     // 2️⃣ Fetch event
     const { data: event } = await db
       .from("events")
-      .select("id,title,price,date,location,max_attendees,organizer_email")
+      .select("id,title,price,date,location,max_attendees,organizer_email,discount_enabled,discount_club,discount_amount,eligible_members")
       .eq("id", eventId)
       .single();
 
@@ -92,8 +97,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3️⃣ Calculate final price again (server trust)
-    const finalPrice = Math.max(0, Number(event.price));
+    const studentContext = await getStudentEligibilityContext(db, studentEmail);
+    const eligible = await isStudentEligibleForEvent(
+      db,
+      eventId,
+      studentEmail,
+      studentContext
+    );
+    if (!eligible) {
+      return NextResponse.json(
+        { error: "You are not eligible to register for this event" },
+        { status: 403 }
+      );
+    }
+
+    const finalPrice = calculateStudentEventPrice(event, studentContext);
 
     // 4️⃣ Check if already registered
     const { data: existingPayment } = await db

@@ -16,19 +16,48 @@ interface Event {
   title: string;
   description: string;
   date: string;
+  start_datetime?: string;
+  end_datetime?: string;
+  schedule_sessions?: any[];
   location: string;
   price: string;
   banner_image?: string;
+  brochure_url?: string;
   organizer_email: string;
   needs_volunteers?: boolean;
   volunteer_roles?: any[];
   volunteer_description?: string;
+  discount_enabled?: boolean;
+  discount_club?: string;
+  discount_amount?: number;
+  sponsorship_enabled?: boolean;
+  prize_pool_amount?: number;
+  prize_pool_description?: string;
+  organizer_contact_name?: string;
+  organizer_contact_phone?: string;
+  organizer_contact_email?: string;
+  whatsapp_group_enabled?: boolean;
+  whatsapp_group_link?: string;
+  max_attendees?: number;
 }
 
 interface VolunteerRole {
   role: string;
   count: number;
   description: string;
+}
+
+interface BulkTicketPack {
+  id: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  base_price: number;
+  bulk_price: number;
+  discount_percentage: number;
+  total_cost: number;
+  status: string;
+  available_count: number;
 }
 
 export default function EventDetailPage() {
@@ -39,14 +68,17 @@ export default function EventDetailPage() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "volunteers">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "volunteers" | "bulk">("overview");
   const [volunteering, setVolunteering] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
   const [volunteerMessage, setVolunteerMessage] = useState("");
   const [hasApplied, setHasApplied] = useState(false);
+  const [bulkPacks, setBulkPacks] = useState<BulkTicketPack[]>([]);
+  const [loadingBulkPacks, setLoadingBulkPacks] = useState(false);
 
   useEffect(() => {
     fetchEvent();
+    fetchBulkPacks();
   }, [eventId]);
 
   async function fetchEvent() {
@@ -61,6 +93,21 @@ export default function EventDetailPage() {
       toast.error("Failed to load event");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchBulkPacks() {
+    try {
+      setLoadingBulkPacks(true);
+      const res = await fetch(`/api/bulk-tickets/packs?eventId=${eventId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setBulkPacks(data.filter((pack: BulkTicketPack) => pack.status === "active" && pack.available_count > 0));
+      }
+    } catch (err) {
+      console.error("Error fetching bulk packs:", err);
+    } finally {
+      setLoadingBulkPacks(false);
     }
   }
 
@@ -193,8 +240,9 @@ export default function EventDetailPage() {
         <div className="flex gap-2 border-b border-border-default mb-6 bg-bg-card rounded-t-lg p-3">
           {[
             { id: "overview", label: "Overview", icon: Icons.Info },
+            { id: "bulk", label: "Bulk Tickets", icon: Icons.Ticket, count: bulkPacks.length },
             { id: "volunteers", label: "Volunteer", icon: Icons.Award },
-          ].map(({ id, label, icon: Icon }: any) => (
+          ].map(({ id, label, icon: Icon, count }: any) => (
             <button
               key={id}
               onClick={() => setActiveTab(id as any)}
@@ -206,6 +254,13 @@ export default function EventDetailPage() {
             >
               <Icon className="h-4 w-4" />
               {label}
+              {count !== undefined && count > 0 && (
+                <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  activeTab === id ? "bg-white/20" : "bg-primary text-text-inverse"
+                }`}>
+                  {count}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -229,8 +284,109 @@ export default function EventDetailPage() {
                 <div className="space-y-2 text-text-secondary">
                   <p>📅 {new Date(event.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
                   <p>💰 Entry Fee: ₹{event.price}</p>
+                  {event.max_attendees && (
+                    <p>👥 Max Attendees: {event.max_attendees}</p>
+                  )}
+                  {event.discount_enabled && event.discount_club && (
+                    <p>🎟️ {event.discount_club} members get ₹{event.discount_amount} discount</p>
+                  )}
                 </div>
               </div>
+
+              {/* Prize Pool */}
+              {event.prize_pool_amount && event.prize_pool_amount > 0 && (
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg p-5 border-2 border-yellow-400/50">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-yellow-400 text-yellow-900 p-2 rounded-lg">
+                      <Icons.Award className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Prize Pool</h3>
+                      <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">₹{event.prize_pool_amount.toLocaleString()}</p>
+                      {event.prize_pool_description && (
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{event.prize_pool_description}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Brochure */}
+              {event.brochure_url && (
+                <div>
+                  <h3 className="text-lg font-bold text-text-primary mb-2">Event Brochure</h3>
+                  <a
+                    href={event.brochure_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-3 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover transition-all"
+                  >
+                    <Icons.Download className="h-4 w-4" />
+                    Download Brochure
+                  </a>
+                </div>
+              )}
+
+              {/* Organizer Contact */}
+              {event.organizer_contact_name && (
+                <div>
+                  <h3 className="text-lg font-bold text-text-primary mb-3">Contact Organizer</h3>
+                  <div className="bg-bg-muted rounded-lg p-4 space-y-2">
+                    <p className="text-text-primary font-semibold">{event.organizer_contact_name}</p>
+                    {event.organizer_contact_phone && (
+                      <a
+                        href={`tel:${event.organizer_contact_phone}`}
+                        className="flex items-center gap-2 text-text-secondary hover:text-primary transition-colors"
+                      >
+                        <Icons.Phone className="h-4 w-4" />
+                        {event.organizer_contact_phone}
+                      </a>
+                    )}
+                    {event.organizer_contact_email && (
+                      <a
+                        href={`mailto:${event.organizer_contact_email}`}
+                        className="flex items-center gap-2 text-text-secondary hover:text-primary transition-colors"
+                      >
+                        <Icons.Mail className="h-4 w-4" />
+                        {event.organizer_contact_email}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* WhatsApp Group */}
+              {event.whatsapp_group_enabled && event.whatsapp_group_link && (
+                <div>
+                  <h3 className="text-lg font-bold text-text-primary mb-3">Join Community</h3>
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-5 border-2 border-green-400/50">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-green-500 text-white p-2 rounded-lg">
+                        <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-gray-900 dark:text-white mb-2">WhatsApp Group</h4>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                          Connect with other participants and stay updated with event announcements
+                        </p>
+                        <a
+                          href={event.whatsapp_group_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all font-semibold text-sm"
+                        >
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                          </svg>
+                          Join WhatsApp Group
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Event Sponsors */}
@@ -245,6 +401,106 @@ export default function EventDetailPage() {
         )}
 
 
+
+        {/* Bulk Tickets Tab */}
+        {activeTab === "bulk" && (
+          <div className="bg-bg-card rounded-lg p-6 border border-border-default">
+            {loadingBulkPacks ? (
+              <div className="text-center py-8">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-3"></div>
+                <p className="text-text-muted">Loading bulk packs...</p>
+              </div>
+            ) : bulkPacks.length > 0 ? (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-text-primary mb-2">Available Bulk Ticket Packs</h3>
+                  <p className="text-text-secondary text-sm mb-4">Save money by purchasing tickets in bulk for your group</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {bulkPacks.map((pack) => (
+                    <div
+                      key={pack.id}
+                      className="bg-bg-muted rounded-lg p-5 border-2 border-border-default hover:border-primary transition-all"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-bold text-text-primary text-lg">{pack.name}</h4>
+                          {pack.description && (
+                            <p className="text-text-secondary text-sm mt-1">{pack.description}</p>
+                          )}
+                        </div>
+                        <div className="bg-success/20 text-success px-2 py-1 rounded-full text-xs font-semibold">
+                          {pack.discount_percentage}% OFF
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-text-muted">Number of tickets:</span>
+                          <span className="font-semibold text-text-primary">{pack.quantity}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-text-muted">Price per ticket:</span>
+                          <div className="text-right">
+                            <span className="font-semibold text-text-primary">₹{pack.bulk_price}</span>
+                            <span className="text-text-muted line-through ml-2 text-xs">₹{pack.base_price}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-border-default">
+                          <span className="text-text-primary font-semibold">Total Pack Price:</span>
+                          <span className="text-primary font-bold text-lg">₹{pack.total_cost}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-text-muted">Available packs:</span>
+                          <span className="text-text-primary font-medium">{pack.available_count}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (!session) {
+                            router.push(`/auth?redirect=/events/${eventId}`);
+                            return;
+                          }
+                          if ((session.user as any)?.role !== "student") {
+                            toast.error("Only students can purchase bulk tickets");
+                            return;
+                          }
+                          // TODO: Implement bulk ticket purchase flow
+                          toast.info("Bulk ticket purchase coming soon!");
+                        }}
+                        className="w-full bg-primary text-text-inverse py-2.5 rounded-lg hover:bg-primaryHover font-semibold transition-all"
+                      >
+                        Purchase Pack
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-primarySoft border border-primary/30 rounded-lg p-4 mt-6">
+                  <div className="flex items-start gap-3">
+                    <Icons.Info className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-text-primary space-y-1">
+                      <p className="font-semibold">How bulk tickets work:</p>
+                      <ul className="list-disc list-inside space-y-1 text-text-secondary">
+                        <li>Purchase a pack for your group or organization</li>
+                        <li>Receive individual tickets that can be distributed</li>
+                        <li>Each ticket can be assigned to different members</li>
+                        <li>Save money compared to individual purchases</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Icons.Ticket className="h-12 w-12 text-text-muted mx-auto mb-3" />
+                <p className="text-text-muted">No bulk ticket packs available for this event</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Volunteers Tab */}
         {activeTab === "volunteers" && (

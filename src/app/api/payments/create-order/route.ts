@@ -4,6 +4,11 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { razorpay } from "@/lib/razorpay";
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
+import {
+  calculateStudentEventPrice,
+  getStudentEligibilityContext,
+  isStudentEligibleForEvent,
+} from "@/lib/registration-eligibility";
 
 // Force dynamic rendering for API routes
 export const dynamic = 'force-dynamic';
@@ -42,7 +47,7 @@ export async function POST(req: Request) {
         });
         const { data, error } = await supabaseAdmin
           .from("student_profiles")
-          .select("full_name,dob,college_name,college_email")
+          .select("*")
           .eq("student_email", studentEmail)
           .single();
         if (!error) profile = data;
@@ -50,7 +55,7 @@ export async function POST(req: Request) {
         // Fallback: try with regular anon client (may be blocked by RLS)
         const { data, error } = await supabase
           .from("student_profiles")
-          .select("full_name,dob,college_name,college_email")
+          .select("*")
           .eq("student_email", studentEmail)
           .single();
         if (!error) profile = data;
@@ -78,7 +83,7 @@ export async function POST(req: Request) {
 
     const { data: event, error: eventError } = await adminDb
       .from("events")
-      .select("id,title,price,max_attendees")
+      .select("id,title,price,max_attendees,discount_enabled,discount_club,discount_amount,eligible_members")
       .eq("id", eventId)
       .single();
 
@@ -127,8 +132,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3️⃣ Final price is server-trusted event price (no client override)
-    const finalPrice = Math.max(0, Number(event.price));
+    const studentContext = await getStudentEligibilityContext(adminDb, studentEmail);
+    const eligible = await isStudentEligibleForEvent(
+      adminDb,
+      eventId,
+      studentEmail,
+      studentContext
+    );
+    if (!eligible) {
+      return NextResponse.json(
+        { error: "You are not eligible to register for this event" },
+        { status: 403 }
+      );
+    }
+
+    const finalPrice = calculateStudentEventPrice(event, studentContext);
 
     // 4️⃣ Create Razorpay order
     const order = await razorpay.orders.create({

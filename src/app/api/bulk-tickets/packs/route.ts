@@ -18,17 +18,18 @@ export async function POST(req: NextRequest) {
       description,
       quantity,
       basePrice,
-      bulkPrice,
+      bulkPrice, // This is the TOTAL pack price
       offerTitle,
       offerDescription,
       offerExpiryDate,
     } = body;
 
-    // Calculate discount percentage
+    // Calculate per-ticket bulk price and discount percentage
+    const bulkPricePerTicket = bulkPrice / quantity;
     const discountPercentage = Math.round(
-      ((basePrice - bulkPrice) / basePrice) * 100
+      ((basePrice - bulkPricePerTicket) / basePrice) * 100
     );
-    const totalCost = bulkPrice * quantity;
+    const totalCost = bulkPrice;
 
     const { data, error } = await supabase
       .from("bulk_ticket_packs")
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
           description,
           quantity,
           base_price: basePrice,
-          bulk_price: bulkPrice,
+          bulk_price: bulkPricePerTicket,
           discount_percentage: discountPercentage,
           total_cost: totalCost,
           offer_title: offerTitle,

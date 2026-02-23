@@ -45,12 +45,20 @@ type Event = {
   location: string;
   price: string;
   banner_image?: string;
+  brochure_url?: string;
   discount_enabled?: boolean;
   discount_club?: string;
   discount_amount?: number;
   eligible_members?: EligibleMember[];
   needs_volunteers?: boolean;
   volunteer_roles?: Array<{ role: string; title?: string; description?: string }> | null;
+  prize_pool_amount?: number;
+  prize_pool_description?: string;
+  organizer_contact_name?: string;
+  organizer_contact_phone?: string;
+  organizer_contact_email?: string;
+  sponsorship_enabled?: boolean;
+  max_attendees?: number;
 };
 
 type Registration = {
@@ -121,6 +129,7 @@ export default function StudentDashboard() {
   const [filterCategory, setFilterCategory] = useState<"all" | "today" | "week">("all");
   const [top10Events, setTop10Events] = useState<any[]>([]);
   const [searchPlaceholder, setSearchPlaceholder] = useState("Search fests...");
+  const [eventBulkTicketStatus, setEventBulkTicketStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (status === "loading") return;
@@ -326,11 +335,40 @@ export default function StudentDashboard() {
         const data = await res.json();
         const list = data.events || [];
         setEvents(list);
+        
+        // Check for bulk tickets availability
+        checkBulkTickets(list.map((e: Event) => e.id));
       }
     } catch (err) {
       console.error("Error fetching events:", err);
     } finally {
       setEventsLoading(false);
+    }
+  }
+
+  async function checkBulkTickets(eventIds: string[]) {
+    try {
+      const results = await Promise.all(
+        eventIds.map(async (eventId) => {
+          try {
+            const res = await fetch(`/api/bulk-tickets/packs?eventId=${eventId}`);
+            if (!res.ok) return { eventId, hasBulk: false };
+            const data = await res.json();
+            const hasBulkTickets = data.some((pack: any) => pack.status === "active" && pack.available_count > 0);
+            return { eventId, hasBulk: hasBulkTickets };
+          } catch {
+            return { eventId, hasBulk: false };
+          }
+        })
+      );
+
+      const statusMap: Record<string, boolean> = {};
+      results.forEach(({ eventId, hasBulk }) => {
+        statusMap[eventId] = hasBulk;
+      });
+      setEventBulkTicketStatus(statusMap);
+    } catch (err) {
+      console.error("Error checking bulk tickets:", err);
     }
   }
 
@@ -442,15 +480,27 @@ export default function StudentDashboard() {
       dob: formData.get("dob"),
       college_name: formData.get("college_name"),
       college_email: formData.get("college_email"),
+      branch: formData.get("branch"),
+      year_of_study: formData.get("year_of_study")
+        ? Number(formData.get("year_of_study"))
+        : null,
       phone_number: formData.get("phone_number"),
       personal_email: formData.get("personal_email"),
     };
 
-    const res = await fetch("/api/student/profile", {
+    let res = await fetch("/api/student/profile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+
+    if (res.status === 409) {
+      res = await fetch("/api/student/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
 
     if (res.ok) {
       toast.success("Profile saved successfully!");
@@ -1006,6 +1056,7 @@ export default function StudentDashboard() {
               <div className="space-y-4">
                 {getFilteredEvents().map((event) => {
                   const reg = getRegistration(event.id);
+                  const hasBulkTickets = eventBulkTicketStatus[event.id];
 
                   return (
                     <div key={event.id} className="bg-bg-card rounded-lg overflow-hidden border border-border-default hover:border-primary transition-all">
@@ -1014,7 +1065,34 @@ export default function StudentDashboard() {
                           <img src={event.banner_image} alt={event.title} className="w-24 h-24 object-cover rounded-lg flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-text-primary mb-1">{event.title}</h3>
+                          <div className="flex items-start gap-2 mb-1">
+                            <h3 className="font-bold text-text-primary flex-1">{event.title}</h3>
+                            <div className="flex flex-wrap gap-1">
+                              {hasBulkTickets && (
+                                <span className="bg-success/20 text-success px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1">
+                                  <Icons.Ticket className="h-3 w-3" />
+                                  Bulk
+                                </span>
+                              )}
+                              {event.prize_pool_amount && event.prize_pool_amount > 0 && (
+                                <span className="bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1">
+                                  <Icons.Award className="h-3 w-3" />
+                                  ₹{event.prize_pool_amount > 1000 ? `${(event.prize_pool_amount / 1000).toFixed(0)}k` : event.prize_pool_amount}
+                                </span>
+                              )}
+                              {event.needs_volunteers && (
+                                <span className="bg-blue-500/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1">
+                                  <Icons.Users className="h-3 w-3" />
+                                  Volunteer
+                                </span>
+                              )}
+                              {event.discount_enabled && event.discount_club && (
+                                <span className="bg-purple-500/20 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap">
+                                  {event.discount_club} ₹{event.discount_amount} OFF
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           <p className="text-sm text-text-muted mb-2 line-clamp-2">{event.description}</p>
                           <div className="flex items-center gap-4 text-xs text-text-secondary mb-2">
                             <span className="flex items-center gap-1"><Icons.Rupee className="h-4 w-4" /> ₹{event.price}</span>
@@ -1026,15 +1104,23 @@ export default function StudentDashboard() {
                             eventTitle={event.title}
                           />
                         </div>
-                        <LoadingButton
-                          onClick={() => handlePay(event)}
-                          disabled={!!reg || loadingEventId === event.id}
-                          loading={loadingEventId === event.id}
-                          loadingText="Submitting…"
-                          className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover disabled:opacity-50 self-center whitespace-nowrap transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
-                        >
-                          {reg ? "✓ Registered" : "Register"}
-                        </LoadingButton>
+                        <div className="flex flex-col gap-2 self-center">
+                          <button
+                            onClick={() => router.push(`/events/${event.id}`)}
+                            className="px-4 py-2 bg-bg-muted border border-border-default text-text-primary rounded-lg hover:bg-bg-hover whitespace-nowrap transition-all text-sm font-medium"
+                          >
+                            View Details
+                          </button>
+                          <LoadingButton
+                            onClick={() => handlePay(event)}
+                            disabled={!!reg || loadingEventId === event.id}
+                            loading={loadingEventId === event.id}
+                            loadingText="Submitting…"
+                            className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover disabled:opacity-50 whitespace-nowrap transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
+                          >
+                            {reg ? "✓ Registered" : "Register"}
+                          </LoadingButton>
+                        </div>
                       </div>
                     </div>
                   );
@@ -1354,6 +1440,29 @@ export default function StudentDashboard() {
                     disabled={!editingProfile}
                     required
                     className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block">Branch</label>
+                  <input
+                    name="branch"
+                    defaultValue={profile?.branch || ""}
+                    disabled={!editingProfile}
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
+                    placeholder="e.g., CSE"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block">Year of Study</label>
+                  <input
+                    name="year_of_study"
+                    type="number"
+                    min={1}
+                    max={8}
+                    defaultValue={profile?.year_of_study || ""}
+                    disabled={!editingProfile}
+                    className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary disabled:opacity-60 transition-all duration-fast ease-standard"
+                    placeholder="e.g., 3"
                   />
                 </div>
                 <div>

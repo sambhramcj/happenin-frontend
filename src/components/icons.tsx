@@ -51,6 +51,8 @@ import {
   Trash2,
   Image,
   MessageCircle,
+  Phone,
+  Mail,
 } from "lucide-react";
 
 export const Icons = {
@@ -106,6 +108,8 @@ export const Icons = {
   Trash2,
   Image,
   WhatsApp: MessageCircle,
+  Phone,
+  Mail,
 };
 
 export type IconKey = keyof typeof Icons;

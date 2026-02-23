@@ -2,16 +2,18 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = 'force-dynamic';
 
-// Allowed image MIME types
+// Allowed banner/brochure MIME types
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',
   'image/png',
   'image/gif',
   'image/webp',
+  'application/pdf',
 ];
 
 // Maximum file size: 5MB
@@ -40,11 +42,13 @@ export async function POST(req: Request) {
 
     // 3. Parse and validate file
     const formData = await req.formData();
-    const file = formData.get('image') as File;
+    const imageFile = formData.get('image');
+    const genericFile = formData.get('file');
+    const file = (imageFile || genericFile) as File | null;
 
     if (!file) {
       return NextResponse.json(
-        { error: 'No file provided' },
+          { error: 'No file provided. Upload a banner image or brochure file.' },
         { status: 400 }
       );
     }
@@ -72,6 +76,7 @@ export async function POST(req: Request) {
       'image/png': ['png'],
       'image/gif': ['gif'],
       'image/webp': ['webp'],
+      'application/pdf': ['pdf'],
     };
 
     const allowedExts = mimeToExt[file.type];
@@ -104,6 +109,7 @@ export async function POST(req: Request) {
       'image/png': [0x89, 0x50, 0x4E, 0x47],
       'image/gif': [0x47, 0x49, 0x46, 0x38],
       'image/webp': [0x52, 0x49, 0x46, 0x46],
+      'application/pdf': [0x25, 0x50, 0x44, 0x46],
     };
 
     const expectedMagic = magicNumbers[file.type];
@@ -125,25 +131,50 @@ export async function POST(req: Request) {
     // - Multiple file validation layers (lines 52-119)
     // - RLS policies on the bucket (see SUPABASE_SETUP.md)
     // The anon key is safe because only authenticated organizers can reach this point
-    const { data, error } = await supabase.storage
-      .from('event-banners')
-      .upload(filePath, buffer, {
-        contentType: file.type,
-        upsert: false,
-        cacheControl: '3600',
-      });
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const storageClient = supabaseUrl && serviceRoleKey
+      ? createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } })
+      : supabase;
 
-    if (error) {
-      console.error('Supabase upload error:', error);
+    const bucketCandidates = ['event-banners', 'banners'];
+    let usedBucket: string | null = null;
+    let uploadError: any = null;
+
+    for (const bucket of bucketCandidates) {
+      const { error } = await storageClient.storage
+        .from(bucket)
+        .upload(filePath, buffer, {
+          contentType: file.type,
+          upsert: false,
+          cacheControl: '3600',
+        });
+
+      if (!error) {
+        usedBucket = bucket;
+        uploadError = null;
+        break;
+      }
+
+      uploadError = error;
+      const message = (error as any)?.message?.toLowerCase?.() || '';
+      if (!message.includes('bucket') && !message.includes('not found')) {
+        break;
+      }
+    }
+
+    if (!usedBucket) {
+      console.error('Supabase upload error:', uploadError);
+      const message = (uploadError as any)?.message || 'Failed to upload image. Please try again.';
       return NextResponse.json(
-        { error: 'Failed to upload image. Please try again.' },
+        { error: message },
         { status: 500 }
       );
     }
 
     // 11. Get public URL
-    const { data: urlData } = supabase.storage
-      .from('event-banners')
+    const { data: urlData } = storageClient.storage
+      .from(usedBucket)
       .getPublicUrl(filePath);
 
     // 12. Log successful upload (for audit trail)
