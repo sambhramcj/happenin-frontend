@@ -55,17 +55,7 @@ export async function GET() {
 
     const { data: applications, error } = await supabase
       .from("volunteer_applications")
-      .select(
-        `
-        *,
-        student_profiles (
-          full_name,
-          phone_number,
-          profile_photo_url,
-          college_name
-        )
-      `
-      )
+      .select("*")
       .in("event_id", eventIds)
       .order("applied_at", { ascending: false });
 
@@ -76,6 +66,23 @@ export async function GET() {
         { status: 500 }
       );
     }
+
+    const studentEmails = Array.from(
+      new Set(
+        ((applications || []) as VolunteerApplication[])
+          .map((app) => app.student_email)
+          .filter((email): email is string => Boolean(email))
+      )
+    );
+
+    const { data: profiles } = studentEmails.length
+      ? await supabase
+          .from("student_profiles")
+          .select("student_email, full_name, phone_number, profile_photo_url, college_name")
+          .in("student_email", studentEmails)
+      : { data: [] };
+
+    const profileMap = new Map((profiles || []).map((profile) => [profile.student_email, profile]));
 
     const applicationsWithCerts = await Promise.all(
       ((applications || []) as VolunteerApplication[]).map(async (app) => {
@@ -89,6 +96,7 @@ export async function GET() {
 
         return {
           ...app,
+          student_profiles: profileMap.get(app.student_email) || null,
           certificates: certificates || [],
         };
       })

@@ -608,7 +608,7 @@ export default function StudentDashboard() {
       // Create order (individual or team)
       const endpoint = mode === "team" 
         ? "/api/payments/create-bulk-order"  
-        : "/api/payments/create-order";
+        : "/api/payments/create-ticket-order";
 
       const payload = mode === "team"
         ? {
@@ -652,7 +652,7 @@ export default function StudentDashboard() {
           try {
             const verifyEndpoint = mode === "team"
               ? "/api/payments/verify-bulk"
-              : "/api/payments/verify";
+              : "/api/payments/webhook";
 
             const verifyPayload = mode === "team"
               ? {
@@ -1118,7 +1118,9 @@ export default function StudentDashboard() {
                             loadingText="Submitting…"
                             className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover disabled:opacity-50 whitespace-nowrap transition-all duration-fast ease-standard active:scale-press hover:scale-hover"
                           >
-                            {reg ? "✓ Registered" : "Register"}
+                            {reg
+                              ? "✓ Registered"
+                              : "Register"}
                           </LoadingButton>
                         </div>
                       </div>

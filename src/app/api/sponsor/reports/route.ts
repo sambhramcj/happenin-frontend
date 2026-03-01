@@ -13,7 +13,7 @@ const serviceSupabase = createClient(
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email as string | undefined;
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = (session?.user as { role?: string } | undefined)?.role;
 
   if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (role !== "sponsor") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -29,11 +29,11 @@ export async function GET(req: NextRequest) {
   try {
     // Fetch sponsor's orders within date range
     const { data: orders, error: ordersError } = await serviceSupabase
-      .from("sponsorship_orders")
+      .from("digital_visibility_packs")
       .select(`
         id,
         amount,
-        status,
+        payment_status,
         pack_type,
         created_at,
         event_id,
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         events(title, date, location),
         fests(title, start_date, end_date)
       `)
-      .eq("sponsor_email", email)
+      .eq("sponsor_id", email)
       .gte("created_at", from)
       .lte("created_at", to)
       .order("created_at", { ascending: false });
@@ -56,9 +56,9 @@ export async function GET(req: NextRequest) {
 
     if (bannersError) throw bannersError;
 
-    const bannerIds = (banners || []).map((b: any) => b.id);
+    const bannerIds = (banners || []).map((b: { id: string }) => b.id);
 
-    let analytics: any[] = [];
+    let analytics: Array<{ banner_id: string; event_type: string; created_at: string }> = [];
     if (bannerIds.length > 0) {
       const { data: analyticsData, error: analyticsError } = await serviceSupabase
         .from("banner_analytics")
@@ -76,9 +76,9 @@ export async function GET(req: NextRequest) {
       dateRange: { from, to },
       summary: {
         totalOrders: orders?.length || 0,
-        totalSpent: orders?.filter(o => o.status === 'paid').reduce((sum, o) => sum + (o.amount || 0), 0) || 0,
-        totalImpressions: analytics.filter(a => a.event_type === 'view').length,
-        totalClicks: analytics.filter(a => a.event_type === 'click').length,
+        totalSpent: orders?.filter((o: { payment_status: string; amount?: number }) => o.payment_status === 'paid').reduce((sum: number, o: { amount?: number }) => sum + (o.amount || 0), 0) || 0,
+        totalImpressions: analytics.filter((a) => a.event_type === 'view').length,
+        totalClicks: analytics.filter((a) => a.event_type === 'click').length,
       },
       orders: orders || [],
       analytics: analytics,

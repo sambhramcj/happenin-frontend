@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icons } from "@/components/icons";
 
 interface SponsorshipDeal {
@@ -27,14 +27,10 @@ export function OrganizerSponsorshipDeals({ eventId }: OrganizerSponsorshipDeals
   const [deals, setDeals] = useState<SponsorshipDeal[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDeals();
-  }, [eventId]);
-
-  const fetchDeals = async () => {
+  const fetchDeals = useCallback(async () => {
     try {
       setLoading(true);
-      // Query new sponsorship_orders endpoint for this event
+      // Query digital visibility pack orders for this event
       const url = eventId 
         ? `/api/sponsorships/orders?event_id=${eventId}`
         : '/api/sponsorships/orders';
@@ -43,7 +39,8 @@ export function OrganizerSponsorshipDeals({ eventId }: OrganizerSponsorshipDeals
       if (res.ok) {
         const data = await res.json();
         // Filter to only paid orders
-        const paidOrders = (data.deals || []).filter((deal: SponsorshipDeal) => deal.status === 'paid');
+        const source = data.orders || data.deals || [];
+        const paidOrders = source.filter((deal: SponsorshipDeal) => deal.status === 'paid');
         setDeals(paidOrders);
       }
     } catch (error) {
@@ -51,10 +48,11 @@ export function OrganizerSponsorshipDeals({ eventId }: OrganizerSponsorshipDeals
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
 
-  const formatStatus = (status: string) =>
-    status ? status.replace(/_/g, " ") : "pending";
+  useEffect(() => {
+    fetchDeals();
+  }, [fetchDeals]);
 
   if (loading) {
     return (

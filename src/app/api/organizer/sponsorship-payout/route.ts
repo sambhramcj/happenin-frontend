@@ -8,10 +8,20 @@ const serviceSupabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+type SessionUserWithRole = {
+  email?: string;
+  role?: string;
+};
+
+type OrganizerPayoutRow = {
+  payout_amount: number;
+  payout_status: "pending" | "paid";
+};
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email as string | undefined;
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = (session?.user as SessionUserWithRole | undefined)?.role;
 
   if (!email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,21 +51,14 @@ export async function GET(req: NextRequest) {
       .select(
         `
         id,
-        sponsorship_deal_id,
+        digital_pack_id,
         gross_amount,
         platform_fee,
         payout_amount,
         payout_status,
         payout_method,
         paid_at,
-        created_at,
-        sponsorship_deals (
-          id,
-          event_id,
-          sponsorship_packages (tier),
-          events (id, title),
-          sponsors_profile (company_name)
-        )
+        created_at
       `
       )
       .eq("organizer_email", email)
@@ -63,16 +66,89 @@ export async function GET(req: NextRequest) {
 
     if (payoutsError) throw payoutsError;
 
-    const typedPayouts = payouts || [];
+    const typedPayouts = (payouts || []) as Array<Record<string, unknown>>;
+    const digitalPackIds = Array.from(
+      new Set(
+        typedPayouts
+          .map((payout) => payout.digital_pack_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0)
+      )
+    );
+
+    const { data: packs } = digitalPackIds.length
+      ? await serviceSupabase
+          .from("digital_visibility_packs")
+          .select("id, pack_type, event_id, sponsor_id")
+          .in("id", digitalPackIds)
+      : { data: [] };
+
+    const eventIds = Array.from(
+      new Set(
+        ((packs || []) as Array<{ event_id?: string | null }>)
+          .map((pack) => pack.event_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+    const sponsorIds = Array.from(
+      new Set(
+        ((packs || []) as Array<{ sponsor_id?: string | null }>)
+          .map((pack) => pack.sponsor_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    const { data: events } = eventIds.length
+      ? await serviceSupabase.from("events").select("id, title").in("id", eventIds)
+      : { data: [] };
+    const { data: sponsors } = sponsorIds.length
+      ? await serviceSupabase
+          .from("sponsors_profile")
+          .select("email, company_name")
+          .in("email", sponsorIds)
+      : { data: [] };
+
+    const packMap = new Map(
+      ((packs || []) as Array<{ id: string; pack_type?: string | null; event_id?: string | null; sponsor_id?: string | null }>).map(
+        (pack) => [pack.id, pack]
+      )
+    );
+    const eventMap = new Map(
+      ((events || []) as Array<{ id: string; title?: string | null }>).map((event) => [event.id, event])
+    );
+    const sponsorMap = new Map(
+      ((sponsors || []) as Array<{ email: string; company_name?: string | null }>).map((sponsor) => [
+        sponsor.email,
+        sponsor,
+      ])
+    );
+
+    const normalizedPayouts = typedPayouts.map((payout) => {
+      const pack = packMap.get(String(payout.digital_pack_id || ""));
+      const eventTitle = pack?.event_id ? eventMap.get(pack.event_id)?.title : null;
+      const sponsorName = pack?.sponsor_id ? sponsorMap.get(pack.sponsor_id)?.company_name : null;
+
+      return {
+        ...payout,
+        event_title: eventTitle || "Event",
+        sponsor_name: sponsorName || "Sponsor",
+        pack_type: pack?.pack_type || "standard",
+      };
+    });
+
     const totalEarnings = typedPayouts.reduce(
-      (sum: number, p: any) => sum + (p.payout_amount || 0),
+      (sum: number, payout) => sum + Number((payout as OrganizerPayoutRow).payout_amount || 0),
       0
     );
     const paidToOrganizer = typedPayouts.reduce(
-      (sum: number, p: any) => sum + (p.payout_status === "paid" ? p.payout_amount || 0 : 0),
+      (sum: number, payout) => {
+        const typed = payout as OrganizerPayoutRow;
+        return sum + (typed.payout_status === "paid" ? Number(typed.payout_amount || 0) : 0);
+      },
       0
     );
-    const pendingPayouts = typedPayouts.filter((p: any) => p.payout_status === "pending").length;
+    const pendingPayouts = typedPayouts.filter(
+      (payout) => (payout as OrganizerPayoutRow).payout_status === "pending"
+    ).length;
 
     return NextResponse.json({
       bankAccount: bankAccount || null,
@@ -81,7 +157,7 @@ export async function GET(req: NextRequest) {
         paidToOrganizer,
         pendingPayouts,
       },
-      payouts: typedPayouts,
+      payouts: normalizedPayouts,
     });
   } catch (error) {
     console.error("Error fetching payout:", error);

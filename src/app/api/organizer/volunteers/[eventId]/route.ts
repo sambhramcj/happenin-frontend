@@ -49,18 +49,9 @@ export async function GET(
       );
     }
 
-    // Get all applications with applicant details
     const { data: applications, error } = await supabase
       .from("volunteer_applications")
-      .select(`
-        *,
-        student_profiles (
-          full_name,
-          phone_number,
-          profile_photo_url,
-          college_name
-        )
-      `)
+      .select("*")
       .eq("event_id", eventId)
       .order("applied_at", { ascending: false });
 
@@ -72,7 +63,19 @@ export async function GET(
       );
     }
 
-    // For each applicant, get their certificates
+    const studentEmails = Array.from(
+      new Set((applications || []).map((app) => app.student_email).filter((email): email is string => Boolean(email)))
+    );
+
+    const { data: profiles } = studentEmails.length
+      ? await supabase
+          .from("student_profiles")
+          .select("student_email, full_name, phone_number, profile_photo_url, college_name")
+          .in("student_email", studentEmails)
+      : { data: [] };
+
+    const profileMap = new Map((profiles || []).map((profile) => [profile.student_email, profile]));
+
     const applicationsWithCerts = await Promise.all(
       applications.map(async (app) => {
         const { data: certificates } = await supabase
@@ -85,6 +88,7 @@ export async function GET(
 
         return {
           ...app,
+          student_profiles: profileMap.get(app.student_email) || null,
           certificates: certificates || [],
         };
       })

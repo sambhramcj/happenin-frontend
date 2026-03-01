@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ComponentType } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -18,14 +19,14 @@ interface Event {
   date: string;
   start_datetime?: string;
   end_datetime?: string;
-  schedule_sessions?: any[];
+  schedule_sessions?: unknown[];
   location: string;
   price: string;
   banner_image?: string;
   brochure_url?: string;
   organizer_email: string;
   needs_volunteers?: boolean;
-  volunteer_roles?: any[];
+  volunteer_roles?: VolunteerRole[];
   volunteer_description?: string;
   discount_enabled?: boolean;
   discount_club?: string;
@@ -60,6 +61,21 @@ interface BulkTicketPack {
   available_count: number;
 }
 
+type EventTabId = "overview" | "volunteers" | "bulk";
+
+interface EventTab {
+  id: EventTabId;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  count?: number;
+}
+
+interface RazorpayPaymentResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
 export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -68,35 +84,31 @@ export default function EventDetailPage() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "volunteers" | "bulk">("overview");
+  const [activeTab, setActiveTab] = useState<EventTabId>("overview");
   const [volunteering, setVolunteering] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
   const [volunteerMessage, setVolunteerMessage] = useState("");
   const [hasApplied, setHasApplied] = useState(false);
   const [bulkPacks, setBulkPacks] = useState<BulkTicketPack[]>([]);
   const [loadingBulkPacks, setLoadingBulkPacks] = useState(false);
+  const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchEvent();
-    fetchBulkPacks();
-  }, [eventId]);
-
-  async function fetchEvent() {
+  const fetchEvent = useCallback(async () => {
     try {
       const res = await fetch(`/api/events/${eventId}`);
       if (res.ok) {
         const data = await res.json();
         setEvent(data.event);
       }
-    } catch (err) {
-      console.error("Error fetching event:", err);
+    } catch {
+      console.error("Error fetching event");
       toast.error("Failed to load event");
     } finally {
       setLoading(false);
     }
-  }
+  }, [eventId]);
 
-  async function fetchBulkPacks() {
+  const fetchBulkPacks = useCallback(async () => {
     try {
       setLoadingBulkPacks(true);
       const res = await fetch(`/api/bulk-tickets/packs?eventId=${eventId}`);
@@ -109,7 +121,12 @@ export default function EventDetailPage() {
     } finally {
       setLoadingBulkPacks(false);
     }
-  }
+  }, [eventId]);
+
+  useEffect(() => {
+    fetchEvent();
+    fetchBulkPacks();
+  }, [fetchEvent, fetchBulkPacks]);
 
   async function handleVolunteerApply() {
     if (!selectedRole) {
@@ -138,10 +155,110 @@ export default function EventDetailPage() {
         const data = await res.json();
         toast.error(data.error || "Failed to submit application");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to submit application");
     } finally {
       setVolunteering(false);
+    }
+  }
+
+  function loadRazorpayScript(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  }
+
+  async function handleBulkPackPurchase(pack: BulkTicketPack) {
+    if (!session) {
+      router.push(`/auth?redirect=/events/${eventId}`);
+      return;
+    }
+
+    const userRole = (session.user as { role?: string }).role;
+    if (userRole !== "student") {
+      toast.error("Only students can purchase bulk tickets");
+      return;
+    }
+
+    try {
+      setPurchasingPackId(pack.id);
+
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error("Razorpay SDK failed to load");
+        setPurchasingPackId(null);
+        return;
+      }
+
+      const createOrderRes = await fetch("/api/bulk-tickets/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bulkPackId: pack.id,
+          quantityPurchased: pack.quantity,
+        }),
+      });
+
+      const createOrderData = await createOrderRes.json();
+
+      if (!createOrderRes.ok) {
+        toast.error(createOrderData.error || "Failed to create bulk order");
+        setPurchasingPackId(null);
+        return;
+      }
+
+      const razorpay = new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: createOrderData.amountPaise,
+        currency: createOrderData.currency || "INR",
+        name: "Happenin",
+        description: `Bulk Pack: ${pack.name}`,
+        order_id: createOrderData.orderId,
+        prefill: { email: session.user.email },
+        theme: { color: "#7c3aed" },
+        modal: {
+          ondismiss: () => setPurchasingPackId(null),
+        },
+        handler: async (response: RazorpayPaymentResponse) => {
+          const verifyRes = await fetch("/api/bulk-tickets/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              bulkPackId: pack.id,
+              quantityPurchased: pack.quantity,
+            }),
+          });
+
+          const verifyData = await verifyRes.json();
+
+          if (!verifyRes.ok) {
+            toast.error(verifyData.error || "Payment verification failed");
+            setPurchasingPackId(null);
+            return;
+          }
+
+          toast.success(`Bulk pack purchased! ${verifyData.tickets_generated || pack.quantity} tickets generated.`);
+          await fetchBulkPacks();
+          setPurchasingPackId(null);
+        },
+      });
+
+      razorpay.open();
+    } catch {
+      toast.error("Failed to purchase bulk pack");
+      setPurchasingPackId(null);
     }
   }
 
@@ -189,11 +306,15 @@ export default function EventDetailPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Banner */}
         {event.banner_image && (
-          <img
-            src={event.banner_image}
-            alt={event.title}
-            className="w-full h-80 object-cover rounded-xl mb-6 border border-border-default"
-          />
+          <div className="relative w-full h-80 rounded-xl mb-6 border border-border-default overflow-hidden">
+            <Image
+              src={event.banner_image}
+              alt={event.title}
+              fill
+              sizes="(max-width: 1024px) 100vw, 896px"
+              className="object-cover"
+            />
+          </div>
         )}
 
         {/* Event Info */}
@@ -242,10 +363,10 @@ export default function EventDetailPage() {
             { id: "overview", label: "Overview", icon: Icons.Info },
             { id: "bulk", label: "Bulk Tickets", icon: Icons.Ticket, count: bulkPacks.length },
             { id: "volunteers", label: "Volunteer", icon: Icons.Award },
-          ].map(({ id, label, icon: Icon, count }: any) => (
+          ].map(({ id, label, icon: Icon, count }: EventTab) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id as any)}
+              onClick={() => setActiveTab(id)}
               className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
                 activeTab === id
                   ? "bg-primary text-text-inverse"
@@ -458,21 +579,11 @@ export default function EventDetailPage() {
                       </div>
 
                       <button
-                        onClick={() => {
-                          if (!session) {
-                            router.push(`/auth?redirect=/events/${eventId}`);
-                            return;
-                          }
-                          if ((session.user as any)?.role !== "student") {
-                            toast.error("Only students can purchase bulk tickets");
-                            return;
-                          }
-                          // TODO: Implement bulk ticket purchase flow
-                          toast.info("Bulk ticket purchase coming soon!");
-                        }}
-                        className="w-full bg-primary text-text-inverse py-2.5 rounded-lg hover:bg-primaryHover font-semibold transition-all"
+                        onClick={() => handleBulkPackPurchase(pack)}
+                        disabled={purchasingPackId === pack.id}
+                        className="w-full bg-primary text-text-inverse py-2.5 rounded-lg hover:bg-primaryHover font-semibold transition-all disabled:opacity-60"
                       >
-                        Purchase Pack
+                        {purchasingPackId === pack.id ? "Purchasing..." : "Purchase Pack"}
                       </button>
                     </div>
                   ))}
@@ -535,7 +646,7 @@ export default function EventDetailPage() {
                   </div>
                 </div>
 
-                {(session?.user as any)?.role === "student" && (
+                {((session?.user as { role?: string } | undefined)?.role === "student") && (
                   <div className="space-y-3">
                     <textarea
                       value={volunteerMessage}

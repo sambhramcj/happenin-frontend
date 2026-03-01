@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -8,25 +8,26 @@ const supabase = createClient(
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const now = new Date().toISOString();
-
-    // Get active sponsorship deals with paid visibility
     const { data: deals, error } = await supabase
-      .from("sponsorship_deals")
+      .from("digital_visibility_packs")
       .select(`
-        *,
-        events!sponsorship_deals_event_id_fkey (
+        id,
+        pack_type,
+        amount,
+        event_id,
+        fest_id,
+        payment_status,
+        visibility_active,
+        admin_approved,
+        events:event_id (
           id,
           title,
           banner_url,
           banner_image,
-          start_date,
-          date,
-          college_id
         ),
-        sponsors_profile!sponsorship_deals_sponsor_email_fkey (
+        sponsors_profile!digital_visibility_packs_sponsor_id_fkey (
           company_name,
           logo_url,
           banner_url,
@@ -34,9 +35,10 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq("visibility_active", true)
-      .eq("payment_status", "verified")
-      .gte("visibility_end_date", now)
-      .order("visibility_priority", { ascending: true })
+      .eq("admin_approved", true)
+      .eq("payment_status", "paid")
+      .in("pack_type", ["platinum", "gold", "silver"])
+      .order("created_at", { ascending: false })
       .limit(5);
 
     if (error) {
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ deals: deals || [] });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in sponsored content API:", error);
     return NextResponse.json(
       { error: "Failed to fetch sponsored content" },

@@ -10,9 +10,32 @@ const serviceSupabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+type SessionUserWithRole = {
+  email?: string;
+  role?: string;
+};
+
+type PayoutRow = {
+  organizer_email: string;
+  gross_amount: number;
+  platform_fee: number;
+  payout_amount: number;
+  payout_status: "pending" | "paid";
+};
+
+type BankAccountRow = {
+  organizer_email: string;
+  account_holder_name: string | null;
+  bank_name: string | null;
+  account_number: string | null;
+  ifsc_code: string | null;
+  upi_id: string | null;
+  is_verified: boolean;
+};
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = (session?.user as SessionUserWithRole | undefined)?.role;
 
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -25,7 +48,7 @@ export async function GET(req: NextRequest) {
     .select(
       `
       id,
-      sponsorship_deal_id,
+      digital_pack_id,
       organizer_email,
       gross_amount,
       platform_fee,
@@ -34,11 +57,11 @@ export async function GET(req: NextRequest) {
       payout_status,
       paid_at,
       created_at,
-      sponsorship_deals (
+      digital_visibility_packs!sponsorship_payouts_digital_pack_id_fkey (
         id,
+        pack_type,
         events (id, title),
-        sponsorship_packages (tier),
-        sponsors_profile (company_name)
+        sponsors_profile!digital_visibility_packs_sponsor_id_fkey (company_name)
       )
     `
     )
@@ -55,7 +78,9 @@ export async function GET(req: NextRequest) {
   }
 
   const payouts = data || [];
-  const organizerEmails = Array.from(new Set(payouts.map((p: any) => p.organizer_email).filter(Boolean)));
+  const organizerEmails = Array.from(
+    new Set(((payouts || []) as PayoutRow[]).map((payout) => payout.organizer_email).filter(Boolean))
+  );
 
   const { data: bankAccounts } = organizerEmails.length
     ? await serviceSupabase
@@ -64,35 +89,59 @@ export async function GET(req: NextRequest) {
         .in("organizer_email", organizerEmails)
     : { data: [] };
 
-  const bankMap = (bankAccounts || []).reduce((acc: Record<string, any>, account: any) => {
+  const bankMap = ((bankAccounts || []) as BankAccountRow[]).reduce((acc: Record<string, BankAccountRow>, account) => {
     acc[account.organizer_email] = account;
     return acc;
-  }, {} as Record<string, any>);
+  }, {} as Record<string, BankAccountRow>);
 
-  const enrichedPayouts = payouts.map((p: any) => ({
-    ...p,
-    organizer_bank_accounts: bankMap[p.organizer_email] || null,
+  const enrichedPayouts = ((payouts || []) as Array<Record<string, unknown>>).map((payout) => {
+    const pack = payout.digital_visibility_packs as
+      | {
+          events?: { title?: string } | Array<{ title?: string }> | null;
+          sponsors_profile?: { company_name?: string } | Array<{ company_name?: string }> | null;
+          pack_type?: string;
+        }
+      | null;
+    const event = Array.isArray(pack?.events) ? pack?.events[0] : pack?.events;
+    const sponsor = Array.isArray(pack?.sponsors_profile)
+      ? pack?.sponsors_profile[0]
+      : pack?.sponsors_profile;
+
+    return {
+      ...payout,
+      event_title: event?.title || "Event",
+      sponsor_name: sponsor?.company_name || "Sponsor",
+      pack_type: pack?.pack_type || "standard",
+    };
+  });
+
+  const payoutsWithBank = enrichedPayouts.map((payout) => ({
+    ...payout,
+    organizer_bank_accounts: bankMap[String(payout.organizer_email)] || null,
   }));
+
   const { data: metricsRows } = await serviceSupabase
     .from("sponsorship_payouts")
     .select("gross_amount, platform_fee, payout_amount, payout_status");
 
-  const totalSponsorshipRevenue = (metricsRows || []).reduce(
-    (sum: number, p: any) => sum + (p.gross_amount || 0),
+  const typedMetrics = (metricsRows || []) as PayoutRow[];
+
+  const totalSponsorshipRevenue = typedMetrics.reduce(
+    (sum: number, payout) => sum + (payout.gross_amount || 0),
     0
   );
-  const totalPlatformEarnings = (metricsRows || []).reduce(
-    (sum: number, p: any) => sum + (p.platform_fee || 0),
+  const totalPlatformEarnings = typedMetrics.reduce(
+    (sum: number, payout) => sum + (payout.platform_fee || 0),
     0
   );
-  const totalPaidToOrganizers = (metricsRows || []).reduce(
-    (sum: number, p: any) => sum + (p.payout_status === "paid" ? p.payout_amount || 0 : 0),
+  const totalPaidToOrganizers = typedMetrics.reduce(
+    (sum: number, payout) => sum + (payout.payout_status === "paid" ? payout.payout_amount || 0 : 0),
     0
   );
-  const pendingPayoutsCount = (metricsRows || []).filter((p: any) => p.payout_status === "pending").length;
+  const pendingPayoutsCount = typedMetrics.filter((payout) => payout.payout_status === "pending").length;
 
   return NextResponse.json({
-    payouts: enrichedPayouts,
+    payouts: payoutsWithBank,
     metrics: {
       totalSponsorshipRevenue,
       totalPlatformEarnings,
@@ -104,7 +153,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = (session?.user as SessionUserWithRole | undefined)?.role;
   const adminEmail = session?.user?.email as string | undefined;
 
   if (!adminEmail) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

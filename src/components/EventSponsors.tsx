@@ -54,7 +54,7 @@ export function EventSponsors({ eventId }: EventSponsorsProps) {
     return acc;
   }, {});
 
-  const typeOrder = ['fest', 'app', 'digital'];
+  const typeOrder = ['platinum', 'gold', 'silver'];
 
   return (
     <div className="bg-bg-card rounded-xl p-6 border border-border-default">

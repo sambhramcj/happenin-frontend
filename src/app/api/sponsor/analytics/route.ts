@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
@@ -10,10 +10,10 @@ const serviceSupabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email as string | undefined;
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = (session?.user as { role?: string } | undefined)?.role;
 
   if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (role !== "sponsor") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to fetch banners" }, { status: 500 });
   }
 
-  const bannerIds = (banners || []).map((b: any) => b.id);
+  const bannerIds = (banners || []).map((b: { id: string }) => b.id);
   if (bannerIds.length === 0) {
     return NextResponse.json({ totalClicks: 0, totalImpressions: 0 });
   }
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   }
 
   const totals = (analytics || []).reduce(
-    (acc: { totalClicks: number; totalImpressions: number }, row: any) => {
+    (acc: { totalClicks: number; totalImpressions: number }, row: { event_type: string }) => {
       if (row.event_type === "click") acc.totalClicks += 1;
       if (row.event_type === "view") acc.totalImpressions += 1;
       return acc;
@@ -51,27 +51,28 @@ export async function GET(req: NextRequest) {
   );
 
   // Fetch orders for event-wise analytics
-  const { data: orders, error: ordersError } = await serviceSupabase
-    .from("sponsorship_orders")
+  const { data: orders } = await serviceSupabase
+    .from("digital_visibility_packs")
     .select(`
       id,
       amount,
       pack_type,
       event_id,
       fest_id,
+      payment_status,
       events(title),
       fests(title)
     `)
-    .eq("sponsor_email", email)
-    .eq("status", "paid");
+    .eq("sponsor_id", email)
+    .eq("payment_status", "paid");
 
-  let eventAnalytics: any[] = [];
+  const eventAnalytics: Array<{ eventName: string; packType: string; amount: number; impressions: number; clicks: number }> = [];
   if (orders && orders.length > 0) {
     // Group analytics by event/fest
     for (const order of orders) {
       const eventName = 
-        (Array.isArray(order.events) ? order.events[0]?.title : (order.events as any)?.title) ||
-        (Array.isArray(order.fests) ? order.fests[0]?.title : (order.fests as any)?.title) ||
+        (Array.isArray(order.events) ? order.events[0]?.title : (order.events as { title?: string } | null)?.title) ||
+        (Array.isArray(order.fests) ? order.fests[0]?.title : (order.fests as { title?: string } | null)?.title) ||
         "Unknown Event";
       
       // Get banners for this order
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
         .eq("sponsor_email", email)
         .eq(order.event_id ? "event_id" : "fest_id", order.event_id || order.fest_id);
 
-      const orderBannerIds = (orderBanners || []).map((b: any) => b.id);
+      const orderBannerIds = (orderBanners || []).map((b: { id: string }) => b.id);
       
       let eventClicks = 0;
       let eventImpressions = 0;
@@ -92,8 +93,8 @@ export async function GET(req: NextRequest) {
           .select("event_type")
           .in("banner_id", orderBannerIds);
 
-        eventClicks = (eventAnalyticsData || []).filter((a: any) => a.event_type === "click").length;
-        eventImpressions = (eventAnalyticsData || []).filter((a: any) => a.event_type === "view").length;
+        eventClicks = (eventAnalyticsData || []).filter((a: { event_type: string }) => a.event_type === "click").length;
+        eventImpressions = (eventAnalyticsData || []).filter((a: { event_type: string }) => a.event_type === "view").length;
       }
 
       eventAnalytics.push({

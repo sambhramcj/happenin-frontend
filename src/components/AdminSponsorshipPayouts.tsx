@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface PayoutRow {
@@ -12,11 +12,9 @@ interface PayoutRow {
   payout_method: string | null;
   payout_status: "pending" | "paid";
   paid_at: string | null;
-  sponsorship_deals: {
-    events: { title: string } | null;
-    sponsorship_packages: { tier: string } | null;
-    sponsors_profile: { company_name: string } | null;
-  } | null;
+  event_title: string;
+  sponsor_name: string;
+  pack_type: string;
   organizer_bank_accounts: {
     organizer_email: string;
     account_holder_name: string | null;
@@ -44,11 +42,7 @@ export function AdminSponsorshipPayouts() {
   const [methods, setMethods] = useState<Record<string, string>>({});
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchPayouts();
-  }, [statusFilter]);
-
-  const fetchPayouts = async () => {
+  const fetchPayouts = useCallback(async () => {
     try {
       setLoading(true);
       const url = new URL("/api/admin/sponsorship-payouts", window.location.origin);
@@ -69,7 +63,11 @@ export function AdminSponsorshipPayouts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    fetchPayouts();
+  }, [fetchPayouts]);
 
   const handleMarkPaid = async (payoutId: string) => {
     const payoutMethod = methods[payoutId] || "";
@@ -219,14 +217,14 @@ export function AdminSponsorshipPayouts() {
               return (
                 <tr key={payout.id} className="hover:bg-bg-muted transition-colors">
                   <td className="px-4 py-3 text-text-primary">
-                    {payout.sponsorship_deals?.events?.title || "Event"}
+                    {payout.event_title || "Event"}
                   </td>
                   <td className="px-4 py-3 text-text-primary">{payout.organizer_email}</td>
                   <td className="px-4 py-3 text-text-primary">
-                    {payout.sponsorship_deals?.sponsors_profile?.company_name || "Sponsor"}
+                    {payout.sponsor_name || "Sponsor"}
                   </td>
                   <td className="px-4 py-3 text-text-primary capitalize">
-                    {payout.sponsorship_deals?.sponsorship_packages?.tier || "standard"}
+                    {payout.pack_type || "standard"}
                   </td>
                   <td className="px-4 py-3 text-right text-text-primary font-medium">₹{Math.round(payout.gross_amount)}</td>
                   <td className="px-4 py-3 text-right text-text-primary">₹{Math.round(payout.platform_fee)}</td>

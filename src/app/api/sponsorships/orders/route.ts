@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
+
+type OrderRow = {
+  sponsor_id: string;
+  payment_status: string;
+  [key: string]: unknown;
+};
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,37 +17,37 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email as string | undefined;
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = (session?.user as { role?: string } | undefined)?.role;
 
   if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let query = supabase
-    .from("sponsorship_orders")
+    .from("digital_visibility_packs")
     .select(
       `
       id,
-      sponsor_email,
+      sponsor_id,
       event_id,
       fest_id,
       pack_type,
       amount,
-      status,
+      payment_status,
       visibility_active,
-      organizer_payout_settled,
-      organizer_payout_settled_at,
+      organizer_email,
+      admin_approved,
       created_at,
       events (id, title, date, location, banner_image, fest_id),
       fests (id, title, start_date, end_date),
-      sponsors_profile (company_name, logo_url, website_url, is_active)
+      sponsors_profile!digital_visibility_packs_sponsor_id_fkey (company_name, logo_url, website_url, is_active)
     `
     )
     .order("created_at", { ascending: false });
 
   if (role === "sponsor") {
-    query = query.eq("sponsor_email", email);
+    query = query.eq("sponsor_id", email);
   } else if (role === "organizer") {
     const { data: events } = await supabase
       .from("events")
@@ -74,5 +80,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ orders: orders || [] });
+  const normalized = ((orders || []) as OrderRow[]).map((order) => ({
+    ...order,
+    sponsor_email: order.sponsor_id,
+    status: order.payment_status,
+    organizer_payout_settled: false,
+    organizer_payout_settled_at: null,
+  }));
+
+  return NextResponse.json({ orders: normalized });
 }

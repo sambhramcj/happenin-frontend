@@ -10,15 +10,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+type SessionUserWithRole = {
+  email?: string;
+  role?: string;
+};
+
+type VolunteerRoleOption = {
+  role?: string;
+};
+
 // POST: Student applies for volunteer position
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    const roleValue = (session?.user as SessionUserWithRole | undefined)?.role;
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if ((session.user as any).role !== "student") {
+    if (roleValue !== "student") {
       return NextResponse.json(
         { error: "Only students can apply for volunteer positions" },
         { status: 403 }
@@ -58,8 +68,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if role exists in event
-    const volunteerRoles = event.volunteer_roles || [];
-    const roleExists = volunteerRoles.some((r: any) => r.role === role);
+    const volunteerRoles = (event.volunteer_roles || []) as VolunteerRoleOption[];
+    const roleExists = volunteerRoles.some((volunteerRole) => volunteerRole.role === role);
 
     if (!roleExists) {
       return NextResponse.json(
@@ -125,7 +135,7 @@ export async function POST(req: NextRequest) {
 }
 
 // GET: Get student's volunteer applications
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -134,20 +144,9 @@ export async function GET(req: NextRequest) {
 
     const studentEmail = session.user.email;
 
-    // Get all applications with event details
     const { data: applications, error } = await supabase
       .from("volunteer_applications")
-      .select(`
-        *,
-        events (
-          id,
-          title,
-          date,
-          location,
-          banner_image,
-          organizer_email
-        )
-      `)
+      .select("*")
       .eq("student_email", studentEmail)
       .order("applied_at", { ascending: false });
 
@@ -159,7 +158,24 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ applications });
+    const eventIds = Array.from(
+      new Set((applications || []).map((app) => app.event_id).filter((id): id is string => Boolean(id)))
+    );
+
+    const { data: events } = eventIds.length
+      ? await supabase
+          .from("events")
+          .select("id,title,date,location,banner_image,organizer_email")
+          .in("id", eventIds)
+      : { data: [] };
+
+    const eventMap = new Map((events || []).map((event) => [event.id, event]));
+    const enrichedApplications = (applications || []).map((app) => ({
+      ...app,
+      events: app.event_id ? eventMap.get(app.event_id) || null : null,
+    }));
+
+    return NextResponse.json({ applications: enrichedApplications });
   } catch (error) {
     console.error("Fetch applications error:", error);
     return NextResponse.json(

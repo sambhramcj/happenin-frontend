@@ -2,10 +2,6 @@
 
 import { SPONSORSHIP_PACKS, SPONSORSHIP_VISIBILITY } from "@/types/sponsorship";
 
-interface SponsorshipPackagesManagerProps {
-  eventId: string;
-}
-
 export default function SponsorshipPackagesManager() {
   const packs = Object.entries(SPONSORSHIP_PACKS).map(([key, value]) => ({
     type: key,

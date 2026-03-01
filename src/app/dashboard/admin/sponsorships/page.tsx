@@ -232,7 +232,7 @@ export default function AdminSponsorshipsPage() {
         <div className="bg-bg-card border border-border-default rounded-lg p-6">
           <div className="text-text-secondary text-sm font-medium">Total Platform Revenue</div>
           <div className="text-3xl font-bold text-text-primary mt-2">
-            ₹{(analytics.totalRevenue / 100000).toFixed(2)}L
+            ₹{analytics.totalRevenue.toLocaleString()}
           </div>
           <div className="text-text-muted text-xs mt-2">From {analytics.dealsCount} paid orders</div>
         </div>
@@ -259,7 +259,7 @@ export default function AdminSponsorshipsPage() {
           >
             All
           </button>
-          {['created', 'paid', 'failed'].map((status) => (
+          {['pending', 'paid', 'failed', 'cancelled'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -309,14 +309,14 @@ export default function AdminSponsorshipsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right text-text-primary font-medium">
-                  ₹{(deal.amount / 100).toLocaleString()}
+                  ₹{Number(deal.amount || 0).toLocaleString()}
                 </td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-block px-2 py-1 rounded text-xs font-medium capitalize ${
                       deal.status === 'paid'
                         ? 'bg-green-100 text-green-700'
-                        : deal.status === 'created'
+                        : deal.status === 'pending'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-red-100 text-red-700'
                     }`}

@@ -1,51 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import { SPONSORSHIP_VISIBILITY } from "@/types/sponsorship";
+import { DIGITAL_PACK_PRICES } from "@/lib/revenue";
 
 declare global {
   interface Window {
-    Razorpay: any;
+    Razorpay: new (options: {
+      key?: string;
+      amount: number;
+      currency: string;
+      name: string;
+      description: string;
+      order_id: string;
+      handler: (response: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) => Promise<void>;
+      prefill?: Record<string, string>;
+    }) => { open: () => void };
   }
 }
 
-type PackType = "digital" | "app" | "fest";
+type PackType = "silver" | "gold" | "platinum";
+
+const PACK_VISIBILITY: Record<PackType, string[]> = {
+  silver: [
+    "Event page sponsor logo",
+    "Event page sponsor banner slot",
+  ],
+  gold: [
+    "All Silver benefits",
+    "Premium event page placement",
+  ],
+  platinum: [
+    "Homepage top priority banner",
+    "All-event fest visibility",
+  ],
+};
 
 export default function SponsorEventPage() {
   const { eventId } = useParams();
-  const [event, setEvent] = useState<any>(null);
+  const [event, setEvent] = useState<{ id: string; title: string; description?: string; location?: string; date?: string; banner_image?: string; fest_id?: string | null } | null>(null);
   const [packages, setPackages] = useState<Array<{ type: PackType; price: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState<PackType | null>(null);
   const [processing, setProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "paid" | "pending">("idle");
 
-  useEffect(() => {
-    fetchEventDetails();
-  }, [eventId]);
-
-  async function fetchEventDetails() {
+  const fetchEventDetails = useCallback(async () => {
     setLoading(true);
     const eventRes = await fetch(`/api/events`);
     if (eventRes.ok) {
-      const all = await eventRes.json();
-      const e = (all || []).find((x: any) => x.id === eventId);
+      const all = (await eventRes.json()) as Array<{ id: string; title: string; description?: string; location?: string; date?: string; banner_image?: string; fest_id?: string | null }>;
+      const e = (all || []).find((x) => x.id === eventId);
       setEvent(e || null);
       if (e) {
         const packs: Array<{ type: PackType; price: number }> = [
-          { type: "digital", price: 10000 },
-          { type: "app", price: 25000 },
+          { type: "silver", price: DIGITAL_PACK_PRICES.silver },
+          { type: "gold", price: DIGITAL_PACK_PRICES.gold },
         ];
         if (e.fest_id) {
-          packs.push({ type: "fest", price: 50000 });
+          packs.push({ type: "platinum", price: DIGITAL_PACK_PRICES.platinum });
         }
         setPackages(packs);
       }
     }
     setLoading(false);
-  }
+  }, [eventId]);
+
+  useEffect(() => {
+    fetchEventDetails();
+  }, [fetchEventDetails]);
 
   function loadRazorpayScript(): Promise<boolean> {
     return new Promise((resolve) => {
@@ -83,12 +111,13 @@ export default function SponsorEventPage() {
         return;
       }
 
-      const res = await fetch("/api/sponsorships/create-order", {
+      const res = await fetch("/api/payments/create-digital-pack-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          event_id: eventId,
-          pack_type: selectedPackage,
+          eventId,
+          festId: event?.fest_id || null,
+          packType: selectedPackage,
         }),
       });
 
@@ -107,9 +136,9 @@ export default function SponsorEventPage() {
         name: "Happenin",
         description: "Sponsorship Payment",
         order_id: data.orderId,
-        handler: async (response: any) => {
+        handler: async (response) => {
           try {
-            const verifyRes = await fetch("/api/sponsorships/verify", {
+            const verifyRes = await fetch("/api/payments/webhook", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -128,7 +157,7 @@ export default function SponsorEventPage() {
               setPaymentStatus("pending");
               toast.error("Payment verification pending");
             }
-          } catch (error) {
+          } catch {
             setPaymentStatus("pending");
             toast.error("Payment verification pending");
           }
@@ -137,7 +166,7 @@ export default function SponsorEventPage() {
       });
 
       razorpay.open();
-    } catch (error) {
+    } catch {
       toast.error("Payment failed");
       setPaymentStatus("idle");
     } finally {
@@ -177,7 +206,7 @@ export default function SponsorEventPage() {
           )}
 
           {packages.map((pkg) => {
-            const visibilityList = SPONSORSHIP_VISIBILITY[pkg.type] || [];
+            const visibilityList = PACK_VISIBILITY[pkg.type] || [];
             const isSelected = selectedPackage === pkg.type;
 
             return (

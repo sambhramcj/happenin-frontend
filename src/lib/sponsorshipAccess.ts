@@ -9,8 +9,8 @@ const supabase = createClient(
  * Check if sponsorship visibility is active for an event
  *
  * Returns TRUE if:
- * - Event has NO sponsorship deals
- * - Event has at least one deal with visibility_active = true and payment_status = 'verified'
+ * - Event has NO paid digital visibility packs
+ * - Event/fest has at least one paid, admin-approved, visibility-active pack
  *
  * Used for rendering sponsor visibility and status indicators.
  */
@@ -28,10 +28,11 @@ export async function isSponsorshipSettled(eventId: string): Promise<boolean> {
     }
 
     let query = supabase
-      .from('sponsorship_orders')
-      .select('id, visibility_active, status')
+      .from('digital_visibility_packs')
+      .select('id, visibility_active, payment_status, admin_approved')
       .eq('visibility_active', true)
-      .eq('status', 'paid');
+      .eq('payment_status', 'paid')
+      .eq('admin_approved', true);
 
     if (event?.fest_id) {
       query = query.or(`event_id.eq.${eventId},fest_id.eq.${event.fest_id}`);
@@ -50,7 +51,7 @@ export async function isSponsorshipSettled(eventId: string): Promise<boolean> {
       return true;
     }
 
-    return orders.some(order => order.visibility_active && order.status === 'paid');
+    return orders.some((order) => order.visibility_active && order.payment_status === 'paid' && order.admin_approved === true);
   } catch (err) {
     console.error('Unexpected error in isSponsorshipSettled:', err);
     return true;

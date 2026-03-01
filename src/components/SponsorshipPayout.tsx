@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface BankAccount {
@@ -24,11 +24,9 @@ interface SponsorshipPayoutRow {
   payout_method: string | null;
   paid_at: string | null;
   created_at: string;
-  sponsorship_deals: {
-    events: { id: string; title: string } | null;
-    sponsorship_packages: { tier: string } | null;
-    sponsors_profile: { company_name: string } | null;
-  } | null;
+  event_title: string;
+  sponsor_name: string;
+  pack_type: string;
 }
 
 interface OrganizerPayoutSummary {
@@ -66,22 +64,7 @@ export function SponsorshipPayout({ organizerEmail }: SponsorshipPayoutProps) {
   const [ifscCode, setIfscCode] = useState('');
   const [upiId, setUpiId] = useState('');
 
-  useEffect(() => {
-    if (!organizerEmail) return;
-    fetchPayoutData();
-  }, [organizerEmail]);
-
-  useEffect(() => {
-    if (payoutData?.bankAccount) {
-      setAccountHolderName(payoutData.bankAccount.account_holder_name || '');
-      setBankName(payoutData.bankAccount.bank_name || '');
-      setAccountNumber(payoutData.bankAccount.account_number || '');
-      setIfscCode(payoutData.bankAccount.ifsc_code || '');
-      setUpiId(payoutData.bankAccount.upi_id || '');
-    }
-  }, [payoutData?.bankAccount]);
-
-  const fetchPayoutData = async () => {
+  const fetchPayoutData = useCallback(async () => {
     try {
       const res = await fetch(`/api/organizer/sponsorship-payout?email=${organizerEmail}`);
       if (res.ok) {
@@ -96,7 +79,22 @@ export function SponsorshipPayout({ organizerEmail }: SponsorshipPayoutProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizerEmail]);
+
+  useEffect(() => {
+    if (!organizerEmail) return;
+    fetchPayoutData();
+  }, [organizerEmail, fetchPayoutData]);
+
+  useEffect(() => {
+    if (payoutData?.bankAccount) {
+      setAccountHolderName(payoutData.bankAccount.account_holder_name || '');
+      setBankName(payoutData.bankAccount.bank_name || '');
+      setAccountNumber(payoutData.bankAccount.account_number || '');
+      setIfscCode(payoutData.bankAccount.ifsc_code || '');
+      setUpiId(payoutData.bankAccount.upi_id || '');
+    }
+  }, [payoutData?.bankAccount]);
 
   const handleSaveBankDetails = async () => {
     setSaving(true);
@@ -270,9 +268,9 @@ export function SponsorshipPayout({ organizerEmail }: SponsorshipPayoutProps) {
           </thead>
           <tbody className="divide-y divide-border-default">
             {payoutData.payouts.map((payout) => {
-              const sponsorName = payout.sponsorship_deals?.sponsors_profile?.company_name || 'Sponsor';
-              const eventName = payout.sponsorship_deals?.events?.title || 'Event';
-              const tier = payout.sponsorship_deals?.sponsorship_packages?.tier || 'standard';
+              const sponsorName = payout.sponsor_name || 'Sponsor';
+              const eventName = payout.event_title || 'Event';
+              const tier = payout.pack_type || 'standard';
               const feeRate = payout.gross_amount > 0 ? Math.round((payout.platform_fee / payout.gross_amount) * 100) : 0;
 
               return (

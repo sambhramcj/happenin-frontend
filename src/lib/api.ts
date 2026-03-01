@@ -19,7 +19,7 @@ type RequestOptions = Omit<RequestInit, 'cache'> & {
  * Used during fest day traffic spikes
  */
 interface CacheEntry {
-  data: any;
+  data: unknown;
   timestamp: number;
   ttl: number;
 }
@@ -30,7 +30,7 @@ class APIError extends Error {
   constructor(
     message: string,
     public status: number,
-    public data?: any
+    public data?: unknown
   ) {
     super(message);
     this.name = 'APIError';
@@ -48,7 +48,7 @@ async function apiRequest<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { retry = true, skipAuth = false, cacheMode, ...fetchOptions } = options;
+  const { retry = true, cacheMode, ...fetchOptions } = options;
   const cacheStrategy = (cacheMode || 'no-cache') as 'stale-while-revalidate' | 'no-cache';
 
   const makeRequest = async () => {
@@ -111,12 +111,12 @@ export const api = {
   // Events
   // DISASTER SCENARIO: Fest day traffic - use stale-while-revalidate
   async getEvents() {
-    return apiRequest<any[]>('/api/events', {
+    return apiRequest<unknown[]>('/api/events', {
       cacheMode: 'stale-while-revalidate',
     });
   },
 
-  async createEvent(data: any) {
+  async createEvent(data: unknown) {
     return apiRequest('/api/events', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -126,10 +126,10 @@ export const api = {
 
   // Student
   async getProfile() {
-    return apiRequest<any>('/api/student/profile');
+    return apiRequest<unknown>('/api/student/profile');
   },
 
-  async updateProfile(data: any) {
+  async updateProfile(data: unknown) {
     return apiRequest('/api/student/profile', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -137,12 +137,12 @@ export const api = {
   },
 
   async getTickets() {
-    return apiRequest<any[]>('/api/student/tickets');
+    return apiRequest<unknown[]>('/api/student/tickets');
   },
 
   // Payments
   async createOrder(data: { eventId: string }) {
-    return apiRequest<{ orderId: string; amount: number }>('/api/payments/create-order', {
+    return apiRequest<{ orderId: string; amount: number; currency: string }>('/api/payments/create-ticket-order', {
       method: 'POST',
       body: JSON.stringify(data),
       retry: false, // Never retry payment creation
@@ -155,7 +155,7 @@ export const api = {
     razorpay_signature: string;
     eventId: string;
   }) {
-    return apiRequest<{ success: boolean; ticket?: any }>('/api/payments/verify', {
+    return apiRequest<{ success: boolean; stream?: string; duplicate?: boolean }>('/api/payments/webhook', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -163,11 +163,11 @@ export const api = {
 
   // Organizer
   async getEventRegistrations(eventId: string) {
-    return apiRequest<any>(`/api/organizer/events/${eventId}/registrations`);
+    return apiRequest<unknown>(`/api/organizer/events/${eventId}/registrations`);
   },
 
   async getAttendance(eventId: string) {
-    return apiRequest<any>(`/api/organizer/attendance/${eventId}`);
+    return apiRequest<unknown>(`/api/organizer/attendance/${eventId}`);
   },
 
   async recordAttendance(eventId: string, qrCodeData: string) {

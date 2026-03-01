@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -8,26 +8,37 @@ const supabase = createClient(
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+type FeaturedRow = {
+  events?: Record<string, unknown> | Array<Record<string, unknown>>;
+};
+
+export async function GET() {
   try {
     const now = new Date().toISOString();
 
-    // Get events with active boost visibility
-    const { data: events, error } = await supabase
-      .from("events")
+    const { data: featuredRows, error } = await supabase
+      .from("featured_events")
       .select(`
-        *,
-        organizers_profile!events_organizer_email_fkey (
-          first_name,
-          last_name,
-          logo_url
+        id,
+        start_date,
+        end_date,
+        events:event_id (
+          id,
+          title,
+          description,
+          banner_url,
+          banner_image,
+          start_date,
+          date,
+          ticket_price,
+          price,
+          organizer_email
         )
       `)
-      .eq("boost_visibility", true)
-      .eq("boost_payment_status", "verified")
-      .gte("boost_end_date", now)
-      .order("boost_priority", { ascending: true })
-      .order("start_date", { ascending: true })
+      .eq("active", true)
+      .eq("payment_status", "paid")
+      .gte("end_date", now)
+      .order("created_at", { ascending: false })
       .limit(10);
 
     if (error) {
@@ -35,8 +46,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ events: events || [] });
-  } catch (error: any) {
+    const events = ((featuredRows || []) as FeaturedRow[])
+      .map((row) => ({
+        ...(Array.isArray(row.events) ? row.events[0] : row.events),
+      }))
+      .filter(Boolean);
+
+    return NextResponse.json({ events });
+  } catch (error: unknown) {
     console.error("Error in featured events API:", error);
     return NextResponse.json(
       { error: "Failed to fetch featured events" },

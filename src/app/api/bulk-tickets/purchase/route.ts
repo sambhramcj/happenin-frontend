@@ -1,69 +1,38 @@
 // API: Bulk Ticket Purchases
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// POST /api/bulk-tickets/purchase - Purchase a bulk ticket pack
+// POST /api/bulk-tickets/purchase
+// Deprecated: purchase is now completed only through Razorpay verify route
+// (/api/bulk-tickets/verify) after successful payment.
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { bulkPackId, buyerEmail, quantityPurchased, totalAmount } = body;
-
-    // Get bulk pack details
-    const { data: packData, error: packError } = await supabase
-      .from("bulk_ticket_packs")
-      .select("*")
-      .eq("id", bulkPackId)
-      .single();
-
-    if (packError || !packData) {
-      return NextResponse.json(
-        { error: "Bulk pack not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check availability
-    if (packData.available_count < quantityPurchased) {
-      return NextResponse.json(
-        { error: "Not enough tickets available in this pack" },
-        { status: 400 }
-      );
-    }
-
-    // Create purchase record
-    const { data: purchaseData, error: purchaseError } = await supabase
-      .from("bulk_ticket_purchases")
-      .insert([
-        {
-          bulk_pack_id: bulkPackId,
-          buyer_email: buyerEmail,
-          quantity_purchased: quantityPurchased,
-          price_per_ticket: packData.bulk_price,
-          total_amount: totalAmount,
-          payment_status: "pending",
-        },
-      ])
-      .select();
-
-    if (purchaseError) throw purchaseError;
-
-    return NextResponse.json(purchaseData[0], { status: 201 });
-  } catch (error: any) {
-    console.error("Error creating bulk purchase:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  void req;
+  return NextResponse.json(
+    {
+      error:
+        "Direct purchase is disabled. Use /api/bulk-tickets/create-order and /api/bulk-tickets/verify.",
+    },
+    { status: 410 }
+  );
 }
 
-// GET /api/bulk-tickets/purchase?buyerEmail=xxx - Get purchases for a buyer
+// GET /api/bulk-tickets/purchase - Get purchases for the authenticated buyer
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    const sessionEmail = session?.user?.email;
+    if (!sessionEmail) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const buyerEmail = searchParams.get("buyerEmail");
     const bulkPackId = searchParams.get("bulkPackId");
 
     let query = supabase
@@ -78,9 +47,7 @@ export async function GET(req: NextRequest) {
       )
       .order("purchase_date", { ascending: false });
 
-    if (buyerEmail) {
-      query = query.eq("buyer_email", buyerEmail);
-    }
+    query = query.eq("buyer_email", sessionEmail);
 
     if (bulkPackId) {
       query = query.eq("bulk_pack_id", bulkPackId);
@@ -91,8 +58,9 @@ export async function GET(req: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching bulk purchases:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to fetch bulk purchases";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+type PublicDeal = {
+  pack_type: string;
+  sponsors_profile?: { is_active?: boolean };
+  [key: string]: unknown;
+};
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const event_id = searchParams.get("event_id");
@@ -22,23 +28,26 @@ export async function GET(req: Request) {
   }
 
   let query = supabase
-    .from("sponsorship_orders")
+    .from("digital_visibility_packs")
     .select(
       `
       id,
+      sponsor_id,
       event_id,
       fest_id,
       pack_type,
       amount,
-      status,
+      payment_status,
       visibility_active,
-      sponsors_profile (company_name, logo_url, website_url, is_active),
+      admin_approved,
+      sponsors_profile!digital_visibility_packs_sponsor_id_fkey (company_name, logo_url, website_url, is_active),
       events (id, title, fest_id),
       fests (id, title, start_date, end_date)
     `
     )
     .eq("visibility_active", true)
-    .eq("status", "paid");
+    .eq("admin_approved", true)
+    .eq("payment_status", "paid");
 
   if (event_id) {
     if (festId) {
@@ -53,30 +62,21 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  let deals = (data || []).filter((d: any) => d.sponsors_profile?.is_active !== false);
+  let deals = ((data || []) as PublicDeal[]).filter((d) => d.sponsors_profile?.is_active !== false);
 
   if (placement === "homepage") {
-    const now = new Date();
-    deals = deals.filter((d: any) => {
+    deals = deals.filter((d) => {
       const packType = d.pack_type;
-      if (!['app', 'fest'].includes(packType)) return false;
-
-      const festStart = d.fests?.start_date ? new Date(d.fests.start_date) : null;
-      const festEnd = d.fests?.end_date ? new Date(d.fests.end_date) : null;
-
-      if (festStart && festEnd) {
-        return now >= festStart && now <= festEnd;
-      }
-
-      return true;
+      return packType === "platinum";
     });
   }
 
-  const mapped = deals.map((deal: any) => ({
+  const mapped = deals.map((deal) => ({
     ...deal,
+    status: String((deal as Record<string, unknown>).payment_status || "pending"),
     sponsorship_packages: {
       type: deal.pack_type,
-      price: deal.amount,
+      price: Number((deal as Record<string, unknown>).amount || 0),
     },
   }));
 

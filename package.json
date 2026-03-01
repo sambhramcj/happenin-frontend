@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
-    "pre-deploy": "npm run type-check && npm run build"
+    "pre-deploy": "npm run type-check && npm run build",
+    "seed:demo": "node scripts/seed-demo-data.js",
+    "seed:demo:reset": "node scripts/seed-demo-data.js --reset-only"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",

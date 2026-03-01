@@ -2,7 +2,7 @@ export interface SponsorshipPackage {
   id: string;
   event_id: string | null;
   fest_id?: string | null;
-  type: 'digital' | 'app' | 'fest';
+  type: 'silver' | 'gold' | 'platinum';
   price: number;
   scope: 'per_event' | 'fest';
   is_active: boolean;
@@ -24,13 +24,14 @@ export interface SponsorshipDeal {
   sponsor_email: string;
   event_id: string | null;
   fest_id?: string | null;
-  package_id: string;
-  payment_status: 'pending' | 'verified' | 'rejected';
+  package_id?: string;
+  payment_status: 'pending' | 'paid' | 'failed' | 'cancelled';
   transaction_reference?: string;
   payment_method?: 'UPI' | 'Bank' | 'Cash';
   payment_date?: string;
-  verified_by_admin: boolean;
+  verified_by_admin?: boolean;
   visibility_active: boolean;
+  admin_approved?: boolean;
   created_at: string;
 }
 
@@ -39,11 +40,11 @@ export interface SponsorshipOrder {
   sponsor_email: string;
   event_id: string | null;
   fest_id?: string | null;
-  pack_type: 'digital' | 'app' | 'fest';
+  pack_type: 'silver' | 'gold' | 'platinum';
   amount: number;
   razorpay_order_id: string;
   razorpay_payment_id?: string | null;
-  status: 'created' | 'paid' | 'failed';
+  status: 'pending' | 'paid' | 'failed' | 'cancelled';
   visibility_active: boolean;
   organizer_payout_settled: boolean;
   organizer_payout_settled_at?: string | null;
@@ -74,7 +75,8 @@ export interface OrganizerBankAccount {
 
 export interface SponsorshipPayout {
   id: string;
-  sponsorship_deal_id: string;
+  sponsorship_deal_id?: string | null;
+  digital_pack_id?: string | null;
   organizer_email: string;
   gross_amount: number;
   platform_fee: number;
@@ -88,7 +90,7 @@ export interface SponsorshipPayout {
 
 export interface CreatePackageRequest {
   event_id: string;
-  type: 'digital' | 'app' | 'fest';
+  type: 'silver' | 'gold' | 'platinum';
   price: number;
   scope: 'per_event' | 'fest';
 }
@@ -102,30 +104,28 @@ export interface CreateDealRequest {
 }
 
 export const SPONSORSHIP_PACKS = {
-  digital: { price: 10000, scope: 'per_event' },
-  app: { price: 25000, scope: 'per_event' },
-  fest: { price: 50000, scope: 'fest' },
+  silver: { price: 10000, scope: 'per_event' },
+  gold: { price: 25000, scope: 'per_event' },
+  platinum: { price: 100000, scope: 'fest' },
 } as const;
 
 export const SPONSORSHIP_VISIBILITY = {
-  digital: [
+  silver: [
     'Logo on event tickets',
     'Logo on event certificates',
     'Event page banner',
   ],
-  app: [
+  gold: [
     'Logo on event tickets',
     'Logo on event certificates',
-    'Event page banner',
-    'Homepage rotating banner (fest days)',
-    'Click and impression tracking',
+    'Premium event page banner placement',
+    'Enhanced sponsor prominence on event pages',
   ],
-  fest: [
+  platinum: [
     'Logo on all fest event tickets',
     'Logo on all fest event certificates',
-    'Event page banners',
-    'Homepage rotating banners',
-    'Additional homepage placements',
+    'Homepage top and mid priority banners',
+    'Fest-wide sponsor visibility',
     'Click and impression tracking',
   ],
 } as const;

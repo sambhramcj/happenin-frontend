@@ -758,31 +758,63 @@ export default function OrganizerDashboard() {
   }
 
   async function handleBoostRequest(eventId: string) {
-    const amount = Number(boostAmountByEvent[eventId] || 0);
-    const durationDays = Number(boostDaysByEvent[eventId] || 7);
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Enter a valid boost amount");
-      return;
-    }
-
     try {
       setBoostSubmittingByEvent((prev) => ({ ...prev, [eventId]: true }));
-      const res = await fetch(`/api/organizer/events/${eventId}/boost-request`, {
+
+      if (!(window as any).Razorpay) {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        await new Promise<void>((resolve, reject) => {
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Razorpay SDK failed to load"));
+          document.body.appendChild(script);
+        });
+      }
+
+      const res = await fetch(`/api/payments/create-featured-boost-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, durationDays }),
+        body: JSON.stringify({ eventId }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "Failed to submit boost request");
+        throw new Error(data.error || "Failed to create featured boost order");
       }
 
-      toast.success(data.message || "Boost request submitted");
-      const updatedEvents = await fetchEvents();
-      await fetchAllRegistrations(updatedEvents);
+      const razorpay = new (window as any).Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: Math.round(Number(data.amount || 0) * 100),
+        currency: data.currency || "INR",
+        name: "Happenin",
+        description: "Featured Event Boost",
+        order_id: data.orderId,
+        prefill: { email: session?.user?.email },
+        handler: async (response: any) => {
+          const verifyRes = await fetch("/api/payments/webhook", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+
+          if (!verifyRes.ok) {
+            const verifyData = await verifyRes.json().catch(() => ({}));
+            throw new Error(verifyData.error || "Boost payment verification failed");
+          }
+
+          toast.success("Featured boost activated");
+          const updatedEvents = await fetchEvents();
+          await fetchAllRegistrations(updatedEvents);
+        },
+      });
+
+      razorpay.open();
+
     } catch (err: any) {
-      toast.error(err.message || "Failed to submit boost request");
+      toast.error(err.message || "Failed to start featured boost payment");
     } finally {
       setBoostSubmittingByEvent((prev) => ({ ...prev, [eventId]: false }));
     }
@@ -1082,38 +1114,17 @@ export default function OrganizerDashboard() {
       
       toast.success(
         <div>
-          <p className="font-semibold mb-2">Event created successfully!</p>
-          <p className="text-sm mb-2">Share this link:</p>
-          <div className="flex items-center gap-2">
-            <input 
-              type="text" 
-              value={eventLink} 
-              readOnly 
-              className="flex-1 px-2 py-1 bg-bg-muted border border-border-default rounded text-xs"
-            />
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(eventLink);
-                toast.success("Link copied!");
-              }}
-              className="px-2 py-1 bg-primary text-white rounded text-xs"
-            >
-              Copy
-            </button>
-          </div>
+          <p className="font-semibold mb-1">Event created successfully!</p>
+          <p className="text-xs break-all">{eventLink}</p>
         </div>,
         { duration: 8000 }
       );
-      
+
       setTitle("");
       setDescription("");
       setLocation("");
       setPrice("");
       setMaxAttendees("");
-      setDiscountEnabled(false);
-      setDiscountClub("");
-      setDiscountAmount(0);
-      setEligibleMembers([]);
       setSponsorshipEnabled(false);
       setBannerImage(null);
       setBannerImagePreview(null);

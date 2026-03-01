@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { toast } from "sonner";
 import * as QRCode from "qrcode.react";
 
@@ -17,6 +17,11 @@ interface TicketComponentProps {
   design?: TicketDesign;
   eventId?: string;
 }
+
+type PublicSponsorDeal = {
+  sponsors_profile?: { company_name?: string; logo_url?: string };
+  sponsorship_packages?: { type?: string };
+};
 
 export default function TicketComponent({
   ticketId,
@@ -42,10 +47,10 @@ export default function TicketComponent({
         const res = await fetch(`/api/sponsorship/public?event_id=${eventId}`);
         if (!res.ok) return;
         const json = await res.json();
-        const deals = json.deals || [];
+        const deals = (json.deals || []) as PublicSponsorDeal[];
         if (deals.length === 0) return;
-        const priority = ["fest", "app", "digital"];
-        const chosen = deals.sort((a: any, b: any) => {
+        const priority = ["platinum", "gold", "silver"];
+        const chosen = deals.sort((a, b) => {
           const aRank = priority.indexOf(a?.sponsorship_packages?.type || "");
           const bRank = priority.indexOf(b?.sponsorship_packages?.type || "");
           return (aRank === -1 ? 99 : aRank) - (bRank === -1 ? 99 : bRank);

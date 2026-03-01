@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     // 2️⃣ Fetch event
     const { data: event } = await db
       .from("events")
-      .select("id,title,price,date,location,max_attendees,organizer_email,discount_enabled,discount_club,discount_amount,eligible_members")
+      .select("id,title,price,date,venue,location,max_attendees,organizer_email,discount_enabled,discount_club,discount_amount,eligible_members")
       .eq("id", eventId)
       .single();
 
@@ -173,8 +173,8 @@ export async function POST(req: Request) {
     }
 
     // 5️⃣ Create registrations for all team members
-    const registrations: any[] = [];
-    const tickets: any[] = [];
+    const registrations: Array<{ id: string }> = [];
+    const tickets: Array<{ id: string }> = [];
 
     for (let i = 0; i < members.length; i++) {
       const member = members[i];
@@ -238,7 +238,7 @@ export async function POST(req: Request) {
         student_email: member.email,
         event_title: event.title || "",
         event_date: event.date || "",
-        event_location: event.location || "",
+        event_location: event.venue || event.location || "",
         qr_code_data: qrData,
         design_template: "modern",
         status: "active",

@@ -84,19 +84,18 @@ export default function StudentHomePage({ profileCollege, colleges = [] }: Stude
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
-        {/* 1. Top Banner Carousel (Hero) */}
+        {/* 1. Platinum banners */}
         <TopBannerCarousel />
 
-        {/* 2. Trending Now (Top 5 events by registrations) */}
-        <TrendingEvents selectedCollege={selectedCollege} />
-
-        {/* 3. Sponsor Spotlight */}
-        <SponsorSpotlight selectedCollege={selectedCollege} />
-
-        {/* 4. Featured Events (Boosted Visibility) */}
+        {/* 2. Featured events */}
         <FeaturedEvents selectedCollege={selectedCollege} />
 
-        {/* 5. Fest Discovery Block */}
+        {/* 3. Normal events */}
+        <UpcomingEvents selectedCollege={selectedCollege} />
+        <TrendingEvents selectedCollege={selectedCollege} />
+
+        {/* Remaining discovery blocks */}
+        <SponsorSpotlight selectedCollege={selectedCollege} />
         <FestDiscovery selectedCollege={selectedCollege} />
 
         {/* 6. Global Event Category Strip */}
@@ -105,13 +104,10 @@ export default function StudentHomePage({ profileCollege, colleges = [] }: Stude
           onCategoryChange={setSelectedCategory}
         />
 
-        {/* 7. Upcoming Events (Horizontal Scroll) */}
-        <UpcomingEvents selectedCollege={selectedCollege} />
-
-        {/* 8. Recommended For You */}
+        {/* Personalized feed */}
         <RecommendedForYou selectedCollege={selectedCollege} />
 
-        {/* 9. Infinite Smart Event Feed */}
+        {/* Infinite smart feed */}
         <InfiniteEventFeed 
           selectedCategory={selectedCategory}
           selectedCollege={selectedCollege}

@@ -98,7 +98,7 @@ export const routeConfigs: Record<string, RouteConfig> = {
     queue: true, // Soft queue payments
     circuitBreaker: true,
   },
-  'POST /api/payments/verify': {
+  'POST /api/payments/webhook': {
     tier: 1,
     circuitBreaker: true,
   },
