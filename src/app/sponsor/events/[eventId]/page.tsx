@@ -7,24 +7,17 @@ import { DIGITAL_PACK_PRICES } from "@/lib/revenue";
 
 declare global {
   interface Window {
-    Razorpay: new (options: {
-      key?: string;
-      amount: number;
-      currency: string;
-      name: string;
-      description: string;
-      order_id: string;
-      handler: (response: {
-        razorpay_order_id: string;
-        razorpay_payment_id: string;
-        razorpay_signature: string;
-      }) => Promise<void>;
-      prefill?: Record<string, string>;
-    }) => { open: () => void };
+    Razorpay: any;
   }
 }
 
 type PackType = "silver" | "gold" | "platinum";
+
+type RazorpayHandlerResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
 
 const PACK_VISIBILITY: Record<PackType, string[]> = {
   silver: [
@@ -136,7 +129,7 @@ export default function SponsorEventPage() {
         name: "Happenin",
         description: "Sponsorship Payment",
         order_id: data.orderId,
-        handler: async (response) => {
+        handler: async (response: RazorpayHandlerResponse) => {
           try {
             const verifyRes = await fetch("/api/payments/webhook", {
               method: "POST",

@@ -33,6 +33,26 @@ type BankAccountRow = {
   is_verified: boolean;
 };
 
+type DigitalVisibilityPackRelation = {
+  events?: { title?: string } | Array<{ title?: string }> | null;
+  sponsors_profile?: { company_name?: string } | Array<{ company_name?: string }> | null;
+  pack_type?: string;
+};
+
+type PayoutWithRelations = {
+  id: string;
+  digital_pack_id?: string | null;
+  organizer_email: string;
+  gross_amount: number;
+  platform_fee: number;
+  payout_amount: number;
+  payout_method?: string | null;
+  payout_status: "pending" | "paid";
+  paid_at?: string | null;
+  created_at?: string;
+  digital_visibility_packs?: DigitalVisibilityPackRelation | null;
+};
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as SessionUserWithRole | undefined)?.role;
@@ -94,14 +114,8 @@ export async function GET(req: NextRequest) {
     return acc;
   }, {} as Record<string, BankAccountRow>);
 
-  const enrichedPayouts = ((payouts || []) as Array<Record<string, unknown>>).map((payout) => {
-    const pack = payout.digital_visibility_packs as
-      | {
-          events?: { title?: string } | Array<{ title?: string }> | null;
-          sponsors_profile?: { company_name?: string } | Array<{ company_name?: string }> | null;
-          pack_type?: string;
-        }
-      | null;
+  const enrichedPayouts = ((payouts || []) as PayoutWithRelations[]).map((payout) => {
+    const pack = payout.digital_visibility_packs || null;
     const event = Array.isArray(pack?.events) ? pack?.events[0] : pack?.events;
     const sponsor = Array.isArray(pack?.sponsors_profile)
       ? pack?.sponsors_profile[0]

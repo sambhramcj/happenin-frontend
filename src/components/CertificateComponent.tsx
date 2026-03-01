@@ -58,7 +58,7 @@ export default function CertificateComponent({
 
             if (chosen?.sponsors_profile) {
               setSponsor({
-                name: chosen.sponsors_profile.company_name,
+                name: chosen.sponsors_profile.company_name || "Sponsor",
                 logo_url: chosen.sponsors_profile.logo_url,
               });
             }

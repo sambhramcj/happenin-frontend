@@ -56,7 +56,7 @@ export default function TicketComponent({
           return (aRank === -1 ? 99 : aRank) - (bRank === -1 ? 99 : bRank);
         })[0];
         const sp = chosen.sponsors_profile || {};
-        if (!cancelled) setSponsor({ name: sp.company_name, logo_url: sp.logo_url });
+        if (!cancelled) setSponsor({ name: sp.company_name || "Sponsor", logo_url: sp.logo_url });
       } catch {}
     }
     run();

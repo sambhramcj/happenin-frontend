@@ -93,6 +93,12 @@ export default function EventDetailPage() {
   const [loadingBulkPacks, setLoadingBulkPacks] = useState(false);
   const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null);
 
+  const eventTabs: EventTab[] = [
+    { id: "overview", label: "Overview", icon: Icons.Info },
+    { id: "bulk", label: "Bulk Tickets", icon: Icons.Ticket, count: bulkPacks.length },
+    { id: "volunteers", label: "Volunteer", icon: Icons.Award },
+  ];
+
   const fetchEvent = useCallback(async () => {
     try {
       const res = await fetch(`/api/events/${eventId}`);
@@ -359,11 +365,7 @@ export default function EventDetailPage() {
 
         {/* Tabs */}
         <div className="flex gap-2 border-b border-border-default mb-6 bg-bg-card rounded-t-lg p-3">
-          {[
-            { id: "overview", label: "Overview", icon: Icons.Info },
-            { id: "bulk", label: "Bulk Tickets", icon: Icons.Ticket, count: bulkPacks.length },
-            { id: "volunteers", label: "Volunteer", icon: Icons.Award },
-          ].map(({ id, label, icon: Icon, count }: EventTab) => (
+          {eventTabs.map(({ id, label, icon: Icon, count }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
