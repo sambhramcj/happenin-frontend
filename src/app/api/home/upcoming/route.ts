@@ -26,22 +26,21 @@ export async function GET(request: NextRequest) {
       collegeId = profile?.college_id || null;
     }
 
-    const now = new Date().toISOString();
+    const nowIso = new Date().toISOString();
 
     // Build query to get upcoming events
     let query = supabase
       .from("events")
       .select(`
         *,
-        organizers_profile!events_organizer_email_fkey (
+        organizers_profile:organizers!events_organizer_email_fkey (
           first_name,
           last_name,
           logo_url
         )
       `)
-      .gte("start_date", now)
-      .order("start_date", { ascending: true })
-      .limit(20);
+      .order("created_at", { ascending: false })
+      .limit(120);
 
     // Prioritize college events if user is authenticated
     if (collegeId) {
@@ -55,7 +54,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ events: events || [] });
+    const now = new Date(nowIso);
+    const getEventStartTime = (event: any) =>
+      new Date(event.start_date || event.start_datetime || event.date || "");
+
+    const normalized = (events || [])
+      .map((event: any) => ({
+        ...event,
+        start_date: event.start_date || event.start_datetime || event.date || null,
+      }))
+      .filter((event: any) => {
+        const eventDate = getEventStartTime(event);
+        return !Number.isNaN(eventDate.getTime()) && eventDate >= now;
+      })
+      .sort((a: any, b: any) => {
+        const aTime = getEventStartTime(a).getTime();
+        const bTime = getEventStartTime(b).getTime();
+        return aTime - bTime;
+      })
+      .slice(0, 20);
+
+    return NextResponse.json({ events: normalized });
   } catch (error: any) {
     console.error("Error in upcoming events API:", error);
     return NextResponse.json(

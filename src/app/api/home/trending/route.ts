@@ -40,7 +40,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ events: events || [] });
+    let outputEvents = events || [];
+
+    if (!outputEvents.length) {
+      const now = new Date();
+      const { data: fallbackEvents, error: fallbackError } = await supabase
+        .from("events")
+        .select(`
+          *,
+          organizers_profile:organizers!events_organizer_email_fkey (
+            first_name,
+            last_name,
+            logo_url
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(25);
+
+      if (!fallbackError) {
+        outputEvents = (fallbackEvents || [])
+          .map((event: any) => ({
+            ...event,
+            start_date: event.start_date || event.start_datetime || event.date || null,
+          }))
+          .filter((event: any) => {
+            const eventDate = new Date(event.start_date || "");
+            return !Number.isNaN(eventDate.getTime()) && eventDate >= now;
+          })
+          .slice(0, 5);
+      }
+    }
+
+    return NextResponse.json({ events: outputEvents });
   } catch (error: any) {
     console.error("Error in trending events API:", error);
     return NextResponse.json(

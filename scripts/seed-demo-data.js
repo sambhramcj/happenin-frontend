@@ -177,6 +177,8 @@ async function cleanupSeedData() {
 
   const tables = {
     banners: await tableExists("banners"),
+    digitalVisibilityPacks: await tableExists("digital_visibility_packs"),
+    featuredEvents: await tableExists("featured_events"),
     bulkTickets: await tableExists("bulk_tickets"),
     bulkPurchases: await tableExists("bulk_ticket_purchases"),
     bulkPacks: await tableExists("bulk_ticket_packs"),
@@ -186,6 +188,8 @@ async function cleanupSeedData() {
     badges: await tableExists("achievement_badges"),
     tickets: await tableExists("tickets"),
     registrations: await tableExists("registrations"),
+    eventRegistrations: await tableExists("event_registrations"),
+    clubMembers: await tableExists("club_members"),
     festEvents: await tableExists("fest_events"),
     festMembers: await tableExists("fest_members"),
     sponsorshipOrders: await tableExists("sponsorship_orders"),
@@ -193,6 +197,7 @@ async function cleanupSeedData() {
     fests: await tableExists("fests"),
     sponsorProfiles: await tableExists("sponsors_profile"),
     studentProfiles: await tableExists("student_profiles"),
+    studentsProfile: await tableExists("students_profile"),
     users: await tableExists("users"),
   };
 
@@ -217,6 +222,17 @@ async function cleanupSeedData() {
 
   if (tables.banners) {
     await supabase.from("banners").delete().ilike("title", `${SEED_PREFIX}%`);
+  }
+
+  if (tables.digitalVisibilityPacks && seededEventIds.length) {
+    await supabase.from("digital_visibility_packs").delete().in("event_id", seededEventIds);
+    if (seededFestIds.length) {
+      await supabase.from("digital_visibility_packs").delete().in("fest_id", seededFestIds);
+    }
+  }
+
+  if (tables.featuredEvents && seededEventIds.length) {
+    await supabase.from("featured_events").delete().in("event_id", seededEventIds);
   }
 
   if (tables.bulkTickets && seededEventIds.length) {
@@ -262,6 +278,17 @@ async function cleanupSeedData() {
     await supabase.from("registrations").delete().in("event_id", seededEventIds);
   }
 
+  if (tables.eventRegistrations && seededEventIds.length) {
+    await supabase.from("event_registrations").delete().in("event_id", seededEventIds);
+  }
+
+  if (tables.clubMembers) {
+    await supabase
+      .from("club_members")
+      .delete()
+      .ilike("student_email", "seed.student%@happenin.test");
+  }
+
   if (tables.festEvents && seededFestIds.length) {
     await supabase.from("fest_events").delete().in("fest_id", seededFestIds);
   }
@@ -302,6 +329,13 @@ async function cleanupSeedData() {
       .from("student_profiles")
       .delete()
       .ilike("student_email", "seed.student%@happenin.test");
+  }
+
+  if (tables.studentsProfile) {
+    await supabase
+      .from("students_profile")
+      .delete()
+      .ilike("email", "seed.student%@happenin.test");
   }
 
   if (tables.users) {
@@ -347,6 +381,11 @@ async function seed() {
     bulkTickets: 0,
     sponsorshipOrders: 0,
     sponsorshipDeals: 0,
+    digitalVisibilityPacks: 0,
+    featuredEvents: 0,
+    eventRegistrations: 0,
+    studentsProfiles: 0,
+    clubMembers: 0,
     banners: 0,
   };
 
@@ -367,6 +406,12 @@ async function seed() {
   const admins = [{ email: "seed.admin1@happenin.test", role: "admin" }];
 
   const allUsers = [...organizers, ...students, ...sponsors, ...admins];
+
+  let collegeIds = [];
+  if (await tableExists("colleges")) {
+    const { data } = await supabase.from("colleges").select("id").limit(20);
+    collegeIds = (data || []).map((row) => row.id);
+  }
 
   if (await tableExists("users")) {
     const rows = [];
@@ -449,10 +494,30 @@ async function seed() {
     stats.sponsorProfiles = data?.length || 0;
   }
 
-  let collegeIds = [];
-  if (await tableExists("colleges")) {
-    const { data } = await supabase.from("colleges").select("id").limit(20);
-    collegeIds = (data || []).map((row) => row.id);
+  if (await tableExists("students_profile")) {
+    const rows = [];
+    for (let i = 0; i < students.length; i += 1) {
+      rows.push(await pickColumns("students_profile", {
+        email: students[i].email,
+        college_id: collegeIds.length ? collegeIds[i % collegeIds.length] : null,
+      }));
+    }
+
+    const validRows = rows.filter((row) => Object.keys(row).length > 0);
+    if (validRows.length) {
+      const { data, error } = await upsertWithRetry(
+        "students_profile",
+        validRows,
+        { onConflict: "email", ignoreDuplicates: false },
+        "email"
+      );
+
+      if (!error) {
+        stats.studentsProfiles = data?.length || 0;
+      } else {
+        console.warn("⚠️ students_profile seed warning:", error.message);
+      }
+    }
   }
 
   const festRows = [];
@@ -515,17 +580,18 @@ async function seed() {
     const start = new Date(Date.now() + (i - 12) * 24 * 60 * 60 * 1000);
     const end = new Date(start.getTime() + randomInt(2, 8) * 60 * 60 * 1000);
     const paid = i % 3 !== 0;
-    const sponsorshipEnabled = i % 2 === 0;
-    const needsVolunteers = i % 3 !== 1;
-    const hasPrize = i % 4 === 0;
-    const hasDiscount = i % 5 === 0;
-    const hasWhatsapp = i % 2 === 0;
-    const hasBrochure = i % 3 === 0;
+    const sponsorshipEnabled = true;
+    const needsVolunteers = true;
+    const hasPrize = true;
+    const hasDiscount = true;
+    const hasWhatsapp = true;
+    const hasBrochure = true;
     const fest = createdFests.length && i % 2 === 0 ? sample(createdFests) : null;
+    const organizerEmail = sample(organizers).email;
 
     const baseRow = {
       title: `${SEED_PREFIX} ${sample(["Hack", "Summit", "Carnival", "Challenge", "Expo", "Showdown"])} ${i + 1}`,
-      description: `${SEED_PREFIX} Auto-generated test event with full feature coverage for UI and flow validation`,
+      description: `${SEED_PREFIX} Auto-generated detailed event ${i + 1} with timeline, organizer contacts, brochure, discount, volunteers, WhatsApp, sponsorship, and prize info for end-to-end UI validation.`,
       date: start.toISOString(),
       start_datetime: start.toISOString(),
       end_datetime: end.toISOString(),
@@ -534,7 +600,7 @@ async function seed() {
       venue: sample(["Main Auditorium", "Seminar Hall", "Open Grounds", "Lab Complex", "Online"]),
       price: paid ? randomInt(99, 1499) : 0,
       ticket_price: paid ? randomInt(99, 1499) : 0,
-      organizer_email: sample(organizers).email,
+      organizer_email: organizerEmail,
       category: categories[i % categories.length],
       max_attendees: randomInt(80, 500),
       registrations_closed: false,
@@ -568,7 +634,8 @@ async function seed() {
       whatsapp_group_link: hasWhatsapp ? `https://chat.whatsapp.com/SEED${String(i + 1).padStart(4, "0")}` : null,
       organizer_contact_name: `Organizer ${i + 1}`,
       organizer_contact_phone: `97777${String(i + 1).padStart(5, "0")}`,
-      organizer_contact_email: sample(organizers).email,
+      organizer_contact_email: organizerEmail,
+      college_id: collegeIds.length ? sample(collegeIds) : null,
       fest_id: fest?.id || null,
       boost_visibility: i % 6 === 0,
       boost_payment_status: i % 6 === 0 ? "completed" : "unpaid",
@@ -583,7 +650,7 @@ async function seed() {
     const { data, error } = await insertWithRetry(
       "events",
       eventRows,
-      "id,title,organizer_email,needs_volunteers,price,fest_id,sponsorship_enabled"
+      "id,title,organizer_email,needs_volunteers,price,fest_id,sponsorship_enabled,college_id"
     );
 
     if (error) throw new Error(`Failed to seed events: ${error.message}`);
@@ -609,6 +676,36 @@ async function seed() {
       "id"
     );
     if (!error) stats.festEvents = data?.length || 0;
+  }
+
+  if (createdEvents.length && (await tableExists("featured_events"))) {
+    const now = new Date();
+    const upcomingEvents = createdEvents
+      .filter((event) => event.college_id)
+      .slice(0, 10);
+    const rows = [];
+    for (let i = 0; i < upcomingEvents.length; i += 1) {
+      const event = upcomingEvents[i];
+      rows.push(await pickColumns("featured_events", {
+        event_id: event.id,
+        college_id: event.college_id,
+        organizer_email: event.organizer_email,
+        active: true,
+        payment_status: "paid",
+        start_date: now.toISOString(),
+        end_date: new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+      }));
+    }
+
+    const validRows = rows.filter((row) => Object.keys(row).length > 0);
+    if (validRows.length) {
+      const { data, error } = await insertWithRetry("featured_events", validRows, "id");
+      if (!error) {
+        stats.featuredEvents = data?.length || 0;
+      } else {
+        console.warn("⚠️ featured_events seed warning:", error.message);
+      }
+    }
   }
 
   const registrationEmailColumn = (await columnExists("registrations", "student_email"))
@@ -645,6 +742,62 @@ async function seed() {
     } else {
       createdRegistrations = data || [];
       stats.registrations = createdRegistrations.length;
+    }
+  }
+
+  if (createdEvents.length && (await tableExists("event_registrations"))) {
+    const rows = [];
+    for (const event of createdEvents.slice(0, 24)) {
+      const pickedStudents = shuffle(students).slice(0, randomInt(4, 12));
+      for (const student of pickedStudents) {
+        rows.push(await pickColumns("event_registrations", {
+          event_id: event.id,
+          student_email: student.email,
+          status: sample(["registered", "registered", "checked_in"]),
+          registration_date: new Date().toISOString(),
+        }));
+      }
+    }
+
+    const validRows = rows.filter((row) => Object.keys(row).length > 0);
+    if (validRows.length) {
+      const { data, error } = await insertWithRetry("event_registrations", validRows, "id");
+      if (!error) {
+        stats.eventRegistrations = data?.length || 0;
+      } else {
+        console.warn("⚠️ event_registrations seed warning:", error.message);
+      }
+    }
+  }
+
+  if ((await tableExists("club_members")) && (await tableExists("clubs"))) {
+    const { data: clubs } = await supabase.from("clubs").select("id").limit(12);
+    if ((clubs || []).length) {
+      const rows = [];
+      for (let i = 0; i < Math.min(students.length, 36); i += 1) {
+        const club = clubs[i % clubs.length];
+        rows.push(await pickColumns("club_members", {
+          club_id: club.id,
+          student_email: students[i].email,
+          status: "approved",
+          joined_at: new Date().toISOString(),
+        }));
+      }
+
+      const validRows = rows.filter((row) => Object.keys(row).length > 0);
+      if (validRows.length) {
+        const { data, error } = await upsertWithRetry(
+          "club_members",
+          validRows,
+          { onConflict: "club_id,student_email", ignoreDuplicates: true },
+          "club_id"
+        );
+        if (!error) {
+          stats.clubMembers = data?.length || 0;
+        } else {
+          console.warn("⚠️ club_members seed warning:", error.message);
+        }
+      }
     }
   }
 
@@ -969,6 +1122,82 @@ async function seed() {
         stats.sponsorshipDeals = dealData?.length || 0;
       } else {
         console.warn("⚠️ Sponsorship deals seed warning:", dealError.message);
+      }
+    }
+  }
+
+  if (createdEvents.length && (await tableExists("digital_visibility_packs")) && (await tableExists("sponsors_profile"))) {
+    const sponsorEmailExists = await columnExists("sponsors_profile", "email");
+    let sponsorRows = [];
+
+    if (sponsorEmailExists) {
+      const { data } = await supabase
+        .from("sponsors_profile")
+        .select("email")
+        .ilike("email", "seed.sponsor%@happenin.test")
+        .limit(30);
+      sponsorRows = data || [];
+    }
+
+    const rows = [];
+    const festBackedEvents = createdEvents.filter((event) => event.fest_id);
+    const uniqueFestEvents = [];
+    const seenFestIds = new Set();
+    for (const event of festBackedEvents) {
+      if (!event.fest_id || seenFestIds.has(event.fest_id)) continue;
+      seenFestIds.add(event.fest_id);
+      uniqueFestEvents.push(event);
+      if (uniqueFestEvents.length >= 6) break;
+    }
+
+    for (let i = 0; i < uniqueFestEvents.length; i += 1) {
+      const event = uniqueFestEvents[i];
+      const sponsor = sponsorRows.length ? sponsorRows[i % sponsorRows.length] : null;
+      const amount = 25000;
+      rows.push(await pickColumns("digital_visibility_packs", {
+        sponsor_id: sponsor?.email || sponsors[i % sponsors.length].email,
+        event_id: null,
+        fest_id: event.fest_id,
+        pack_type: "platinum",
+        amount,
+        organizer_share: Number((amount * 0.8).toFixed(2)),
+        platform_share: Number((amount * 0.2).toFixed(2)),
+        payment_status: "paid",
+        admin_approved: true,
+        visibility_active: true,
+        organizer_email: event.organizer_email,
+      }));
+    }
+
+    const futureEvents = createdEvents.slice(0, 16);
+    for (let i = 0; i < futureEvents.length; i += 1) {
+      const event = futureEvents[i];
+      const sponsor = sponsorRows.length ? sponsorRows[i % sponsorRows.length] : null;
+      const packType = i % 2 === 0 ? "gold" : "silver";
+      const amount = packType === "gold" ? 15000 : 9000;
+
+      rows.push(await pickColumns("digital_visibility_packs", {
+        sponsor_id: sponsor?.email || sponsors[i % sponsors.length].email,
+        event_id: event.id,
+        fest_id: null,
+        pack_type: packType,
+        amount,
+        organizer_share: Number((amount * 0.8).toFixed(2)),
+        platform_share: Number((amount * 0.2).toFixed(2)),
+        payment_status: "paid",
+        admin_approved: true,
+        visibility_active: true,
+        organizer_email: event.organizer_email,
+      }));
+    }
+
+    const validRows = rows.filter((row) => Object.keys(row).length > 0);
+    if (validRows.length) {
+      const { data, error } = await insertWithRetry("digital_visibility_packs", validRows, "id");
+      if (!error) {
+        stats.digitalVisibilityPacks = data?.length || 0;
+      } else {
+        console.warn("⚠️ digital_visibility_packs seed warning:", error.message);
       }
     }
   }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock, Calendar, ArrowRight } from "lucide-react";
+import { Clock, ArrowRight } from "lucide-react";
 
 interface Event {
   id: string;
@@ -11,8 +11,11 @@ interface Event {
   banner_url: string | null;
   banner_image: string | null;
   start_date: string;
+  start_datetime?: string | null;
+  date?: string | null;
   ticket_price: number | null;
   price: number | null;
+  college?: string | null;
   organizers_profile?: {
     first_name: string;
     last_name: string;
@@ -32,11 +35,40 @@ export default function UpcomingEvents({ selectedCollege }: UpcomingEventsProps)
     fetchUpcomingEvents();
   }, [selectedCollege]);
 
+  const getOrganizerName = (event: Event) => {
+    const firstName = event.organizers_profile?.first_name || "";
+    const lastName = event.organizers_profile?.last_name || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || "Organizer";
+  };
+
   const fetchUpcomingEvents = async () => {
     try {
       const response = await fetch("/api/home/upcoming");
       const data = await response.json();
-      setEvents(data.events || []);
+      let list = data.events || [];
+
+      if (!Array.isArray(list) || list.length === 0) {
+        const fallbackResponse = await fetch("/api/events");
+        const fallbackData = await fallbackResponse.json();
+        const allEvents = Array.isArray(fallbackData) ? fallbackData : (fallbackData.events || []);
+        const now = new Date();
+
+        list = allEvents
+          .map((event: any) => ({
+            ...event,
+            start_date: event.start_date || event.start_datetime || event.date || null,
+          }))
+          .filter((event: any) => {
+            const eventDate = new Date(event.start_date || "");
+            return !Number.isNaN(eventDate.getTime()) && eventDate >= now;
+          })
+          .filter((event: any) => selectedCollege === "all" || !event.college || event.college === selectedCollege)
+          .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+          .slice(0, 20);
+      }
+
+      setEvents(list);
     } catch (error) {
       console.error("Error fetching upcoming events:", error);
     } finally {
@@ -51,11 +83,11 @@ export default function UpcomingEvents({ selectedCollege }: UpcomingEventsProps)
           <Clock className="w-5 h-5 text-blue-500" />
           Upcoming Events
         </h2>
-        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="flex-shrink-0 w-64 bg-gray-100 rounded-xl h-[280px] animate-pulse"
+              className="flex-shrink-0 w-64 md:w-52 bg-gray-100 rounded-xl h-[260px] animate-pulse"
             />
           ))}
         </div>
@@ -83,75 +115,36 @@ export default function UpcomingEvents({ selectedCollege }: UpcomingEventsProps)
         </Link>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
         {events.map((event) => (
           <Link
             key={event.id}
             href={`/events/${event.id}`}
-            className="flex-shrink-0 w-64 group"
+            className="group flex-shrink-0 w-64 md:w-52 bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
           >
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all border border-gray-200">
-              {/* Banner */}
-              <div className="relative h-36 bg-gray-100">
-                {(event.banner_url || event.banner_image) && (
-                  <Image
-                    src={event.banner_url || event.banner_image || ""}
-                    alt={event.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                )}
-              </div>
+            <div className="relative aspect-[4/5] bg-gray-100 rounded-t-2xl overflow-hidden">
+              {(event.banner_url || event.banner_image) && (
+                <Image
+                  src={event.banner_url || event.banner_image || ""}
+                  alt={event.title}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              )}
+            </div>
 
-              {/* Content */}
-              <div className="p-3 space-y-2">
-                <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-blue-600 transition-colors">
-                  {event.title}
-                </h3>
-
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(event.start_date).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </div>
-
-                {/* Price */}
-                {(event.ticket_price || event.price) ? (
-                  <div className="pt-2 border-t border-gray-100">
-                    <span className="text-base font-bold text-green-600">
-                      ₹{event.ticket_price || event.price}
-                    </span>
+            <div className="px-3.5 pt-3 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                {event.organizers_profile?.logo_url ? (
+                  <div className="relative h-6 w-6 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <Image src={event.organizers_profile.logo_url} alt={getOrganizerName(event)} fill className="object-cover" />
                   </div>
                 ) : (
-                  <div className="pt-2 border-t border-gray-100">
-                    <span className="text-sm font-medium text-green-600">
-                      Free
-                    </span>
+                  <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                    {getOrganizerName(event).charAt(0).toUpperCase()}
                   </div>
                 )}
-
-                {/* Organizer */}
-                {event.organizers_profile && (
-                  <div className="flex items-center gap-2 pt-2">
-                    {event.organizers_profile.logo_url && (
-                      <div className="relative w-5 h-5 rounded-full overflow-hidden">
-                        <Image
-                          src={event.organizers_profile.logo_url}
-                          alt="Organizer"
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-                    <span className="text-xs text-gray-600 truncate">
-                      {event.organizers_profile.first_name}{" "}
-                      {event.organizers_profile.last_name}
-                    </span>
-                  </div>
-                )}
+                <h4 className="font-semibold text-sm leading-5 line-clamp-1 text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{event.title}</h4>
               </div>
             </div>
           </Link>

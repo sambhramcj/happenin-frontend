@@ -20,8 +20,21 @@ function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="text-2xl font-bold" style={{ color: primary }}>Happenin</div>
           <div className="flex items-center gap-4">
-            <button onClick={() => router.push('/auth')} className="text-gray-600 hover:text-gray-900 font-medium">Login</button>
-            <button onClick={() => router.push('/auth')} style={{ backgroundColor: primary }} className="px-6 py-2 text-white font-semibold rounded-lg hover:opacity-90 transition">Get Started</button>
+            <button
+              onClick={() => router.push('/auth')}
+              style={{ backgroundColor: primarySoft, color: primary, borderColor: primary }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = primary;
+                e.currentTarget.style.color = "#ffffff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = primarySoft;
+                e.currentTarget.style.color = primary;
+              }}
+              className="px-5 py-2 rounded-lg border font-semibold transition"
+            >
+              Login
+            </button>
           </div>
         </div>
       </nav>

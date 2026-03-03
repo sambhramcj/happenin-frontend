@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Calendar, MapPin, Users, Clock, TrendingUp, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Flame } from "lucide-react";
+import { Calendar, MapPin, Clock, Sparkles, ChevronDown, Flame } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -26,13 +26,11 @@ interface Event {
   banner_url?: string;
   banner_image?: string;
   college?: string;
-}
-
-interface Banner {
-  id: string;
-  image_url: string;
-  redirect_url?: string;
-  title?: string;
+  organizers_profile?: {
+    first_name?: string;
+    last_name?: string;
+    logo_url?: string | null;
+  };
 }
 
 export default function EventsPage() {
@@ -45,13 +43,12 @@ export default function EventsPage() {
   const [selectedCollege, setSelectedCollege] = useState('all');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [colleges, setColleges] = useState<string[]>([]);
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [todayEvents, setTodayEvents] = useState<Event[]>([]);
   const [weekEvents, setWeekEvents] = useState<Event[]>([]);
   const [popularEvents, setPopularEvents] = useState<Event[]>([]);
   const [eventsTab, setEventsTab] = useState<"all" | "nearby">("all");
   const [priceFilter, setPriceFilter] = useState<"all" | "free" | "paid">("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all");
 
   const primary = '#6D28D9';
   const primaryLight = '#EDE9FE';
@@ -59,15 +56,6 @@ export default function EventsPage() {
   useEffect(() => {
     fetchEvents();
   }, [selectedCollege]);
-
-  // Banner auto-advance
-  useEffect(() => {
-    if (banners.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [banners.length]);
 
   const fetchEvents = async () => {
     try {
@@ -78,29 +66,11 @@ export default function EventsPage() {
       const collegesData = await collegesRes.json();
       setColleges((collegesData.data || []).map((college: any) => college.name).filter(Boolean));
 
-      // Fetch banners
-      const bannersRes = await fetch('/api/home/banners');
-      const bannersData = await bannersRes.json();
-      const homeBanners = bannersData.banners || [];
-
       // Fetch events
       const res = await fetch("/api/events");
       const data = await res.json();
       const allEvents = Array.isArray(data) ? data : (data.events || []);
       setEvents(allEvents);
-
-      // Fallback banners from event images when home banners are empty
-      const eventBanners: Banner[] = allEvents
-        .filter((event: Event) => Boolean(event.banner_image || event.banner_url))
-        .slice(0, 5)
-        .map((event: Event) => ({
-          id: `event-${event.id}`,
-          image_url: event.banner_image || event.banner_url || '',
-          title: event.title,
-          redirect_url: `/events/${event.id}`,
-        }));
-
-      setBanners(homeBanners.length > 0 ? homeBanners : eventBanners);
 
       // Filter events by college
       const filteredEvents = selectedCollege === 'all' 
@@ -138,16 +108,6 @@ export default function EventsPage() {
     }
   };
 
-  const handleBannerClick = (banner: Banner) => {
-    if (banner.redirect_url) {
-      if (banner.redirect_url.startsWith('/')) {
-        router.push(banner.redirect_url);
-      } else {
-        window.open(banner.redirect_url, '_blank');
-      }
-    }
-  };
-
   const filteredEvents = events.filter((event) => {
     const matchesCollege = selectedCollege === 'all' || event.college === selectedCollege;
     return matchesCollege;
@@ -164,6 +124,35 @@ export default function EventsPage() {
 
   const scopeEvents = eventsTab === "nearby" ? nearbyEvents : filteredEvents;
 
+  const getEventDate = (event: Event) => new Date(event.start_date || event.event_date || event.date || "");
+
+  const applyDateFilter = (list: Event[]) => {
+    if (dateFilter === "all") return list;
+
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+
+    const weekEnd = new Date(todayStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    const monthEnd = new Date(todayStart);
+    monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+    return list.filter((event) => {
+      const eventDate = getEventDate(event);
+      if (Number.isNaN(eventDate.getTime())) return false;
+
+      if (dateFilter === "today") return eventDate >= todayStart && eventDate < tomorrowStart;
+      if (dateFilter === "week") return eventDate >= todayStart && eventDate <= weekEnd;
+      if (dateFilter === "month") return eventDate >= todayStart && eventDate <= monthEnd;
+      return true;
+    });
+  };
+
   const applyPriceFilter = (list: Event[]) =>
     list.filter((event) => {
       if (priceFilter === "free") return Number(event.price || event.ticket_price || 0) === 0;
@@ -171,9 +160,57 @@ export default function EventsPage() {
       return true;
     });
 
-  const todayDisplay = applyPriceFilter(todayEvents).filter((event) => scopeEvents.some((s) => s.id === event.id));
-  const weekDisplay = applyPriceFilter(weekEvents).filter((event) => scopeEvents.some((s) => s.id === event.id));
-  const popularDisplay = applyPriceFilter(popularEvents).filter((event) => scopeEvents.some((s) => s.id === event.id));
+  const todayDisplay = applyDateFilter(applyPriceFilter(todayEvents)).filter((event) => scopeEvents.some((s) => s.id === event.id));
+  const weekDisplay = applyDateFilter(applyPriceFilter(weekEvents)).filter((event) => scopeEvents.some((s) => s.id === event.id));
+  const popularDisplay = applyDateFilter(applyPriceFilter(popularEvents)).filter((event) => scopeEvents.some((s) => s.id === event.id));
+  const featuredDisplay = applyDateFilter(applyPriceFilter(scopeEvents))
+    .filter((event) => Boolean(event.banner_url || event.banner_image))
+    .slice(0, 6);
+
+  const getOrganizerName = (event: Event) => {
+    const firstName = event.organizers_profile?.first_name || '';
+    const lastName = event.organizers_profile?.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (fullName) return fullName;
+    return event.organizer_email?.split('@')[0] || 'Organizer';
+  };
+
+  const renderEventCard = (event: Event) => (
+    <Link
+      key={event.id}
+      href={`/events/${event.id}`}
+      className="group flex-shrink-0 w-64 bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
+    >
+      <div className="relative aspect-[4/5]" style={{ backgroundColor: primaryLight }}>
+        {(event.banner_url || event.banner_image) ? (
+          <Image
+            src={event.banner_url || event.banner_image || ''}
+            alt={event.title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Calendar className="w-16 h-16 opacity-20" style={{ color: primary }} />
+          </div>
+        )}
+      </div>
+      <div className="p-2.5">
+        <div className="flex items-center gap-2">
+          {event.organizers_profile?.logo_url ? (
+            <div className="relative h-5 w-5 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700">
+              <Image src={event.organizers_profile.logo_url} alt={getOrganizerName(event)} fill className="object-cover" />
+            </div>
+          ) : (
+            <div className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+              {getOrganizerName(event).charAt(0).toUpperCase()}
+            </div>
+          )}
+          <h4 className="font-semibold text-sm line-clamp-1 text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{event.title}</h4>
+        </div>
+      </div>
+    </Link>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -300,6 +337,23 @@ export default function EventsPage() {
                 </button>
               ))}
             </div>
+
+            <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl p-1 border border-gray-200 dark:border-gray-700">
+              {([
+                { key: "all", label: "All Dates" },
+                { key: "today", label: "Today" },
+                { key: "week", label: "This Week" },
+                { key: "month", label: "This Month" },
+              ] as const).map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => setDateFilter(item.key)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === item.key ? "bg-primary text-white" : "text-gray-700 dark:text-gray-300"}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -317,58 +371,9 @@ export default function EventsPage() {
             </div>
           </div>
 
-          {banners.length > 0 ? (
-            <div className="relative w-full h-[300px] sm:h-[400px] lg:h-[500px] overflow-hidden rounded-2xl group shadow-xl">
-              <div className="relative w-full h-full">
-                {banners.map((banner, index) => (
-                  <div
-                    key={banner.id}
-                    className={`absolute inset-0 transition-opacity duration-500 ${
-                      index === currentBannerIndex ? 'opacity-100' : 'opacity-0'
-                    }`}
-                    onClick={() => handleBannerClick(banner)}
-                    style={{ cursor: banner.redirect_url ? 'pointer' : 'default' }}
-                  >
-                    <Image
-                      src={banner.image_url}
-                      alt={banner.title || 'Banner'}
-                      fill
-                      className="object-cover"
-                      priority={index === 0}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {banners.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setCurrentBannerIndex((prev) => (prev - 1 + banners.length) % banners.length)}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentBannerIndex((prev) => (prev + 1) % banners.length)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
-
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                    {banners.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentBannerIndex(index)}
-                        className={`w-2 h-2 rounded-full transition-all ${
-                          index === currentBannerIndex ? 'w-8 opacity-100' : 'opacity-50'
-                        }`}
-                        style={{ backgroundColor: 'white' }}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
+          {featuredDisplay.length > 0 ? (
+            <div className="flex gap-5 sm:gap-6 overflow-x-auto pb-2 scrollbar-hide">
+              {featuredDisplay.map((event) => renderEventCard(event))}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-10 text-center">
@@ -391,45 +396,8 @@ export default function EventsPage() {
             </div>
           </div>
           {todayDisplay.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-              {todayDisplay.map((event) => (
-                <Link
-                  key={event.id}
-                  href={`/events/${event.id}`}
-                  className="group bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
-                >
-                  <div className="relative h-48" style={{ backgroundColor: primaryLight }}>
-                    {(event.banner_url || event.banner_image) ? (
-                      <Image
-                        src={event.banner_url || event.banner_image || ''}
-                        alt={event.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Calendar className="w-16 h-16 opacity-20" style={{ color: primary }} />
-                      </div>
-                    )}
-                    <div className="absolute top-3 right-3">
-                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white">Today</span>
-                    </div>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h4 className="font-bold text-lg line-clamp-1 text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{event.title}</h4>
-                    <p className="text-sm line-clamp-2 text-gray-600 dark:text-gray-400">{event.description}</p>
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <MapPin className="w-4 h-4" />
-                      <span className="text-sm truncate">{event.location}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-sm font-semibold" style={{ color: primary }}>
-                        {(event.price === 0 || event.ticket_price === 0) ? 'FREE' : `₹${event.price || event.ticket_price}`}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+            <div className="flex gap-5 sm:gap-6 overflow-x-auto pb-2 scrollbar-hide">
+              {todayDisplay.map((event) => renderEventCard(event))}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-8 text-center">
@@ -452,52 +420,8 @@ export default function EventsPage() {
             </div>
           </div>
           {weekDisplay.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-              {weekDisplay.map((event) => {
-                const eventDate = new Date(event.start_date || event.event_date || event.date || '');
-                const daysUntil = Math.ceil((eventDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                
-                return (
-                  <Link
-                    key={event.id}
-                    href={`/events/${event.id}`}
-                    className="group bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
-                  >
-                    <div className="relative h-48" style={{ backgroundColor: primaryLight }}>
-                      {(event.banner_url || event.banner_image) ? (
-                        <Image
-                          src={event.banner_url || event.banner_image || ''}
-                          alt={event.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Calendar className="w-16 h-16 opacity-20" style={{ color: primary }} />
-                        </div>
-                      )}
-                      <div className="absolute top-3 right-3">
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500 text-white">
-                          in {daysUntil} {daysUntil === 1 ? 'day' : 'days'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-4 space-y-2">
-                      <h4 className="font-bold text-lg line-clamp-1 text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{event.title}</h4>
-                      <p className="text-sm line-clamp-2 text-gray-600 dark:text-gray-400">{event.description}</p>
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <Calendar className="w-4 h-4" />
-                        <span className="text-sm">{eventDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                      </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-sm font-semibold" style={{ color: primary }}>
-                          {(event.price === 0 || event.ticket_price === 0) ? 'FREE' : `₹${event.price || event.ticket_price}`}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="flex gap-5 sm:gap-6 overflow-x-auto pb-2 scrollbar-hide">
+              {weekDisplay.map((event) => renderEventCard(event))}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-8 text-center">
@@ -520,48 +444,8 @@ export default function EventsPage() {
             </div>
           </div>
           {popularDisplay.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-              {popularDisplay.map((event, index) => (
-                <Link
-                  key={event.id}
-                  href={`/events/${event.id}`}
-                  className="group bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
-                >
-                  <div className="relative h-48" style={{ backgroundColor: primaryLight }}>
-                    {(event.banner_url || event.banner_image) ? (
-                      <Image
-                        src={event.banner_url || event.banner_image || ''}
-                        alt={event.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Calendar className="w-16 h-16 opacity-20" style={{ color: primary }} />
-                      </div>
-                    )}
-                    <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-500 text-white">
-                      <TrendingUp className="w-3 h-3" />
-                      #{index + 1}
-                    </div>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h4 className="font-bold text-lg line-clamp-1 text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{event.title}</h4>
-                    <p className="text-sm line-clamp-2 text-gray-600 dark:text-gray-400">{event.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        <span>{(event.registration_count || event.registrations_count) || 0} registered</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-sm font-semibold" style={{ color: primary }}>
-                        {(event.price === 0 || event.ticket_price === 0) ? 'FREE' : `₹${event.price || event.ticket_price}`}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+            <div className="flex gap-5 sm:gap-6 overflow-x-auto pb-2 scrollbar-hide">
+              {popularDisplay.map((event) => renderEventCard(event))}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-8 text-center">

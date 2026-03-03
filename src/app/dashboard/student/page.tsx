@@ -9,6 +9,8 @@ declare global {
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { uploadProfilePhoto } from "@/lib/profileStorage";
@@ -45,6 +47,13 @@ type Event = {
   location: string;
   price: string;
   banner_image?: string;
+  banner_url?: string;
+  organizer_email?: string;
+  organizers_profile?: {
+    first_name?: string;
+    last_name?: string;
+    logo_url?: string | null;
+  };
   brochure_url?: string;
   discount_enabled?: boolean;
   discount_club?: string;
@@ -333,7 +342,7 @@ export default function StudentDashboard() {
       const res = await fetch("/api/events");
       if (res.ok) {
         const data = await res.json();
-        const list = data.events || [];
+        const list = Array.isArray(data) ? data : (data.events || []);
         setEvents(list);
         
         // Check for bulk tickets availability
@@ -827,6 +836,93 @@ export default function StudentDashboard() {
     return events.filter((event) => event.needs_volunteers);
   }
 
+  function getEventDate(event: Event) {
+    const source = event.start_datetime || event.date || "";
+    return new Date(source);
+  }
+
+  const homeUpcomingEvents = events.filter((event) => {
+    const eventDate = getEventDate(event);
+    if (Number.isNaN(eventDate.getTime())) return false;
+    return eventDate >= new Date();
+  });
+
+  const homeFeaturedEvents = homeUpcomingEvents
+    .filter((event) => Boolean(event.banner_image || event.banner_url))
+    .slice(0, 6);
+
+  const homeTodayEvents = homeUpcomingEvents
+    .filter((event) => {
+      const eventDate = getEventDate(event);
+      if (Number.isNaN(eventDate.getTime())) return false;
+      return eventDate.toDateString() === new Date().toDateString();
+    })
+    .slice(0, 6);
+
+  const homeWeekEvents = homeUpcomingEvents
+    .filter((event) => {
+      const eventDate = getEventDate(event);
+      if (Number.isNaN(eventDate.getTime())) return false;
+      const now = new Date();
+      const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return eventDate >= now && eventDate <= weekFromNow;
+    })
+    .slice(0, 6);
+
+  const homePopularEvents = [...homeUpcomingEvents]
+    .sort((a: any, b: any) => Number(b.registration_count || b.registrations_count || 0) - Number(a.registration_count || a.registrations_count || 0))
+    .slice(0, 6);
+
+  function getOrganizerNameForCard(event: Event) {
+    const firstName = event.organizers_profile?.first_name || "";
+    const lastName = event.organizers_profile?.last_name || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (fullName) return fullName;
+    return event.organizer_email?.split("@")[0] || "Organizer";
+  }
+
+  function renderHomeEventCard(event: Event) {
+    const organizerName = getOrganizerNameForCard(event);
+    return (
+      <Link
+        key={event.id}
+        href={`/events/${event.id}`}
+        className="group flex-shrink-0 w-64 bg-bg-card rounded-2xl overflow-hidden border border-border-default hover:shadow-lg transition-all"
+      >
+        <div className="relative aspect-[4/5] bg-bg-muted">
+          {(event.banner_image || event.banner_url) ? (
+            <Image
+              src={event.banner_image || event.banner_url || ""}
+              alt={event.title}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Icons.Calendar className="h-12 w-12 text-text-muted" />
+            </div>
+          )}
+        </div>
+        <div className="p-2.5">
+          <div className="flex items-center gap-2">
+            {event.organizers_profile?.logo_url ? (
+              <div className="relative h-5 w-5 rounded-full overflow-hidden border border-border-default">
+                <Image src={event.organizers_profile.logo_url} alt={organizerName} fill className="object-cover" />
+              </div>
+            ) : (
+              <div className="h-5 w-5 rounded-full bg-primarySoft text-primary border border-primary/30 flex items-center justify-center text-[10px] font-bold">
+                {organizerName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <h4 className="font-semibold text-sm line-clamp-1 text-text-primary group-hover:text-primary transition-colors">
+              {event.title}
+            </h4>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
   // Get top 10 trending events (by registration count)
   async function getTop10Events() {
     try {
@@ -943,7 +1039,7 @@ export default function StudentDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* HOME TAB */}
         {activeTab === "home" && (
-          <StudentHomePage 
+          <StudentHomePage
             profileCollege={profile?.college_name}
             colleges={allColleges}
           />

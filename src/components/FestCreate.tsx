@@ -27,6 +27,7 @@ export default function FestCreate({ onSuccess, onClose }: FestCreateProps) {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    const inputElement = e.target;
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -39,12 +40,35 @@ export default function FestCreate({ onSuccess, onClose }: FestCreateProps) {
       return;
     }
 
-    setBannerImage(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setBannerPreview(reader.result as string);
+    const objectUrl = URL.createObjectURL(file);
+    const image = new window.Image();
+    image.onload = () => {
+      const ratio = image.width / image.height;
+      const targetRatio = 4 / 5;
+      const tolerance = 0.03;
+      URL.revokeObjectURL(objectUrl);
+
+      if (Math.abs(ratio - targetRatio) > tolerance) {
+        setBannerImage(null);
+        setBannerPreview("");
+        inputElement.value = "";
+        toast.error("Poster must be 4:5 ratio (example: 1080×1350)");
+        return;
+      }
+
+      setBannerImage(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setBannerPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     };
-    reader.readAsDataURL(file);
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      inputElement.value = "";
+      toast.error("Unable to read image dimensions");
+    };
+    image.src = objectUrl;
   };
 
   const uploadBannerImage = async (): Promise<string | null> => {
@@ -231,12 +255,17 @@ export default function FestCreate({ onSuccess, onClose }: FestCreateProps) {
             onChange={handleImageChange}
             className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-text-inverse hover:file:bg-primaryHover transition-all duration-fast ease-standard"
           />
+          <p className="text-xs text-text-muted mt-2">
+            Required ratio: 4:5 (example 1080×1350). Max size: 5MB.
+          </p>
           {bannerPreview && (
-            <img
-              src={bannerPreview}
-              alt="Preview"
-              className="mt-2 h-40 w-full object-cover rounded-lg"
-            />
+            <div className="mt-2 w-full max-w-xs aspect-[4/5] rounded-lg overflow-hidden border border-border-default">
+              <img
+                src={bannerPreview}
+                alt="Preview"
+                className="h-full w-full object-cover"
+              />
+            </div>
           )}
         </div>
 

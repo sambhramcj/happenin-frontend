@@ -232,17 +232,35 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("events")
-    .select("*")
+    .select(`
+      *,
+      organizers_profile:organizers!events_organizer_email_fkey (
+        first_name,
+        last_name,
+        logo_url
+      )
+    `)
     .order("created_at", { ascending: false });
 
+  let resolvedData = data;
   if (error) {
-    console.error("❌ SUPABASE FETCH ERROR:", error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    console.warn("⚠️ Relation fetch failed in /api/events, falling back to base events query:", error.message);
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from("events")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (fallbackError) {
+      console.error("❌ SUPABASE FALLBACK FETCH ERROR:", fallbackError);
+      return NextResponse.json(
+        { error: fallbackError.message },
+        { status: 500 }
+      );
+    }
+
+    resolvedData = fallbackData || [];
   }
 
-  const sanitized = (data || []).map(({ whatsapp_group_link, whatsapp_group_enabled, ...rest }) => rest);
+  const sanitized = (resolvedData || []).map(({ whatsapp_group_link, whatsapp_group_enabled, ...rest }) => rest);
   return NextResponse.json(sanitized);
 }

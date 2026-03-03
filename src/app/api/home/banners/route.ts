@@ -16,6 +16,8 @@ type BannerPackRow = {
 
 export async function GET() {
   try {
+    const nowIso = new Date().toISOString();
+
     const { data: packs, error } = await supabase
       .from("digital_visibility_packs")
       .select(`
@@ -32,12 +34,7 @@ export async function GET() {
       .order("created_at", { ascending: false })
       .limit(10);
 
-    if (error) {
-      console.error("Error fetching home banners:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const banners = ((packs || []) as BannerPackRow[])
+    const packBanners = ((packs || []) as BannerPackRow[])
       .map((pack) => {
         const event = Array.isArray(pack.events) ? pack.events[0] : pack.events;
         const sponsor = Array.isArray(pack.sponsors_profile)
@@ -58,6 +55,32 @@ export async function GET() {
         };
       })
       .filter(Boolean);
+
+    if (!error && packBanners.length > 0) {
+      return NextResponse.json({ banners: packBanners });
+    }
+
+    const { data: fallbackBanners, error: fallbackError } = await supabase
+      .from("banners")
+      .select("id,image_url,event_id,title,priority")
+      .eq("status", "approved")
+      .lte("start_date", nowIso)
+      .gte("end_date", nowIso)
+      .order("priority", { ascending: false })
+      .limit(10);
+
+    if (fallbackError) {
+      console.error("Error fetching home banners:", error || fallbackError);
+      return NextResponse.json({ error: fallbackError.message }, { status: 500 });
+    }
+
+    const banners = (fallbackBanners || []).map((banner: any) => ({
+      id: banner.id,
+      image_url: banner.image_url,
+      redirect_url: banner.event_id ? `/events/${banner.event_id}` : null,
+      title: banner.title || "Sponsored Banner",
+      priority: Number(banner.priority || 0),
+    }));
 
     return NextResponse.json({ banners });
   } catch (error: unknown) {

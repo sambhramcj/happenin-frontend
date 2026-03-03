@@ -21,10 +21,23 @@ interface Event {
   end_datetime?: string;
   schedule_sessions?: unknown[];
   location: string;
+  venue?: string;
   price: string;
   banner_image?: string;
+  banner_url?: string;
   brochure_url?: string;
   organizer_email: string;
+  organizers_profile?:
+    | {
+        first_name?: string;
+        last_name?: string;
+        logo_url?: string | null;
+      }
+    | Array<{
+        first_name?: string;
+        last_name?: string;
+        logo_url?: string | null;
+      }>;
   needs_volunteers?: boolean;
   volunteer_roles?: VolunteerRole[];
   volunteer_description?: string;
@@ -46,6 +59,13 @@ interface VolunteerRole {
   role: string;
   count: number;
   description: string;
+}
+
+interface TimelineSession {
+  date?: string;
+  start_time?: string;
+  end_time?: string;
+  description?: string;
 }
 
 interface BulkTicketPack {
@@ -79,7 +99,7 @@ interface RazorpayPaymentResponse {
 export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const eventId = params.eventId as string;
 
   const [event, setEvent] = useState<Event | null>(null);
@@ -92,11 +112,104 @@ export default function EventDetailPage() {
   const [bulkPacks, setBulkPacks] = useState<BulkTicketPack[]>([]);
   const [loadingBulkPacks, setLoadingBulkPacks] = useState(false);
   const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null);
+  const [canJoinWhatsappGroup, setCanJoinWhatsappGroup] = useState(false);
+  const [timelineExpanded, setTimelineExpanded] = useState(true);
+
+  const eventPrice = Number(event?.price ?? 0);
+  const eventPriceLabel = eventPrice > 0 ? `₹${eventPrice.toLocaleString("en-IN")}` : "Free";
+  const startDateTime = event?.start_datetime || event?.date || null;
+  const endDateTime = event?.end_datetime || null;
+
+  const eventDateLabel = (() => {
+    if (!startDateTime) return "TBD";
+    const parsed = new Date(startDateTime);
+    if (Number.isNaN(parsed.getTime())) return "TBD";
+    return parsed.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  })();
+
+  const eventTimeLabel = (() => {
+    if (!startDateTime) return "TBD";
+    const parsedStart = new Date(startDateTime);
+    if (Number.isNaN(parsedStart.getTime())) return "TBD";
+
+    const startLabel = parsedStart.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+    if (!endDateTime) return startLabel;
+
+    const parsedEnd = new Date(endDateTime);
+    if (Number.isNaN(parsedEnd.getTime())) return startLabel;
+
+    const endLabel = parsedEnd.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+    return `${startLabel} - ${endLabel}`;
+  })();
+
+  const eventLocationLabel = event?.location || event?.venue || "TBD";
+
+  const prizeSplitItems = (event?.prize_pool_description || "")
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const timelineSessions: TimelineSession[] = (() => {
+    if (Array.isArray(event?.schedule_sessions) && event.schedule_sessions.length > 0) {
+      return (event.schedule_sessions as unknown[])
+        .filter((item): item is TimelineSession => typeof item === "object" && item !== null)
+        .map((item) => ({
+          date: item.date,
+          start_time: item.start_time,
+          end_time: item.end_time,
+          description: item.description,
+        }));
+    }
+
+    if (eventDateLabel !== "TBD" || eventTimeLabel !== "TBD") {
+      return [
+        {
+          date: eventDateLabel !== "TBD" ? eventDateLabel : undefined,
+          start_time: eventTimeLabel !== "TBD" ? eventTimeLabel : undefined,
+          description: "Main event session",
+        },
+      ];
+    }
+
+    return [];
+  })();
+
+  const organizerProfile = Array.isArray(event?.organizers_profile)
+    ? event?.organizers_profile[0]
+    : event?.organizers_profile;
+
+  const organizerName = (() => {
+    const firstName = organizerProfile?.first_name || "";
+    const lastName = organizerProfile?.last_name || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (fullName) return fullName;
+    return event?.organizer_email?.split("@")[0] || "Organizer";
+  })();
+
+  const hasBulkPacks = bulkPacks.length > 0;
+  const hasVolunteerSection = Boolean(event?.needs_volunteers);
 
   const eventTabs: EventTab[] = [
     { id: "overview", label: "Overview", icon: Icons.Info },
-    { id: "bulk", label: "Bulk Tickets", icon: Icons.Ticket, count: bulkPacks.length },
-    { id: "volunteers", label: "Volunteer", icon: Icons.Award },
+    ...(hasBulkPacks
+      ? [{ id: "bulk", label: "Bulk Tickets", icon: Icons.Ticket, count: bulkPacks.length } as EventTab]
+      : []),
+    ...(hasVolunteerSection
+      ? [{ id: "volunteers", label: "Volunteer", icon: Icons.Award } as EventTab]
+      : []),
   ];
 
   const fetchEvent = useCallback(async () => {
@@ -133,6 +246,58 @@ export default function EventDetailPage() {
     fetchEvent();
     fetchBulkPacks();
   }, [fetchEvent, fetchBulkPacks]);
+
+  useEffect(() => {
+    setTimelineExpanded(true);
+  }, [eventId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkWhatsappAccess() {
+      if (sessionStatus !== "authenticated") {
+        if (isMounted) setCanJoinWhatsappGroup(false);
+        return;
+      }
+
+      const userRole = (session?.user as { role?: string } | undefined)?.role;
+      if (userRole !== "student") {
+        if (isMounted) setCanJoinWhatsappGroup(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/whatsapp/status?event_id=${eventId}`);
+        if (!res.ok) {
+          if (isMounted) setCanJoinWhatsappGroup(false);
+          return;
+        }
+
+        const data = await res.json();
+        if (isMounted) {
+          setCanJoinWhatsappGroup(Boolean(data?.enabled));
+        }
+      } catch {
+        if (isMounted) setCanJoinWhatsappGroup(false);
+      }
+    }
+
+    checkWhatsappAccess();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId, session, sessionStatus]);
+
+  useEffect(() => {
+    if (activeTab === "bulk" && !hasBulkPacks) {
+      setActiveTab("overview");
+      return;
+    }
+    if (activeTab === "volunteers" && !hasVolunteerSection) {
+      setActiveTab("overview");
+    }
+  }, [activeTab, hasBulkPacks, hasVolunteerSection]);
 
   async function handleVolunteerApply() {
     if (!selectedRole) {
@@ -310,56 +475,53 @@ export default function EventDetailPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Banner */}
-        {event.banner_image && (
-          <div className="relative w-full h-80 rounded-xl mb-6 border border-border-default overflow-hidden">
-            <Image
-              src={event.banner_image}
-              alt={event.title}
-              fill
-              sizes="(max-width: 1024px) 100vw, 896px"
-              className="object-cover"
-            />
-          </div>
-        )}
+        {/* Banner + Event Info */}
+        <div className={`mb-6 ${event.banner_image || event.banner_url ? "lg:grid lg:grid-cols-[minmax(0,18rem)_1fr] lg:gap-6" : ""}`}>
+          {(event.banner_image || event.banner_url) && (
+            <div className="relative w-full max-w-md mx-auto lg:mx-0 lg:max-w-none aspect-[4/5] rounded-xl border border-border-default overflow-hidden">
+              <Image
+                src={event.banner_image || event.banner_url || ""}
+                alt={event.title}
+                fill
+                sizes="(max-width: 1024px) 100vw, 320px"
+                className="object-cover"
+              />
+            </div>
+          )}
 
-        {/* Event Info */}
-        <div className="bg-bg-card rounded-xl p-6 border border-border-default mb-6">
-          <h2 className="text-3xl font-bold text-text-primary mb-2">{event.title}</h2>
-          <p className="text-text-muted mb-4">{event.description}</p>
+          <div className="bg-bg-card rounded-xl p-6 border border-border-default mt-6 lg:mt-0 lg:h-full lg:flex lg:flex-col lg:justify-between">
+          <div className="space-y-6">
+            <h2 className="text-4xl lg:text-5xl font-bold text-text-primary leading-tight">{event.title}</h2>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div>
-              <p className="text-xs text-text-muted mb-1">Date</p>
-              <p className="font-semibold text-text-primary">
-                {new Date(event.date).toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-text-muted mb-1">Location</p>
-              <p className="font-semibold text-text-primary">{event.location}</p>
-            </div>
-            <div>
-              <p className="text-xs text-text-muted mb-1">Price</p>
-              <p className="font-semibold text-text-primary">₹{event.price}</p>
-            </div>
-            <div>
-              <p className="text-xs text-text-muted mb-1">Organizer</p>
-              <p className="font-semibold text-text-primary text-sm">{event.organizer_email}</p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {organizerProfile?.logo_url ? (
+                  <div className="relative h-10 w-10 rounded-full overflow-hidden border border-border-default flex-shrink-0">
+                    <Image src={organizerProfile.logo_url} alt={organizerName} fill className="object-cover" />
+                  </div>
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-primarySoft text-primary border border-primary/30 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    {organizerName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <p className="text-lg text-text-secondary truncate">
+                  <span className="font-semibold text-text-primary">Organizer:</span> {organizerName}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex flex-col items-start gap-2 mt-6 lg:mt-0">
+            <p className="text-lg text-text-secondary whitespace-nowrap">
+              <span className="font-semibold text-text-primary">Registration Fee:</span> {eventPriceLabel}
+            </p>
             <button
               onClick={() => router.push(`/events/${event.id}/register`)}
-              className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover"
+              className="px-5 py-2.5 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover text-base font-medium"
             >
               Register
             </button>
+          </div>
           </div>
         </div>
 
@@ -399,22 +561,53 @@ export default function EventDetailPage() {
 
               <div>
                 <h3 className="text-lg font-bold text-text-primary mb-2">Location</h3>
-                <p className="text-text-secondary">{event.location}</p>
+                <p className="text-text-secondary">{eventLocationLabel}</p>
               </div>
 
-              <div>
-                <h3 className="text-lg font-bold text-text-primary mb-2">Event Details</h3>
-                <div className="space-y-2 text-text-secondary">
-                  <p>📅 {new Date(event.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
-                  <p>💰 Entry Fee: ₹{event.price}</p>
-                  {event.max_attendees && (
-                    <p>👥 Max Attendees: {event.max_attendees}</p>
-                  )}
-                  {event.discount_enabled && event.discount_club && (
-                    <p>🎟️ {event.discount_club} members get ₹{event.discount_amount} discount</p>
-                  )}
-                </div>
+              <div className="space-y-2 text-text-secondary">
+                <p><span className="font-semibold text-text-primary">Date:</span> {eventDateLabel}</p>
+                <p><span className="font-semibold text-text-primary">Time:</span> {eventTimeLabel}</p>
+                <p><span className="font-semibold text-text-primary">Entry Fee:</span> {eventPriceLabel}</p>
+                {event.discount_enabled && event.discount_club && (
+                  <p>{event.discount_club} members get ₹{event.discount_amount} discount</p>
+                )}
               </div>
+
+              {timelineSessions.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold text-text-primary">Timeline</h3>
+                    <button
+                      type="button"
+                      onClick={() => setTimelineExpanded((prev) => !prev)}
+                      className="md:hidden text-sm font-medium text-primary"
+                    >
+                      {timelineExpanded ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                  <div className={`${timelineExpanded ? "block" : "hidden"} md:block`}>
+                    <div className="relative pl-6 space-y-4">
+                      <div className="absolute left-2 top-1 bottom-1 w-px bg-border-default" />
+                      {timelineSessions.map((session, index) => (
+                        <div
+                          key={`${session.date || "date"}-${session.start_time || "time"}-${index}`}
+                          className="relative bg-bg-muted border border-border-default rounded-lg p-4"
+                        >
+                          <span className="absolute -left-[1.75rem] top-5 h-3 w-3 rounded-full bg-primary border-2 border-bg-card" />
+                          <p className="text-sm font-semibold text-text-primary">
+                            {session.date || "Session"}
+                            {session.start_time ? ` • ${session.start_time}` : ""}
+                            {session.end_time ? ` - ${session.end_time}` : ""}
+                          </p>
+                          {session.description && (
+                            <p className="text-sm text-text-secondary mt-1">{session.description}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Prize Pool */}
               {event.prize_pool_amount && event.prize_pool_amount > 0 && (
@@ -426,8 +619,12 @@ export default function EventDetailPage() {
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Prize Pool</h3>
                       <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">₹{event.prize_pool_amount.toLocaleString()}</p>
-                      {event.prize_pool_description && (
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{event.prize_pool_description}</p>
+                      {prizeSplitItems.length > 0 && (
+                        <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                          {prizeSplitItems.map((item, index) => (
+                            <li key={`${item}-${index}`}>{item}</li>
+                          ))}
+                        </ul>
                       )}
                     </div>
                   </div>
@@ -479,7 +676,7 @@ export default function EventDetailPage() {
               )}
 
               {/* WhatsApp Group */}
-              {event.whatsapp_group_enabled && event.whatsapp_group_link && (
+              {event.whatsapp_group_enabled && event.whatsapp_group_link && canJoinWhatsappGroup && (
                 <div>
                   <h3 className="text-lg font-bold text-text-primary mb-3">Join Community</h3>
                   <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-5 border-2 border-green-400/50">
@@ -517,7 +714,6 @@ export default function EventDetailPage() {
 
             {/* Event Banners */}
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-text-primary">Featured Banners</h3>
               <BannerCarousel placement="event_page" maxBanners={2} />
             </div>
           </div>

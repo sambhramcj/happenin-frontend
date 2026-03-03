@@ -1,15 +1,49 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Icons } from "@/components/icons";
+
+interface EventSummary {
+  title: string;
+  price?: number;
+  ticket_price?: number;
+}
 
 export default function EventRegisterPage() {
   const router = useRouter();
   const params = useParams();
   const { data: session } = useSession();
+  const [event, setEvent] = useState<EventSummary | null>(null);
 
   const eventId = params.eventId as string;
+  const eventPrice = Number(event?.price ?? event?.ticket_price ?? 0);
+  const eventPriceLabel = eventPrice > 0 ? `₹${eventPrice.toLocaleString("en-IN")}` : "Free";
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchEventSummary() {
+      try {
+        const res = await fetch(`/api/events/${eventId}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (isMounted && data?.event) {
+          setEvent(data.event);
+        }
+      } catch {
+        // Keep registration flow usable even if summary fetch fails
+      }
+    }
+
+    fetchEventSummary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId]);
 
   return (
     <div className="min-h-screen bg-bg-muted flex items-center justify-center p-6">
@@ -22,6 +56,17 @@ export default function EventRegisterPage() {
         <div className="bg-bg-muted rounded-lg p-4 text-sm text-text-secondary">
           Event ID: <span className="text-text-primary font-medium">{eventId}</span>
         </div>
+
+        {event && (
+          <div className="bg-bg-muted rounded-lg p-4 text-sm text-text-secondary space-y-1">
+            <p>
+              Event: <span className="text-text-primary font-medium">{event.title}</span>
+            </p>
+            <p>
+              Entry Fee: <span className="text-text-primary font-medium">{eventPriceLabel}</span>
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <button

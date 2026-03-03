@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, MapPin, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface Event {
   id: string;
@@ -12,9 +12,12 @@ interface Event {
   banner_url: string | null;
   banner_image: string | null;
   start_date: string;
+  start_datetime?: string | null;
+  date?: string | null;
   ticket_price: number | null;
   price: number | null;
   category: string | null;
+  college?: string | null;
   organizers_profile?: {
     first_name: string;
     last_name: string;
@@ -37,6 +40,44 @@ export default function InfiniteEventFeed({
   const [cursor, setCursor] = useState<string | null>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
+  const getEventStartDate = (event: Event | any) => {
+    const rawDate = event.start_date || event.start_datetime || event.date || "";
+    return new Date(rawDate);
+  };
+
+  const sortEventsUpcomingFirst = (list: Event[]) => {
+    const now = Date.now();
+
+    return [...list].sort((a, b) => {
+      const aDate = getEventStartDate(a);
+      const bDate = getEventStartDate(b);
+
+      const aValid = !Number.isNaN(aDate.getTime());
+      const bValid = !Number.isNaN(bDate.getTime());
+
+      if (!aValid && !bValid) return 0;
+      if (!aValid) return 1;
+      if (!bValid) return -1;
+
+      const aTime = aDate.getTime();
+      const bTime = bDate.getTime();
+
+      const aUpcoming = aTime >= now;
+      const bUpcoming = bTime >= now;
+
+      if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+      if (aUpcoming && bUpcoming) return aTime - bTime;
+      return bTime - aTime;
+    });
+  };
+
+  const getOrganizerName = (event: Event) => {
+    const firstName = event.organizers_profile?.first_name || "";
+    const lastName = event.organizers_profile?.last_name || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || "Organizer";
+  };
+
   // Reset when category changes
   useEffect(() => {
     setEvents([]);
@@ -56,18 +97,56 @@ export default function InfiniteEventFeed({
       const params = new URLSearchParams();
       if (currentCursor) params.append("cursor", currentCursor);
       if (category !== "all") params.append("category", category);
+      if (selectedCollege === "all") params.append("scope", "all");
 
       const response = await fetch(`/api/home/feed?${params.toString()}`);
       const data = await response.json();
 
-      if (data.events && data.events.length > 0) {
+      if (response.ok && Array.isArray(data.events) && data.events.length > 0) {
+        const normalizedIncoming = (data.events || []).map((event: any) => ({
+          ...event,
+          start_date: event.start_date || event.start_datetime || event.date || null,
+        }));
+
         setEvents((prev) =>
-          currentCursor === null ? data.events : [...prev, ...data.events]
+          sortEventsUpcomingFirst(
+            currentCursor === null
+              ? normalizedIncoming
+              : [...prev, ...normalizedIncoming]
+          )
         );
         setCursor(data.nextCursor);
         setHasMore(data.hasMore);
       } else {
-        setHasMore(false);
+        // First-page fallback: use /api/events if feed endpoint returns empty/error
+        if (currentCursor === null) {
+          const fallbackResponse = await fetch("/api/events");
+          const fallbackData = await fallbackResponse.json();
+          const allEvents = Array.isArray(fallbackData)
+            ? fallbackData
+            : (fallbackData.events || []);
+
+          const fallbackList = allEvents
+            .map((event: any) => ({
+              ...event,
+              start_date: event.start_date || event.start_datetime || event.date || null,
+            }))
+            .filter((event: any) => selectedCollege === "all" || !event.college || event.college === selectedCollege)
+            .filter((event: any) => category === "all" || event.category === category)
+            .slice(0, 120);
+
+          const sortedFallback = sortEventsUpcomingFirst(fallbackList).slice(0, 20);
+
+          if (sortedFallback.length > 0) {
+            setEvents(sortedFallback);
+            setCursor(null);
+            setHasMore(false);
+          } else {
+            setHasMore(false);
+          }
+        } else {
+          setHasMore(false);
+        }
       }
     } catch (error) {
       console.error("Error fetching feed events:", error);
@@ -102,11 +181,11 @@ export default function InfiniteEventFeed({
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold">All Events</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="bg-gray-100 rounded-xl h-[300px] animate-pulse"
+              className="bg-gray-100 rounded-2xl h-[300px] animate-pulse"
             />
           ))}
         </div>
@@ -133,15 +212,14 @@ export default function InfiniteEventFeed({
           : `${selectedCategory} Events`}
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         {events.map((event) => (
           <Link
             key={event.id}
             href={`/events/${event.id}`}
-            className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all border border-gray-200"
+            className="group bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
           >
-            {/* Banner */}
-            <div className="relative h-44 bg-gray-100">
+            <div className="relative aspect-[4/5] bg-gray-100 rounded-t-2xl overflow-hidden">
               {(event.banner_url || event.banner_image) && (
                 <Image
                   src={event.banner_url || event.banner_image || ""}
@@ -150,60 +228,25 @@ export default function InfiniteEventFeed({
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               )}
-              {event.category && (
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-gray-700">
-                  {event.category}
-                </div>
-              )}
             </div>
 
-            {/* Content */}
-            <div className="p-4 space-y-2">
-              <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-blue-600 transition-colors">
-                {event.title}
-              </h3>
-              <p className="text-sm text-gray-600 line-clamp-2">
-                {event.description}
-              </p>
-
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Calendar className="w-3 h-3" />
-                {new Date(event.start_date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                {(event.ticket_price || event.price) ? (
-                  <span className="text-base font-bold text-green-600">
-                    ₹{event.ticket_price || event.price}
-                  </span>
+            <div className="px-3.5 pt-3 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                {event.organizers_profile?.logo_url ? (
+                  <div className="relative h-6 w-6 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <Image
+                      src={event.organizers_profile.logo_url}
+                      alt={getOrganizerName(event)}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
-                  <span className="text-sm font-medium text-green-600">
-                    Free
-                  </span>
-                )}
-
-                {event.organizers_profile && (
-                  <div className="flex items-center gap-1">
-                    {event.organizers_profile.logo_url && (
-                      <div className="relative w-5 h-5 rounded-full overflow-hidden">
-                        <Image
-                          src={event.organizers_profile.logo_url}
-                          alt="Organizer"
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-                    <span className="text-xs text-gray-600 truncate max-w-[100px]">
-                      {event.organizers_profile.first_name}
-                    </span>
+                  <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                    {getOrganizerName(event).charAt(0).toUpperCase()}
                   </div>
                 )}
+                <h4 className="font-semibold text-sm leading-5 line-clamp-1 text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{event.title}</h4>
               </div>
             </div>
           </Link>

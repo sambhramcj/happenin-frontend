@@ -885,6 +885,7 @@ export default function OrganizerDashboard() {
 
   function handleBannerImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    const inputElement = e.target;
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -897,13 +898,35 @@ export default function OrganizerDashboard() {
       return;
     }
 
-    setBannerImage(file);
+    const objectUrl = URL.createObjectURL(file);
+    const image = new window.Image();
+    image.onload = () => {
+      const ratio = image.width / image.height;
+      const targetRatio = 4 / 5;
+      const tolerance = 0.03;
+      URL.revokeObjectURL(objectUrl);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setBannerImagePreview(reader.result as string);
+      if (Math.abs(ratio - targetRatio) > tolerance) {
+        setBannerImage(null);
+        setBannerImagePreview(null);
+        inputElement.value = "";
+        toast.error('Poster must be 4:5 ratio (example: 1080×1350)');
+        return;
+      }
+
+      setBannerImage(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setBannerImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     };
-    reader.readAsDataURL(file);
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      inputElement.value = "";
+      toast.error('Unable to read image dimensions');
+    };
+    image.src = objectUrl;
   }
 
   async function uploadBannerImage(): Promise<string | null> {
@@ -2020,7 +2043,7 @@ export default function OrganizerDashboard() {
                     className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-text-inverse hover:file:bg-primaryHover transition-all duration-fast ease-standard"
                   />
                   <p className="text-xs text-text-muted mt-2">
-                    Recommended ratio: 4:5 (Instagram post). Allowed formats: JPG, JPEG, PNG, WEBP. Max size: 5MB.
+                    Required ratio: 4:5 (example 1080×1350). Allowed formats: JPG, JPEG, PNG, WEBP. Max size: 5MB.
                   </p>
                   {bannerImage && (
                     <p className="text-xs text-success mt-2">✓ {bannerImage.name}</p>

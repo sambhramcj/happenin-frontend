@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sparkles, Calendar, TrendingUp } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 interface Event {
   id: string;
@@ -12,9 +12,12 @@ interface Event {
   banner_url: string | null;
   banner_image: string | null;
   start_date: string;
+  start_datetime?: string | null;
+  date?: string | null;
   ticket_price: number | null;
   price: number | null;
   boost_priority: number;
+  college?: string | null;
   organizers_profile?: {
     first_name: string;
     last_name: string;
@@ -37,11 +40,39 @@ export default function FeaturedEvents({ selectedCollege }: FeaturedEventsProps)
   useEffect(() => {
   }, []);
 
+  const getOrganizerName = (event: Event) => {
+    const firstName = event.organizers_profile?.first_name || "";
+    const lastName = event.organizers_profile?.last_name || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || "Organizer";
+  };
+
   const fetchFeaturedEvents = async () => {
     try {
       const response = await fetch("/api/home/featured");
       const data = await response.json();
-      setEvents(data.events || []);
+      let list = data.events || [];
+
+      if (!Array.isArray(list) || list.length === 0) {
+        const fallbackResponse = await fetch("/api/events");
+        const fallbackData = await fallbackResponse.json();
+        const allEvents = Array.isArray(fallbackData) ? fallbackData : (fallbackData.events || []);
+        const now = new Date();
+
+        list = allEvents
+          .map((event: any) => ({
+            ...event,
+            start_date: event.start_date || event.start_datetime || event.date || null,
+          }))
+          .filter((event: any) => {
+            const eventDate = new Date(event.start_date || "");
+            return !Number.isNaN(eventDate.getTime()) && eventDate >= now;
+          })
+          .filter((event: any) => selectedCollege === "all" || !event.college || event.college === selectedCollege)
+          .slice(0, 6);
+      }
+
+      setEvents(list);
     } catch (error) {
       console.error("Error fetching featured events:", error);
     } finally {
@@ -56,11 +87,11 @@ export default function FeaturedEvents({ selectedCollege }: FeaturedEventsProps)
           <Sparkles className="w-6 h-6 text-purple-500" />
           Featured Events
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-gray-100 rounded-xl h-[300px] animate-pulse"
+              className="flex-shrink-0 w-64 md:w-52 bg-gray-100 rounded-2xl h-[300px] animate-pulse"
             />
           ))}
         </div>
@@ -84,21 +115,19 @@ export default function FeaturedEvents({ selectedCollege }: FeaturedEventsProps)
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
         {events.map((event) => (
           <Link
             key={event.id}
             href={`/events/${event.id}`}
-            className="group relative bg-bg-card rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-border-default"
+            className="group relative flex-shrink-0 w-64 md:w-52 bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
           >
-            {/* Featured Badge */}
             <div className="absolute top-3 right-3 z-10 bg-primary text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
               <Sparkles className="w-3 h-3" />
               Featured
             </div>
 
-            {/* Banner Image */}
-            <div className="relative h-48 bg-gray-100">
+            <div className="relative aspect-[4/5] bg-gray-100 rounded-t-2xl overflow-hidden">
               {(event.banner_url || event.banner_image) && (
                 <Image
                   src={event.banner_url || event.banner_image || ""}
@@ -109,49 +138,19 @@ export default function FeaturedEvents({ selectedCollege }: FeaturedEventsProps)
               )}
             </div>
 
-            {/* Content */}
-            <div className="p-4 space-y-3">
-              <h3 className="font-bold text-lg line-clamp-1 group-hover:text-purple-600 transition-colors">
-                {event.title}
-              </h3>
-              <p className="text-sm text-gray-600 line-clamp-2">
-                {event.description}
-              </p>
-
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(event.start_date).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </div>
-                {(event.ticket_price || event.price) && (
-                  <span className="font-bold text-green-600 text-base">
-                    ₹{event.ticket_price || event.price}
-                  </span>
+            <div className="px-3.5 pt-3 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                {event.organizers_profile?.logo_url ? (
+                  <div className="relative h-6 w-6 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <Image src={event.organizers_profile.logo_url} alt={getOrganizerName(event)} fill className="object-cover" />
+                  </div>
+                ) : (
+                  <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                    {getOrganizerName(event).charAt(0).toUpperCase()}
+                  </div>
                 )}
+                <h4 className="font-semibold text-sm leading-5 line-clamp-1 text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{event.title}</h4>
               </div>
-
-              {/* Organizer Info */}
-              {event.organizers_profile && (
-                <div className="flex items-center gap-2 pt-2 border-t border-purple-100">
-                  {event.organizers_profile.logo_url && (
-                    <div className="relative w-6 h-6 rounded-full overflow-hidden">
-                      <Image
-                        src={event.organizers_profile.logo_url}
-                        alt="Organizer"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  <span className="text-xs text-gray-600">
-                    By {event.organizers_profile.first_name}{" "}
-                    {event.organizers_profile.last_name}
-                  </span>
-                </div>
-              )}
             </div>
           </Link>
         ))}
