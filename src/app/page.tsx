@@ -17,8 +17,8 @@ function LandingPage() {
     <div className="min-h-screen bg-white">
       <nav className="fixed top-0 w-full z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button onClick={() => router.push('/')} className="text-2xl font-bold" style={{ color: primary }}>
-            Happenin
+          <button onClick={() => router.push('/')} className="hover:opacity-90 transition-opacity">
+            <img src="/branding/logo-wordmark-brand.svg" alt="Happenin" className="h-8 sm:h-9 w-auto" />
           </button>
           <div className="flex items-center gap-3">
             <button
@@ -48,7 +48,7 @@ function LandingPage() {
             </div>
 
             <h1 className="text-5xl lg:text-6xl font-bold leading-tight" style={{ color: textPrimary }}>
-              Discover, register, and run college events—beautifully.
+              Discover, register, and run college events—seamlessly.
             </h1>
 
             <p className="text-lg lg:text-xl leading-relaxed" style={{ color: textSecondary }}>
@@ -250,12 +250,12 @@ function LandingPage() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 md:items-center md:justify-between">
           <div>
             <p className="text-2xl font-bold" style={{ color: primary }}>Happenin</p>
-            <p className="text-sm text-gray-400 mt-1">Campus events, managed beautifully.</p>
+            <p className="text-sm text-gray-400 mt-1">Campus events, managed seamlessly.</p>
           </div>
           <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-            <button onClick={() => router.push('/events')} className="hover:text-white transition">Events</button>
-            <button onClick={() => router.push('/terms')} className="hover:text-white transition">Terms</button>
+            <button onClick={() => router.push('/about')} className="hover:text-white transition">About</button>
             <button onClick={() => router.push('/privacy')} className="hover:text-white transition">Privacy</button>
+            <button onClick={() => router.push('/terms')} className="hover:text-white transition">Terms</button>
             <button onClick={() => router.push('/contact')} className="hover:text-white transition">Contact</button>
           </div>
         </div>

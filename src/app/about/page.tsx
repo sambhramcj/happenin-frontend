@@ -1,20 +1,22 @@
+import Link from "next/link";
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="relative">
         <header className="border-b border-slate-200/70 bg-white/70 backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-            <a href="/" className="text-lg font-semibold tracking-tight text-slate-900">
+            <Link href="/" className="text-lg font-semibold tracking-tight text-slate-900">
               <span className="text-primary">
                 Happenin
               </span>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/"
               className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
             >
               Back to home
-            </a>
+            </Link>
           </div>
         </header>
 
@@ -119,12 +121,12 @@ export default function AboutPage() {
                 If you have feedback, ideas, or want to bring Happenin to your campus — we’d love to hear from you.
                 Reach out anytime via the Contact page.
               </p>
-              <a
+              <Link
                 href="/contact"
                 className="mt-4 inline-flex w-fit items-center rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700 transition hover:border-purple-300 hover:bg-purple-100"
               >
                 Contact us
-              </a>
+              </Link>
             </section>
           </div>
         </main>

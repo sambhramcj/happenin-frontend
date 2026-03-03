@@ -14,7 +14,15 @@ This document provides a comprehensive overview of all features in the Happenin 
 
 ---
 
-## Core Features (Status updated Feb 17, 2026)
+## Core Features (Status updated Mar 3, 2026)
+
+### Recent UX Updates (Mar 3, 2026)
+
+- Landing header now uses brand logo + wordmark (`/branding/logo-wordmark-brand.svg`).
+- Landing footer links are now: About, Privacy, Terms, Contact.
+- Installed PWA launch splash is a single white splash with brand-colored logo+wordmark.
+- Event/fest cards were compacted for mobile across public and authenticated flows.
+- Free events now register instantly without Razorpay via `POST /api/registrations/free` (individual + team), with immediate ticket generation.
 
 ### 1. Authentication & User Management
 
@@ -58,7 +66,7 @@ This document provides a comprehensive overview of all features in the Happenin 
 
 | Feature | Status | Details | File Location |
 |---------|--------|---------|-----------------|
-| Event Registration | ✅ | Payment integration | `src/app/events/[eventId]/register` |
+| Event Registration | ✅ | Free events: instant registration; Paid events: Razorpay flow | `src/app/api/registrations/free`, `src/app/events/[eventId]/register` |
 | Ticket Generation | ✅ | Digital tickets | `src/api/student/tickets` |
 | QR Code Tickets | ✅ | QR scanning at event | `src/components/AttendanceModal.tsx` |
 | Bulk Tickets | ✅ | CSV upload for bulk | Database: `tickets` table |
@@ -74,10 +82,11 @@ This document provides a comprehensive overview of all features in the Happenin 
 
 | Feature | Status | Details | File Location |
 |---------|--------|---------|-----------------|
-| Razorpay Integration | ✅ | Event registration payments | `src/app/events/[eventId]/register` |
+| Razorpay Integration | ✅ | Paid event registration and sponsorship payments | `src/app/events/[eventId]/register` |
 | Payment Gateway | ✅ | Secure checkout | `src/lib/razorpay.ts` |
 | Order Management | ✅ | Track transactions | Database: `orders` table |
 | Payment Verification | ✅ | Webhook verification | `src/api/payments/webhook` |
+| Free Registration Path | ✅ | No-gateway registration + ticket issue for ₹0 events | `src/app/api/registrations/free/route.ts` |
 | Invoice Generation | 📋 | PDF invoices | NOT STARTED |
 | Sponsorship Payments (Razorpay) | ✅ | Flat-fee packs (Digital/App/Fest) | Database: `sponsorship_orders` |
 | Commission Tracking | ✅ | Platform commission (future) | Database: `sponsorship_payouts` |
@@ -256,9 +265,13 @@ This document provides a comprehensive overview of all features in the Happenin 
 | Animations | ✅ | Smooth transitions | Framer Motion animations |
 | Modal Dialogs | ✅ | Reusable modals | `src/components/Modals/` |
 | Navigation | ✅ | Desktop + mobile nav | `src/app/layout.tsx` |
+| Landing Header Branding | ✅ | Logo + wordmark in header | `src/app/page.tsx` |
+| Landing Footer Links | ✅ | About, Privacy, Terms, Contact | `src/app/page.tsx` |
 | Accessibility | 🟨 | WCAG compliance partial | Semantic HTML only |
 | PWA Install Prompt | ✅ | Install banner + SW | `src/components/PWAInstallPrompt.tsx` |
+| PWA Startup Splash | ✅ | White splash + branded wordmark | `src/components/AppSplash.tsx` |
 | Offline Banners | ✅ | Offline + retry UI | `src/components/OfflineBanner.tsx` |
+| Mobile Card Compaction | ✅ | Shared compact classes for card width/padding | `src/app/globals.css` |
 | Categories Discovery | ✅ | Category grid filters | `src/components/CategoriesDiscovery.tsx` |
 | Advanced Filters | ✅ | Date/location/price/team size | `src/components/SearchFilters.tsx` |
 | Radius Selector | ✅ | Nearby radius filters | `src/components/RadiusSelector.tsx` |

@@ -1,4 +1,4 @@
-> **Last Updated:** February 17, 2026  
+> **Last Updated:** March 3, 2026  
 
 ## High-Level Architecture
 
@@ -155,6 +155,9 @@ Route protection:
 - `manifest.json` and `public/sw.js` are served by Next.js.
 - PWA install prompt: `PWAInstallPrompt` in layout.
 - Offline banners: `OfflineBanner` and `OfflineRetryBanner`.
+- Startup splash for installed PWA is handled by `SplashScreenWrapper` + `AppSplash`.
+- Current splash behavior: single white launch splash with brand logo+wordmark.
+- Manifest startup background is aligned to white (`background_color: #FFFFFF`).
 
 ---
 
@@ -178,7 +181,7 @@ Route protection:
 - Attendance QR scan routes and attendance write logic.
 - Database schema or RLS policies without migrations.
 - Public API route structure (clients depend on it).
-- PWA manifest and service worker registration.
+- PWA manifest and service worker registration (unless coordinated UX release requires explicit splash/brand updates).
 
 ---
 

@@ -87,7 +87,7 @@ export default function UpcomingEvents({ selectedCollege }: UpcomingEventsProps)
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="flex-shrink-0 w-64 md:w-52 bg-gray-100 rounded-xl h-[260px] animate-pulse"
+              className="flex-shrink-0 w-48 md:w-52 bg-gray-100 rounded-xl h-[220px] animate-pulse"
             />
           ))}
         </div>
@@ -120,7 +120,7 @@ export default function UpcomingEvents({ selectedCollege }: UpcomingEventsProps)
           <Link
             key={event.id}
             href={`/events/${event.id}`}
-            className="group flex-shrink-0 w-64 md:w-52 bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
+            className="group mobile-card-compact flex-shrink-0 w-48 md:w-52 bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
           >
             <div className="relative aspect-[4/5] bg-gray-100 rounded-t-2xl overflow-hidden">
               {(event.banner_url || event.banner_image) && (
@@ -133,7 +133,7 @@ export default function UpcomingEvents({ selectedCollege }: UpcomingEventsProps)
               )}
             </div>
 
-            <div className="px-3.5 pt-3 pb-3.5">
+            <div className="mobile-card-compact-content px-3.5 pt-3 pb-3.5">
               <div className="flex items-center gap-2.5">
                 {event.organizers_profile?.logo_url ? (
                   <div className="relative h-6 w-6 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700">

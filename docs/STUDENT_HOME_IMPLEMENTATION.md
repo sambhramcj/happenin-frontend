@@ -1,7 +1,16 @@
 # Student Home Page Implementation Summary
 
-> **Last Updated:** February 17, 2026  
+> **Last Updated:** March 3, 2026  
 > **Status:** Production-ready implementation
+
+## 🔄 Implementation Delta (Mar 3, 2026)
+
+- Home feed behavior now includes stronger fallback data loading from `/api/events` when section endpoints return empty.
+- Event/fest cards on mobile are intentionally compacted using shared classes:
+  - `.mobile-card-compact` (card width ~10.5rem on small screens)
+  - `.mobile-card-compact-content` (reduced inner padding)
+- This compact card behavior is used across home sections, event listing, student dashboard home cards, and fest discovery/list views for visual consistency.
+- All-college discovery mode remains supported for home sections where selected college is `all`.
 
 ## 🎉 What We've Built
 

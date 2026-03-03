@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     // 4. Popular events matching preferred categories
     // 5. If club signals are missing, use category-weighted fallback ranking
 
-    let recommendedEvents: any[] = [];
+    const recommendedEvents: any[] = [];
 
     // 1. Club events
     if (clubIds.length > 0) {

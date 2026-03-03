@@ -39,3 +39,17 @@
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+
+@media (max-width: 640px) {
+  .mobile-card-compact {
+    width: 10.5rem !important;
+  }
+
+  .mobile-card-compact-content {
+    padding: 0.625rem !important;
+  }
+
+  :where(div, section, article, form)[class*="bg-bg-card"][class*="rounded"][class*="p-6"][class*="border"] {
+    padding: 1rem;
+  }
+}

@@ -601,10 +601,73 @@ export default function StudentDashboard() {
     teamData?: { size: number; members: Array<{ email: string; full_name: string }> }
   ) {
     if (!selectedEvent) return;
+    if (mode === "team" && !teamData) {
+      toast.error("Team details are required for team registration");
+      return;
+    }
 
     try {
       setLoadingEventId(selectedEvent.id);
       setPaymentStage("creating");
+
+      const refreshPostRegistrationState = async () => {
+        const { data: regsData } = await supabase
+          .from("registrations")
+          .select("event_id, final_price")
+          .eq("student_email", session?.user?.email);
+
+        if (regsData) {
+          setRegistrations(
+            regsData.map((r: any) => ({
+              eventId: r.event_id,
+              finalPrice: r.final_price,
+            }))
+          );
+        }
+
+        await fetchTickets();
+      };
+
+      const isFreeEvent = Number(selectedEvent.price || 0) <= 0;
+      if (isFreeEvent) {
+        const freeRegistrationPayload =
+          mode === "team"
+            ? {
+                eventId: selectedEvent.id,
+                mode,
+                teamSize: teamData?.size,
+                members: teamData?.members || [],
+              }
+            : {
+                eventId: selectedEvent.id,
+                mode,
+              };
+
+        const freeRes = await fetch("/api/registrations/free", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(freeRegistrationPayload),
+        });
+
+        const freeData = await freeRes.json();
+        if (!freeRes.ok) {
+          toast.error(freeData.error || "Failed to complete free registration");
+          setLoadingEventId(null);
+          setPaymentStage(null);
+          return;
+        }
+
+        await refreshPostRegistrationState();
+        setLoadingEventId(null);
+        setLastRegisteredEventId(selectedEvent.id);
+        setPaymentStage("success");
+        toast.success(
+          mode === "team"
+            ? "Team registration confirmed for free event!"
+            : "Registration confirmed for free event!"
+        );
+        return;
+      }
 
       const loaded = await loadRazorpayScript();
       if (!loaded) {
@@ -689,22 +752,8 @@ export default function StudentDashboard() {
 
             if (verifyRes.ok) {
               await new Promise(resolve => setTimeout(resolve, 1000));
-              
-              const { data: regsData } = await supabase
-                .from("registrations")
-                .select("event_id, final_price")
-                .eq("student_email", session?.user?.email);
 
-              if (regsData) {
-                setRegistrations(
-                    regsData.map((r: any) => ({
-                    eventId: r.event_id,
-                    finalPrice: r.final_price,
-                  }))
-                );
-              }
-              
-              await fetchTickets();
+              await refreshPostRegistrationState();
               setLoadingEventId(null);
               setLastRegisteredEventId(selectedEvent.id);
               setPaymentStage("success");
@@ -887,7 +936,7 @@ export default function StudentDashboard() {
       <Link
         key={event.id}
         href={`/events/${event.id}`}
-        className="group flex-shrink-0 w-64 bg-bg-card rounded-2xl overflow-hidden border border-border-default hover:shadow-lg transition-all"
+        className="group mobile-card-compact flex-shrink-0 w-48 sm:w-56 md:w-64 bg-bg-card rounded-2xl overflow-hidden border border-border-default hover:shadow-lg transition-all"
       >
         <div className="relative aspect-[4/5] bg-bg-muted">
           {(event.banner_image || event.banner_url) ? (
@@ -903,7 +952,7 @@ export default function StudentDashboard() {
             </div>
           )}
         </div>
-        <div className="p-2.5">
+        <div className="mobile-card-compact-content p-2.5">
           <div className="flex items-center gap-2">
             {event.organizers_profile?.logo_url ? (
               <div className="relative h-5 w-5 rounded-full overflow-hidden border border-border-default">

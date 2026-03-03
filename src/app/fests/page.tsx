@@ -168,7 +168,7 @@ export default function FestsPage() {
                       return (
                         <div
                           key={fest.id}
-                          className="flex-shrink-0 w-[60%] snap-center transition-all duration-300 hover:scale-[1.02]"
+                          className="flex-shrink-0 w-[52%] sm:w-[60%] snap-center transition-all duration-300 hover:scale-[1.02]"
                         >
                           <div
                             className="bg-bg-card rounded-2xl overflow-hidden border border-border-default hover:shadow-2xl transition-all cursor-pointer h-full"
@@ -188,7 +188,7 @@ export default function FestsPage() {
                             )}
 
                             {/* Content */}
-                            <div className="p-6">
+                            <div className="mobile-card-compact-content p-6">
                               <div className="flex items-start justify-between gap-2 mb-3">
                                 <h3 className="text-2xl font-bold text-text-primary line-clamp-1 flex-1">
                                   {fest.title}

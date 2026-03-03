@@ -29,7 +29,7 @@ export function EventCardSkeleton() {
 
 export function HorizontalEventCardSkeleton() {
   return (
-    <div className="flex gap-3 bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-800 p-3 min-w-[280px]">
+    <div className="flex gap-3 bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-800 p-3 min-w-[220px] sm:min-w-[280px]">
       {/* Image block */}
       <Skeleton className="w-20 h-20 flex-shrink-0 rounded-lg" />
       

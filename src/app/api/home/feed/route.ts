@@ -62,10 +62,11 @@ export async function GET(request: NextRequest) {
     if (collegeId && scope !== "all") {
       // Get college events
       const collegeQuery = query.eq("college_id", collegeId);
-      let { data: collegeEvents, error: collegeError } = await collegeQuery;
+      const collegeResult = await collegeQuery;
+      let collegeEvents = collegeResult.data;
 
-      if (collegeError) {
-        console.warn("⚠️ /api/home/feed college relation query failed, using fallback select('*'):", collegeError.message);
+      if (collegeResult.error) {
+        console.warn("⚠️ /api/home/feed college relation query failed, using fallback select('*'):", collegeResult.error.message);
         let fallbackCollegeQuery = supabase
           .from("events")
           .select("*")
@@ -101,10 +102,11 @@ export async function GET(request: NextRequest) {
         otherQuery.eq("category", category);
       }
 
-      let { data: otherEvents, error: otherError } = await otherQuery;
+      const otherResult = await otherQuery;
+      let otherEvents = otherResult.data;
 
-      if (otherError) {
-        console.warn("⚠️ /api/home/feed other relation query failed, using fallback select('*'):", otherError.message);
+      if (otherResult.error) {
+        console.warn("⚠️ /api/home/feed other relation query failed, using fallback select('*'):", otherResult.error.message);
         let fallbackOtherQuery = supabase
           .from("events")
           .select("*")
@@ -151,10 +153,11 @@ export async function GET(request: NextRequest) {
     }
 
     // For non-authenticated users, just return all events
-    let { data: events, error } = await query;
+    const queryResult = await query;
+    let events = queryResult.data;
 
-    if (error) {
-      console.warn("⚠️ /api/home/feed relation query failed, using fallback select('*'):", error.message);
+    if (queryResult.error) {
+      console.warn("⚠️ /api/home/feed relation query failed, using fallback select('*'):", queryResult.error.message);
       let fallbackQuery = supabase
         .from("events")
         .select("*")

@@ -112,7 +112,7 @@ export default function FestDiscovery({ selectedCollege }: FestDiscoveryProps) {
             <Link
               key={event.id}
               href={`/events/${event.id}`}
-              className="group bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
+              className="group mobile-card-compact bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
             >
               <div className="relative aspect-[3/2] bg-gray-100 rounded-t-2xl overflow-hidden">
                 {(event.banner_url || event.banner_image) && (
@@ -124,7 +124,7 @@ export default function FestDiscovery({ selectedCollege }: FestDiscoveryProps) {
                   />
                 )}
               </div>
-              <div className="px-3.5 pt-3 pb-3.5">
+              <div className="mobile-card-compact-content px-3.5 pt-3 pb-3.5">
                 <p className="text-sm font-semibold leading-5 line-clamp-1 text-gray-900 dark:text-white">{event.title}</p>
               </div>
             </Link>
@@ -155,7 +155,7 @@ export default function FestDiscovery({ selectedCollege }: FestDiscoveryProps) {
           <Link
             key={fest.id}
             href={`/fests/${fest.id}`}
-            className="group bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
+            className="group mobile-card-compact bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
           >
             <div className="relative aspect-[3/2] bg-gray-100 rounded-t-2xl overflow-hidden">
               {fest.banner_image && (
@@ -168,7 +168,7 @@ export default function FestDiscovery({ selectedCollege }: FestDiscoveryProps) {
               )}
             </div>
 
-            <div className="px-3.5 pt-3 pb-3.5">
+            <div className="mobile-card-compact-content px-3.5 pt-3 pb-3.5">
               <div className="flex items-center gap-2.5">
                 {fest.colleges?.logo_url ? (
                   <div className="relative h-6 w-6 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700">

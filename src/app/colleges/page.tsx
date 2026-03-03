@@ -46,7 +46,7 @@ export default function CollegeBrowsePage() {
   }
 
   useEffect(() => {
-    let filtered = colleges.filter((college) =>
+    const filtered = colleges.filter((college) =>
       college.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       college.location.toLowerCase().includes(searchQuery.toLowerCase())
     );

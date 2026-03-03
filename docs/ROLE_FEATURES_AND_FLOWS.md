@@ -1,8 +1,18 @@
 # ROLE_FEATURES_AND_FLOWS.md
 
 > **Status:** Production System Documentation  
-> **Last Updated:** February 17, 2026  
+> **Last Updated:** March 3, 2026  
 > **Purpose:** End-to-end role coverage for testing and verification (tabs, pages, buttons, and flows)
+
+## Implementation Delta (Mar 3, 2026)
+
+- Mobile event/fest cards are compacted globally using shared classes:
+  - `.mobile-card-compact` → card width ~10.5rem on mobile
+  - `.mobile-card-compact-content` → reduced card body padding on mobile
+- Compact card behavior applies to both pre-login pages (home/events) and authenticated pages (student dashboard home/fests sections).
+- Landing header branding uses logo + wordmark asset instead of plain text title.
+- Landing footer links are: About, Privacy, Terms, Contact.
+- Installed PWA startup uses a single white branded splash screen.
 
 ---
 

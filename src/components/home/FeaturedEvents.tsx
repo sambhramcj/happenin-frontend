@@ -91,7 +91,7 @@ export default function FeaturedEvents({ selectedCollege }: FeaturedEventsProps)
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="flex-shrink-0 w-64 md:w-52 bg-gray-100 rounded-2xl h-[300px] animate-pulse"
+              className="flex-shrink-0 w-48 md:w-52 bg-gray-100 rounded-2xl h-[220px] animate-pulse"
             />
           ))}
         </div>
@@ -120,7 +120,7 @@ export default function FeaturedEvents({ selectedCollege }: FeaturedEventsProps)
           <Link
             key={event.id}
             href={`/events/${event.id}`}
-            className="group relative flex-shrink-0 w-64 md:w-52 bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
+            className="group mobile-card-compact relative flex-shrink-0 w-48 md:w-52 bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
           >
             <div className="absolute top-3 right-3 z-10 bg-primary text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
               <Sparkles className="w-3 h-3" />
@@ -138,7 +138,7 @@ export default function FeaturedEvents({ selectedCollege }: FeaturedEventsProps)
               )}
             </div>
 
-            <div className="px-3.5 pt-3 pb-3.5">
+            <div className="mobile-card-compact-content px-3.5 pt-3 pb-3.5">
               <div className="flex items-center gap-2.5">
                 {event.organizers_profile?.logo_url ? (
                   <div className="relative h-6 w-6 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700">

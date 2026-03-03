@@ -124,19 +124,6 @@ export default function AdminDashboard() {
   // Filters
   const [eventFilter, setEventFilter] = useState<"all" | "today" | "week" | "flagged">("all");
 
-  useEffect(() => {
-    if (status === "loading") return;
-
-    if (!session?.user || (session.user as any).role !== "admin") {
-      router.replace("/auth");
-      return;
-    }
-
-    fetchAllData();
-    fetchDashboardMetrics();
-    fetchAnalyticsData();
-  }, [session, status, router]);
-
   async function fetchDashboardMetrics() {
     try {
       const response = await fetch('/api/admin/dashboard');
@@ -243,6 +230,19 @@ export default function AdminDashboard() {
       setOrganizerProfiles([]);
     }
   }
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session?.user || (session.user as any).role !== "admin") {
+      router.replace("/auth");
+      return;
+    }
+
+    fetchAllData();
+    fetchDashboardMetrics();
+    fetchAnalyticsData();
+  }, [session, status, router]);
 
   // Analytics
   function getTotalColleges() {
