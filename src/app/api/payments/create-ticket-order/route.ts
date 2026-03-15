@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
 import { razorpay } from "@/lib/razorpay";
 import { splitTicketAmount, toPaise } from "@/lib/revenue";
+import { getServerFeatureFlags } from "@/lib/serverFeatureFlags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,14 @@ const db = createClient(
 
 export async function POST(req: Request) {
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.PAYMENTS_RAZORPAY) {
+      return NextResponse.json(
+        { error: "Razorpay payments are currently disabled. Use QR payment registration flow." },
+        { status: 503 }
+      );
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -24,6 +24,15 @@ This document provides a comprehensive overview of all features in the Happenin 
 - Event/fest cards were compacted for mobile across public and authenticated flows.
 - Free events now register instantly without Razorpay via `POST /api/registrations/free` (individual + team), with immediate ticket generation.
 
+### MVP Platform Updates (Mar 15, 2026)
+
+- Lean MVP mode is now active through central feature flags.
+- Student paid registrations use **QR payment screenshot submission** (`POST /api/registrations/submit`) with organizer review.
+- Organizer approval/rejection flow issues QR tickets on approval (`PATCH /api/organizer/events/[eventId]/registrations`).
+- Attendance flow prevents duplicate scans and supports participant-certificate send after event completion.
+- Admin now has event moderation controls plus feature-flag controls in dashboard.
+- Role-matrix smoke test updated to treat `503` as expected for disabled modules (e.g., digital packs / featured boost when flags are OFF).
+
 ### 1. Authentication & User Management
 
 | Feature | Status | Details | File Location |
@@ -66,7 +75,7 @@ This document provides a comprehensive overview of all features in the Happenin 
 
 | Feature | Status | Details | File Location |
 |---------|--------|---------|-----------------|
-| Event Registration | ✅ | Free events: instant registration; Paid events: Razorpay flow | `src/app/api/registrations/free`, `src/app/events/[eventId]/register` |
+| Event Registration | ✅ | Free events: instant registration; Paid events (MVP): QR screenshot submit + organizer review | `src/app/api/registrations/free`, `src/app/api/registrations/submit`, `src/app/events/[eventId]/register` |
 | Ticket Generation | ✅ | Digital tickets | `src/api/student/tickets` |
 | QR Code Tickets | ✅ | QR scanning at event | `src/components/AttendanceModal.tsx` |
 | Bulk Tickets | ✅ | CSV upload for bulk | Database: `tickets` table |
@@ -82,16 +91,17 @@ This document provides a comprehensive overview of all features in the Happenin 
 
 | Feature | Status | Details | File Location |
 |---------|--------|---------|-----------------|
-| Razorpay Integration | ✅ | Paid event registration and sponsorship payments | `src/app/events/[eventId]/register` |
+| Razorpay Integration | ✅ | Implemented in codebase, currently OFF by default in MVP via feature flag (`PAYMENTS_RAZORPAY=false`) | `src/app/events/[eventId]/register` |
 | Payment Gateway | ✅ | Secure checkout | `src/lib/razorpay.ts` |
 | Order Management | ✅ | Track transactions | Database: `orders` table |
 | Payment Verification | ✅ | Webhook verification | `src/api/payments/webhook` |
-| Free Registration Path | ✅ | No-gateway registration + ticket issue for ₹0 events | `src/app/api/registrations/free/route.ts` |
+| Free Registration Path | ✅ | No-gateway registration + immediate ticket issue for ₹0 events | `src/app/api/registrations/free/route.ts` |
+| QR Screenshot Payment Path | ✅ | Paid MVP registration with screenshot proof + organizer verification | `src/app/api/registrations/submit/route.ts` |
 | Invoice Generation | 📋 | PDF invoices | NOT STARTED |
 | Sponsorship Payments (Razorpay) | ✅ | Flat-fee packs (Digital/App/Fest) | Database: `sponsorship_orders` |
 | Commission Tracking | ✅ | Platform commission (future) | Database: `sponsorship_payouts` |
 
-**Status**: ✅ FULLY COMPLETED
+**Status**: ✅ MVP-COMPLETED (QR flow active, Razorpay path retained but flag-disabled)
 
 ---
 
@@ -112,7 +122,7 @@ This document provides a comprehensive overview of all features in the Happenin 
 | Sponsor Dashboard | ✅ | Discover, Sponsorships, Analytics, Profile tabs | `src/app/dashboard/sponsor/page.tsx` |
 | Sponsor Event Page | ✅ | Razorpay checkout for packs | `src/app/sponsor/events/[eventId]/page.tsx` |
 
-**Status**: ✅ FULLY COMPLETED (✅ Production-Ready)
+**Status**: ✅ IMPLEMENTED IN CODEBASE; 🚫 FLAG-DISABLED IN MVP DEFAULTS
 
 ---
 

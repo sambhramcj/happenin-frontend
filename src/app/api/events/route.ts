@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
+import { getServerFeatureFlags } from "@/lib/serverFeatureFlags";
 
 // Force dynamic rendering for API routes
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,14 @@ export async function POST(req: Request) {
   console.log("POST /api/events HIT");
 
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.EVENT_DISCOVERY) {
+      return NextResponse.json(
+        { success: false, error: "Event system is currently disabled" },
+        { status: 503 }
+      );
+    }
+
     const body = await req.json();
     console.log("REQUEST BODY:", body);
 
@@ -80,6 +89,13 @@ export async function POST(req: Request) {
       organizer_contact_phone: body.organizerContactPhone || null,
       organizer_contact_email: body.organizerContactEmail || null,
       organizer_contact_name: body.organizerContactName || null,
+
+      payment_qr: body.paymentQr || null,
+      poster_url: body.posterUrl || body.bannerImage || null,
+      registration_deadline: body.registrationDeadline
+        ? new Date(body.registrationDeadline).toISOString()
+        : null,
+      time: body.time || null,
 
       whatsapp_group_enabled: whatsappEnabled,
       whatsapp_group_link: whatsappLink || null,
@@ -229,6 +245,11 @@ export async function POST(req: Request) {
 // ======================
 export async function GET() {
   console.log("GET /api/events HIT");
+
+  const flags = await getServerFeatureFlags();
+  if (!flags.EVENT_DISCOVERY) {
+    return NextResponse.json([]);
+  }
 
   const { data, error } = await supabase
     .from("events")

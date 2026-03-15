@@ -47,7 +47,7 @@ export default function AboutPage() {
                 organizers run them smoothly.
               </p>
               <p className="mt-3 text-slate-700">
-                From registrations and payments to volunteer hiring and certificates — everything lives in one place.
+                From registrations and QR ticketing to volunteer hiring and certificates — everything lives in one place.
                 No spam. No chaos. No “check this Google Form” messages at the last minute.
               </p>
             </section>
@@ -57,8 +57,8 @@ export default function AboutPage() {
                 <h2 className="text-xl font-semibold text-slate-900">Built for Students</h2>
                 <ul className="mt-3 list-disc space-y-1 pl-6 text-slate-700">
                   <li>Discover what’s happening in your campus (and nearby colleges)</li>
-                  <li>Register for events in seconds</li>
-                  <li>Get digital tickets and QR codes</li>
+                  <li>Register for free events instantly or submit paid registration proof</li>
+                  <li>Get organizer-approved digital tickets and QR codes</li>
                   <li>Track all your events in one place</li>
                   <li>Volunteer, participate, and build your college journey</li>
                 </ul>
@@ -69,8 +69,8 @@ export default function AboutPage() {
                 <h2 className="text-xl font-semibold text-slate-900">Built for Organizers &amp; Clubs</h2>
                 <ul className="mt-3 list-disc space-y-1 pl-6 text-slate-700">
                   <li>Create events effortlessly</li>
-                  <li>Collect payments securely</li>
-                  <li>Manage registrations without spreadsheets</li>
+                  <li>Configure payment QR details for paid registrations</li>
+                  <li>Review and approve/reject registrations without spreadsheets</li>
                   <li>Hire and manage volunteers</li>
                   <li>Track attendance using QR codes</li>
                   <li>Issue participation and volunteering certificates</li>
@@ -84,7 +84,7 @@ export default function AboutPage() {
               <ul className="mt-3 list-disc space-y-1 pl-6 text-slate-700">
                 <li>College-only (designed around real campus workflows)</li>
                 <li>Offline-friendly (because fest Wi-Fi never works)</li>
-                <li>Secure (payments &amp; data handled properly)</li>
+                <li>Secure (role-based access, approvals, and data handled properly)</li>
                 <li>Built for scale (from club meets to full-scale college fests)</li>
               </ul>
             </section>

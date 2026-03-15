@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
+import { getServerFeatureFlags } from "@/lib/serverFeatureFlags";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,11 @@ const supabase = createClient(
 // POST: Issue certificate to approved volunteer
 export async function POST(req: NextRequest) {
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.CERTIFICATES) {
+      return NextResponse.json({ error: "Certificate feature is currently disabled" }, { status: 503 });
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email || session.user.role !== "organizer") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

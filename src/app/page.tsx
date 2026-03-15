@@ -48,11 +48,11 @@ function LandingPage() {
             </div>
 
             <h1 className="text-5xl lg:text-6xl font-bold leading-tight" style={{ color: textPrimary }}>
-              Discover, register, and run college events—seamlessly.
+              Discover, register, and run campus events with a QR-first flow.
             </h1>
 
             <p className="text-lg lg:text-xl leading-relaxed" style={{ color: textSecondary }}>
-              Happenin is the premium event platform for students, organizers, sponsors, and admins. From fests to workshops, every event journey lives in one reliable place.
+              Happenin is a lean MVP for students, organizers, and admins. Students submit QR payment screenshots, organizers approve registrations, and entry + certificates are tracked in one place.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
@@ -75,15 +75,15 @@ function LandingPage() {
             <div className="grid grid-cols-3 gap-6 pt-6">
               <div>
                 <p className="text-3xl font-bold" style={{ color: primary }}>Fast</p>
-                <p className="text-sm" style={{ color: textSecondary }}>Registration & ticketing</p>
+                <p className="text-sm" style={{ color: textSecondary }}>QR registration to ticketing</p>
               </div>
               <div>
                 <p className="text-3xl font-bold" style={{ color: primary }}>Secure</p>
-                <p className="text-sm" style={{ color: textSecondary }}>Payments + access checks</p>
+                <p className="text-sm" style={{ color: textSecondary }}>Approval + access checks</p>
               </div>
               <div>
                 <p className="text-3xl font-bold" style={{ color: primary }}>Unified</p>
-                <p className="text-sm" style={{ color: textSecondary }}>Students to sponsors</p>
+                <p className="text-sm" style={{ color: textSecondary }}>Student, organizer, admin</p>
               </div>
             </div>
           </div>
@@ -92,10 +92,10 @@ function LandingPage() {
             <h3 className="text-2xl font-bold mb-6" style={{ color: textPrimary }}>What Happenin gives you</h3>
             <div className="space-y-5">
               {[
-                { icon: Search, title: 'Event Discovery', text: 'Find events by date, category, college, and trending signals.' },
-                { icon: CreditCard, title: 'Seamless Registration', text: 'One-flow registration with ticketing and payment confirmation.' },
-                { icon: QrCode, title: 'Faster Check-ins', text: 'QR-ready ticket flow for clean on-ground entry management.' },
-                { icon: BarChart, title: 'Organizer Control', text: 'Manage events, volunteers, analytics, and announcements in one dashboard.' },
+                { icon: Search, title: 'Event Discovery', text: 'Find upcoming campus events by date, category, and relevance.' },
+                { icon: CreditCard, title: 'QR Screenshot Registration', text: 'Upload payment proof for paid events; free events are instant.' },
+                { icon: QrCode, title: 'Approval to Ticket Flow', text: 'Organizer approval generates QR tickets for verified entry.' },
+                { icon: BarChart, title: 'Organizer + Admin Control', text: 'Review registrations, moderate events, track attendance, and send certificates.' },
               ].map((item) => (
                 <div key={item.title} className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: primarySoft }}>
@@ -126,17 +126,17 @@ function LandingPage() {
               {
                 title: 'Students',
                 icon: Users,
-                points: ['Discover relevant events', 'Register in minutes', 'Track tickets and participation'],
+                points: ['Discover relevant events', 'Submit QR proof or register free in minutes', 'Track approvals, tickets, and participation'],
               },
               {
                 title: 'Organizers',
                 icon: Calendar,
-                points: ['Create rich event pages', 'Manage registrations and volunteers', 'Access event performance insights'],
+                points: ['Create rich event pages with payment QR', 'Approve/reject registrations and manage volunteers', 'Scan attendance and issue certificates'],
               },
               {
-                title: 'Sponsors',
+                title: 'Admins',
                 icon: TrendingUp,
-                points: ['Promote through spotlight/banner placements', 'Track sponsored visibility', 'Support high-impact fests'],
+                points: ['Moderate event visibility and status', 'Control platform features with flags', 'Oversee operational analytics and quality'],
               },
             ].map((role) => (
               <div key={role.title} className="border border-gray-200 rounded-2xl p-6 hover:border-purple-200 transition">
@@ -162,24 +162,24 @@ function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-4xl font-bold mb-4" style={{ color: textPrimary }}>Why people switch to Happenin</h2>
-            <p className="text-lg" style={{ color: textSecondary }}>Clear process, less chaos, better turnout.</p>
+            <p className="text-lg" style={{ color: textSecondary }}>Clear approvals, less chaos, better turnout.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 icon: MapPin,
                 title: 'No more scattered updates',
-                text: 'Stop chasing posters, stories, and forwarded messages across apps.',
+                text: 'Stop chasing posters, screenshots, and forwarded messages across apps.',
               },
               {
                 icon: Clock,
                 title: 'Faster execution',
-                text: 'From listing to registration to check-in, flows are built for speed.',
+                text: 'From listing to screenshot review to check-in, flows are built for speed.',
               },
               {
                 icon: Zap,
                 title: 'Higher participation',
-                text: 'Cleaner discovery and reminders help events fill up on time.',
+                text: 'Cleaner discovery and ticket-ready approvals keep events on track.',
               },
             ].map((item) => (
               <div key={item.title} className="bg-white border border-gray-200 rounded-2xl p-7">
@@ -198,14 +198,14 @@ function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-4xl font-bold mb-4" style={{ color: textPrimary }}>How it works</h2>
-            <p className="text-lg" style={{ color: textSecondary }}>Simple for students. Powerful for organizers.</p>
+            <p className="text-lg" style={{ color: textSecondary }}>Simple for students. Controlled for organizers and admins.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { step: '01', icon: Search, title: 'Explore Events', text: 'Browse by category, college, and date to find what matters to you.' },
-              { step: '02', icon: CreditCard, title: 'Register & Pay', text: 'Complete registration quickly with secure payment and instant confirmation.' },
-              { step: '03', icon: QrCode, title: 'Check In Smoothly', text: 'Use your ticket for easy venue entry and participation tracking.' },
+              { step: '02', icon: CreditCard, title: 'Submit Registration', text: 'Pay via organizer QR (or register free), then submit your details in one flow.' },
+              { step: '03', icon: QrCode, title: 'Get Approved & Check In', text: 'Organizer approval issues your QR ticket for smooth entry and attendance.' },
             ].map((item) => (
               <div key={item.step} className="border border-gray-200 rounded-2xl p-7">
                 <p className="text-sm font-bold mb-4" style={{ color: primary }}>{item.step}</p>
@@ -226,7 +226,7 @@ function LandingPage() {
             Ready to run better campus events?
           </h2>
           <p className="text-lg mb-9 text-purple-100">
-            Whether you’re attending, hosting, or sponsoring—Happenin keeps the entire event journey clean and professional.
+            Whether you’re attending, hosting, or moderating—Happenin keeps registrations, approvals, tickets, attendance, and certificates in one clean workflow.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button

@@ -26,7 +26,7 @@ export default function PrivacyPolicyPage() {
               Legal
             </span>
             <h1 className="text-3xl font-semibold text-slate-900 md:text-4xl">Privacy Policy</h1>
-            <p className="text-sm text-slate-500">Last updated: February 1, 2026</p>
+            <p className="text-sm text-slate-500">Last updated: March 15, 2026</p>
             <p className="max-w-3xl text-base text-slate-700">
               Happenin (“we”, “our”, “us”) respects your privacy and is committed to protecting the personal information
               you share with us. This Privacy Policy explains what data we collect, why we collect it, how we use it,
@@ -60,6 +60,7 @@ export default function PrivacyPolicyPage() {
                   <ul className="mt-2 list-disc space-y-1 pl-6">
                     <li>Events you view or register for</li>
                     <li>Tickets and QR codes generated</li>
+                    <li>Registration proof uploads (such as payment screenshot files for paid events)</li>
                     <li>Payment status and transaction references (we do not store card or UPI details)</li>
                   </ul>
                 </div>
@@ -80,6 +81,7 @@ export default function PrivacyPolicyPage() {
               <ul className="mt-3 list-disc space-y-1 pl-6 text-slate-700">
                 <li>Create and manage your account</li>
                 <li>Allow event registrations and ticketing</li>
+                <li>Support organizer review workflows for paid registration verification</li>
                 <li>Enable volunteering and certificate issuance</li>
                 <li>Process payments and refunds</li>
                 <li>Send important notifications (event updates, ticket confirmations)</li>
@@ -92,13 +94,20 @@ export default function PrivacyPolicyPage() {
             <section className="rounded-2xl border border-slate-200 bg-white p-6">
               <h2 className="text-xl font-semibold text-slate-900">3. Payments & Financial Information</h2>
               <div className="mt-3 space-y-2 text-slate-700">
-                <p>Payments on Happenin are processed through trusted third-party gateways (such as Razorpay).</p>
+                <p>
+                  In MVP mode, paid registrations may use organizer-provided payment QR flows with screenshot proof and
+                  organizer verification.
+                </p>
+                <p>
+                  If gateway payments are enabled for your deployment, they are processed through trusted third-party
+                  providers (such as Razorpay).
+                </p>
                 <ul className="list-disc space-y-1 pl-6">
                   <li>We do not store your card, UPI, or bank details</li>
                   <li>Payment verification happens securely on our servers</li>
                   <li>Only transaction references and payment status are stored</li>
                 </ul>
-                <p>All payment data is handled according to the payment provider’s security standards.</p>
+                <p>All payment-related data is handled according to our security controls and provider standards when applicable.</p>
               </div>
             </section>
 

@@ -9,6 +9,7 @@ import {
   splitDigitalPackAmount,
   toPaise,
 } from "@/lib/revenue";
+import { getServerFeatureFlags } from "@/lib/serverFeatureFlags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,11 @@ const db = createClient(
 
 export async function POST(req: Request) {
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.SPONSORSHIPS || !flags.DIGITAL_VISIBILITY_PACKS) {
+      return NextResponse.json({ error: "Digital visibility packs are currently disabled" }, { status: 503 });
+    }
+
     const session = await getServerSession(authOptions);
     const email = session?.user?.email as string | undefined;
     const role = (session?.user as { role?: string } | undefined)?.role;

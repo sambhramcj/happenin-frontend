@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
 import { razorpay } from "@/lib/razorpay";
 import { FEATURED_BOOST_PRICE, toPaise } from "@/lib/revenue";
+import { getServerFeatureFlags } from "@/lib/serverFeatureFlags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,11 @@ const db = createClient(
 
 export async function POST(req: Request) {
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.FEATURED_EVENT_BOOST) {
+      return NextResponse.json({ error: "Featured event boost is currently disabled" }, { status: 503 });
+    }
+
     const session = await getServerSession(authOptions);
     const email = session?.user?.email as string | undefined;
     const role = (session?.user as { role?: string } | undefined)?.role;

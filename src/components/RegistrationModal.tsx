@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { X, Users, User } from "lucide-react";
 
 interface TeamMember {
@@ -16,12 +17,27 @@ interface RegistrationModalProps {
     title: string;
     price: number;
   };
-  onRegister: (mode: "individual" | "team", teamData?: { size: number; members: TeamMember[] }) => void;
+  paymentMode: "razorpay" | "qr";
+  paymentQrUrl?: string | null;
+  onRegister: (
+    mode: "individual" | "team",
+    teamData?: { size: number; members: TeamMember[] },
+    options?: { paymentScreenshotUrl?: string | null }
+  ) => void;
 }
 
-export function RegistrationModal({ isOpen, onClose, event, onRegister }: RegistrationModalProps) {
+export function RegistrationModal({
+  isOpen,
+  onClose,
+  event,
+  paymentMode,
+  paymentQrUrl,
+  onRegister,
+}: RegistrationModalProps) {
   const [mode, setMode] = useState<"select" | "individual" | "team">("select");
   const [teamSize, setTeamSize] = useState<number>(2);
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { email: "", full_name: "" },
     { email: "", full_name: "" },
@@ -30,13 +46,38 @@ export function RegistrationModal({ isOpen, onClose, event, onRegister }: Regist
   if (!isOpen) return null;
 
   const handleModeSelect = (selectedMode: "individual" | "team") => {
-    if (selectedMode === "individual") {
-      onRegister("individual");
+    if (selectedMode === "individual" && (paymentMode !== "qr" || event.price <= 0)) {
+      onRegister("individual", undefined, { paymentScreenshotUrl: null });
       onClose();
     } else {
-      setMode("team");
+      setMode(selectedMode);
     }
   };
+
+  async function uploadScreenshot(file: File) {
+    try {
+      setUploadingScreenshot(true);
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to upload screenshot");
+      }
+
+      setPaymentScreenshotUrl(data.imageUrl || null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to upload screenshot";
+      alert(message);
+    } finally {
+      setUploadingScreenshot(false);
+    }
+  }
 
   const handleTeamSizeChange = (size: number) => {
     setTeamSize(size);
@@ -68,7 +109,12 @@ export function RegistrationModal({ isOpen, onClose, event, onRegister }: Regist
       return;
     }
 
-    onRegister("team", { size: teamSize, members: teamMembers });
+    if (paymentMode === "qr" && event.price > 0 && !paymentScreenshotUrl) {
+      alert("Please upload payment screenshot before submitting");
+      return;
+    }
+
+    onRegister("team", { size: teamSize, members: teamMembers }, { paymentScreenshotUrl });
     onClose();
   };
 
@@ -120,7 +166,7 @@ export function RegistrationModal({ isOpen, onClose, event, onRegister }: Regist
                     Register only yourself for this event
                   </p>
                   <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 mt-2">
-                    ₹{event.price}
+                    {event.price > 0 ? `₹${event.price}` : "Free"}
                   </p>
                 </div>
               </button>
@@ -144,6 +190,77 @@ export function RegistrationModal({ isOpen, onClose, event, onRegister }: Regist
                   </p>
                 </div>
               </button>
+            </div>
+          )}
+
+          {mode === "individual" && (
+            <div className="space-y-6">
+              {paymentMode === "qr" && event.price > 0 ? (
+                <>
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Pay using Organizer QR</h4>
+                    {paymentQrUrl ? (
+                      <div className="flex items-center justify-center">
+                        <Image
+                          src={paymentQrUrl}
+                          alt="Payment QR"
+                          width={240}
+                          height={240}
+                          className="rounded-lg border border-gray-200 dark:border-gray-700"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-red-500">Organizer has not uploaded payment QR yet.</p>
+                    )}
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Amount to pay: ₹{event.price}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Upload Payment Screenshot</h4>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadScreenshot(file);
+                      }}
+                      className="w-full text-sm"
+                    />
+                    {uploadingScreenshot && (
+                      <p className="text-sm text-gray-500">Uploading screenshot...</p>
+                    )}
+                    {paymentScreenshotUrl && (
+                      <p className="text-sm text-green-600">Screenshot uploaded successfully</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This is a free event. Registration will be submitted instantly.
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setMode("select")}
+                  className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={() => {
+                    if (paymentMode === "qr" && event.price > 0 && !paymentScreenshotUrl) {
+                      alert("Please upload payment screenshot before submitting");
+                      return;
+                    }
+                    onRegister("individual", undefined, { paymentScreenshotUrl });
+                    onClose();
+                  }}
+                  className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Submit Registration
+                </button>
+              </div>
             </div>
           )}
 
@@ -230,6 +347,40 @@ export function RegistrationModal({ isOpen, onClose, event, onRegister }: Regist
                 </p>
               </div>
 
+              {paymentMode === "qr" && event.price > 0 && (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Pay via QR and upload screenshot</h4>
+                  {paymentQrUrl ? (
+                    <div className="flex items-center justify-center">
+                      <Image
+                        src={paymentQrUrl}
+                        alt="Payment QR"
+                        width={220}
+                        height={220}
+                        className="rounded-lg border border-gray-200 dark:border-gray-700"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-red-500">Organizer has not uploaded payment QR yet.</p>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadScreenshot(file);
+                    }}
+                    className="w-full text-sm"
+                  />
+                  {uploadingScreenshot && (
+                    <p className="text-sm text-gray-500">Uploading screenshot...</p>
+                  )}
+                  {paymentScreenshotUrl && (
+                    <p className="text-sm text-green-600">Screenshot uploaded successfully</p>
+                  )}
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex gap-3">
                 <button
@@ -242,7 +393,7 @@ export function RegistrationModal({ isOpen, onClose, event, onRegister }: Regist
                   onClick={handleTeamSubmit}
                   className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
                 >
-                  Proceed to Payment
+                  Submit Registration
                 </button>
               </div>
             </div>

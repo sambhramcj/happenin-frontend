@@ -38,7 +38,7 @@ export default function ContactPage() {
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-40px_rgba(124,58,237,0.25)]">
               <h2 className="text-xl font-semibold text-slate-900">Get in Touch</h2>
               <p className="mt-3 text-slate-700">General Support</p>
-              <p className="mt-2 text-slate-700">For help with registrations, payments, tickets, or account issues:</p>
+              <p className="mt-2 text-slate-700">For help with registrations, payment-proof approvals, tickets, attendance, certificates, or account issues:</p>
               <div className="mt-3 space-y-1 text-slate-700">
                 <p>
                   Email:{' '}
@@ -55,7 +55,7 @@ export default function ContactPage() {
               <p className="mt-3 text-slate-700">If you’re a college club, fest committee, or organizer and want to:</p>
               <ul className="mt-2 list-disc space-y-1 pl-6 text-slate-700">
                 <li>List your events</li>
-                <li>Enable registrations &amp; payments</li>
+                <li>Set up registrations and payment QR workflows</li>
                 <li>Hire volunteers</li>
                 <li>Issue certificates</li>
                 <li>Discuss sponsorships or promotions</li>
@@ -88,6 +88,9 @@ export default function ContactPage() {
                   </a>
                 </p>
                 <p>Subject line suggestion: Partnership – &lt;Brand / Company Name&gt;</p>
+                <p className="text-sm text-slate-600 mt-2">
+                  Note: Some sponsorship and paid-visibility modules may be temporarily disabled in MVP mode.
+                </p>
               </div>
             </section>
 

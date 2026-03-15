@@ -25,6 +25,7 @@ import { LoadingButton } from "@/components/LoadingButton";
 import StudentHomePage from "@/components/home/StudentHomePage";
 import { RegistrationModal } from "@/components/RegistrationModal";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { FEATURE_FLAGS } from "@/config/featureFlags";
 
 type Membership = {
   club: string;
@@ -68,6 +69,8 @@ type Event = {
   organizer_contact_email?: string;
   sponsorship_enabled?: boolean;
   max_attendees?: number;
+  payment_qr?: string;
+  registration_deadline?: string;
 };
 
 type Registration = {
@@ -598,7 +601,8 @@ export default function StudentDashboard() {
 
   async function handleRegistration(
     mode: "individual" | "team",
-    teamData?: { size: number; members: Array<{ email: string; full_name: string }> }
+    teamData?: { size: number; members: Array<{ email: string; full_name: string }> },
+    options?: { paymentScreenshotUrl?: string | null }
   ) {
     if (!selectedEvent) return;
     if (mode === "team" && !teamData) {
@@ -609,6 +613,13 @@ export default function StudentDashboard() {
     try {
       setLoadingEventId(selectedEvent.id);
       setPaymentStage("creating");
+
+      if (!FEATURE_FLAGS.REGISTRATION) {
+        toast.error("Registrations are currently disabled");
+        setLoadingEventId(null);
+        setPaymentStage(null);
+        return;
+      }
 
       const refreshPostRegistrationState = async () => {
         const { data: regsData } = await supabase
@@ -628,7 +639,52 @@ export default function StudentDashboard() {
         await fetchTickets();
       };
 
+      const isRazorpayEnabled = FEATURE_FLAGS.PAYMENTS_RAZORPAY;
       const isFreeEvent = Number(selectedEvent.price || 0) <= 0;
+
+      if (!isRazorpayEnabled && !isFreeEvent) {
+        const screenshotUrl = options?.paymentScreenshotUrl || null;
+
+        const qrPayload =
+          mode === "team"
+            ? {
+                eventId: selectedEvent.id,
+                mode,
+                members: teamData?.members || [],
+                screenshotUrl,
+              }
+            : {
+                eventId: selectedEvent.id,
+                mode,
+                screenshotUrl,
+              };
+
+        const qrRes = await fetch("/api/registrations/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(qrPayload),
+        });
+
+        const qrData = await qrRes.json();
+        if (!qrRes.ok) {
+          toast.error(qrData.error || "Failed to submit registration");
+          setLoadingEventId(null);
+          setPaymentStage(null);
+          return;
+        }
+
+        await refreshPostRegistrationState();
+        setLoadingEventId(null);
+        setLastRegisteredEventId(selectedEvent.id);
+        setPaymentStage("pending");
+        toast.success(
+          mode === "team"
+            ? "Team registration submitted. Awaiting organizer verification."
+            : "Registration submitted. Awaiting organizer verification."
+        );
+        return;
+      }
+
       if (isFreeEvent) {
         const freeRegistrationPayload =
           mode === "team"
@@ -666,6 +722,13 @@ export default function StudentDashboard() {
             ? "Team registration confirmed for free event!"
             : "Registration confirmed for free event!"
         );
+        return;
+      }
+
+      if (!isRazorpayEnabled) {
+        toast.error("Razorpay flow is disabled");
+        setLoadingEventId(null);
+        setPaymentStage(null);
         return;
       }
 
@@ -1899,6 +1962,8 @@ export default function StudentDashboard() {
             title: selectedEvent.title,
             price: Number(selectedEvent.price),
           }}
+          paymentMode={FEATURE_FLAGS.PAYMENTS_RAZORPAY ? "razorpay" : "qr"}
+          paymentQrUrl={selectedEvent.payment_qr || null}
           onRegister={handleRegistration}
         />
       )}

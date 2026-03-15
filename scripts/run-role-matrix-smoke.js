@@ -202,9 +202,9 @@ async function ensureUsersAndPrereqs() {
     { name: "Student denied admin dashboard", method: "GET", path: "/api/admin/dashboard", role: "student", expect: "denied" },
     { name: "Sponsor denied organizer payout", method: "GET", path: `/api/organizer/sponsorship-payout?email=${encodeURIComponent(USERS.organizer)}`, role: "sponsor", expect: "denied" },
     { name: "Organizer denied sponsor analytics", method: "GET", path: "/api/sponsor/analytics", role: "organizer", expect: "denied" },
-    { name: "Admin denied sponsor-only pack create", method: "POST", path: "/api/payments/create-digital-pack-order", role: "admin", body: { eventId: prereq.eventId, packType: "silver" }, expect: "denied" },
-    { name: "Sponsor denied organizer-only featured create", method: "POST", path: "/api/payments/create-featured-boost-order", role: "sponsor", body: { eventId: prereq.eventId }, expect: "denied" },
-    { name: "Student denied sponsor-only pack create", method: "POST", path: "/api/payments/create-digital-pack-order", role: "student", body: { eventId: prereq.eventId, packType: "silver" }, expect: "denied" },
+    { name: "Admin denied sponsor-only pack create", method: "POST", path: "/api/payments/create-digital-pack-order", role: "admin", body: { eventId: prereq.eventId, packType: "silver" }, expect: "one-of", statuses: [401, 403, 503] },
+    { name: "Sponsor denied organizer-only featured create", method: "POST", path: "/api/payments/create-featured-boost-order", role: "sponsor", body: { eventId: prereq.eventId }, expect: "one-of", statuses: [401, 403, 503] },
+    { name: "Student denied sponsor-only pack create", method: "POST", path: "/api/payments/create-digital-pack-order", role: "student", body: { eventId: prereq.eventId, packType: "silver" }, expect: "one-of", statuses: [401, 403, 503] },
 
     { name: "Student volunteer applications GET", method: "GET", path: "/api/volunteers/apply", role: "student", expect: "one-of", statuses: [200] },
     { name: "Student volunteer apply invalid payload", method: "POST", path: "/api/volunteers/apply", role: "student", body: { eventId: prereq.eventId }, expect: "one-of", statuses: [400] },

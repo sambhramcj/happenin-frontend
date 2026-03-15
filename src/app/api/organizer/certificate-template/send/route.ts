@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth/next';
 import nodemailer from 'nodemailer';
+import { getServerFeatureFlags } from '@/lib/serverFeatureFlags';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,6 +55,11 @@ async function sendCertificateEmail(
 
 export async function POST(req: NextRequest) {
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.CERTIFICATES) {
+      return NextResponse.json({ error: 'Certificate feature is currently disabled' }, { status: 503 });
+    }
+
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

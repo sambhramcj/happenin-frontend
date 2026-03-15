@@ -22,6 +22,7 @@ import { EventTimelineDisplay } from "@/components/EventTimelineDisplay";
 import { BulkTicketManager } from "@/components/BulkTicketManager";
 import QRScanner from "@/components/QRScanner";
 import CertificateGenerationWizard from "@/components/CertificateGenerationWizard";
+import { FEATURE_FLAGS } from "@/config/featureFlags";
 
 type EligibleMember = {
   name: string;
@@ -38,6 +39,10 @@ type Event = {
   schedule_sessions?: Array<{ date: string; start_time: string; end_time: string; description: string }> | null;
   location: string;
   price: string;
+  payment_qr?: string | null;
+  poster_url?: string | null;
+  registration_deadline?: string | null;
+  time?: string | null;
   max_attendees?: number | null;
   organizer_email: string;
   banner_image?: string;
@@ -55,10 +60,14 @@ type Event = {
 type Registration = {
   id: string;
   student_email: string;
+  student_name?: string;
   event_id: string;
   final_price: number;
   created_at: string;
   status?: string | null;
+  screenshot_url?: string | null;
+  payment_status?: string | null;
+  qr_ticket_id?: string | null;
 };
 
 type AttendanceRecord = {
@@ -127,6 +136,10 @@ export default function OrganizerDashboard() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [price, setPrice] = useState("");
+  const [paymentQr, setPaymentQr] = useState("");
+  const [posterUrl, setPosterUrl] = useState("");
+  const [registrationDeadline, setRegistrationDeadline] = useState("");
+  const [eventTime, setEventTime] = useState("");
   const [maxAttendees, setMaxAttendees] = useState("");
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discountClub, setDiscountClub] = useState("");
@@ -200,6 +213,10 @@ export default function OrganizerDashboard() {
   const [editDescription, setEditDescription] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editPrice, setEditPrice] = useState("");
+  const [editPaymentQr, setEditPaymentQr] = useState("");
+  const [editPosterUrl, setEditPosterUrl] = useState("");
+  const [editRegistrationDeadline, setEditRegistrationDeadline] = useState("");
+  const [editEventTime, setEditEventTime] = useState("");
   const [editMaxAttendees, setEditMaxAttendees] = useState("");
   const [editStartDateTime, setEditStartDateTime] = useState("");
   const [editEndDateTime, setEditEndDateTime] = useState("");
@@ -297,6 +314,10 @@ export default function OrganizerDashboard() {
     setEditDescription(event.description || "");
     setEditLocation(event.location || "");
     setEditPrice(String(event.price || ""));
+    setEditPaymentQr(event.payment_qr || "");
+    setEditPosterUrl(event.poster_url || event.banner_image || "");
+    setEditRegistrationDeadline(event.registration_deadline ? event.registration_deadline.slice(0, 16) : "");
+    setEditEventTime(event.time || "");
     setEditMaxAttendees(event.max_attendees ? String(event.max_attendees) : "");
     setEditStartDateTime(event.start_datetime ? event.start_datetime.slice(0, 16) : "");
     setEditEndDateTime(event.end_datetime ? event.end_datetime.slice(0, 16) : "");
@@ -632,6 +653,10 @@ export default function OrganizerDashboard() {
           description: editDescription,
           location: editLocation,
           price: Number(editPrice),
+          payment_qr: editPaymentQr.trim() || null,
+          poster_url: editPosterUrl.trim() || null,
+          registration_deadline: editRegistrationDeadline || null,
+          time: editEventTime.trim() || null,
           max_attendees: editMaxAttendees ? Number(editMaxAttendees) : null,
           start_datetime: editStartDateTime ? new Date(editStartDateTime).toISOString() : null,
           end_datetime: editEndDateTime ? new Date(editEndDateTime).toISOString() : null,
@@ -691,6 +716,35 @@ export default function OrganizerDashboard() {
       await Promise.all([loadEventAttendance(eventId), fetchAllRegistrations()]);
     } catch (err: any) {
       toast.error(err.message || "Failed to mark attendance");
+    }
+  }
+
+  async function handleReviewRegistration(
+    eventId: string,
+    registrationId: string,
+    action: "approve" | "reject"
+  ) {
+    try {
+      const res = await fetch(`/api/organizer/events/${eventId}/registrations`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registrationId, action }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to ${action} registration`);
+      }
+
+      toast.success(
+        action === "approve"
+          ? "Registration approved and QR ticket generated"
+          : "Registration rejected"
+      );
+
+      await fetchAllRegistrations();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to review registration");
     }
   }
 
@@ -1062,6 +1116,10 @@ export default function OrganizerDashboard() {
           description,
           location,
           price,
+          paymentQr: paymentQr.trim() || null,
+          posterUrl: posterUrl.trim() || null,
+          registrationDeadline: registrationDeadline || null,
+          time: eventTime.trim() || null,
           maxAttendees: maxAttendees ? Number(maxAttendees) : null,
           bannerImage: bannerImageUrl,
           brochureUrl,
@@ -1147,6 +1205,10 @@ export default function OrganizerDashboard() {
       setDescription("");
       setLocation("");
       setPrice("");
+      setPaymentQr("");
+      setPosterUrl("");
+      setRegistrationDeadline("");
+      setEventTime("");
       setMaxAttendees("");
       setSponsorshipEnabled(false);
       setBannerImage(null);
@@ -1505,6 +1567,50 @@ export default function OrganizerDashboard() {
                     className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
                     placeholder="Enter price"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-bg-muted rounded-lg p-4 border border-border-default">
+                    <label className="text-sm text-text-secondary mb-2 block">Event Time Label</label>
+                    <input
+                      value={eventTime}
+                      onChange={(e) => setEventTime(e.target.value)}
+                      className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                      placeholder="e.g. 2:00 PM onwards"
+                    />
+                  </div>
+                  <div className="bg-bg-muted rounded-lg p-4 border border-border-default">
+                    <label className="text-sm text-text-secondary mb-2 block">Registration Deadline</label>
+                    <input
+                      type="datetime-local"
+                      value={registrationDeadline}
+                      onChange={(e) => setRegistrationDeadline(e.target.value)}
+                      className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-bg-muted rounded-lg p-4 border border-border-default">
+                    <label className="text-sm text-text-secondary mb-2 block">Payment QR URL</label>
+                    <input
+                      value={paymentQr}
+                      onChange={(e) => setPaymentQr(e.target.value)}
+                      className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                      placeholder="https://..."
+                    />
+                    <p className="text-xs text-text-muted mt-2">Used for QR screenshot payments when the MVP QR flow is enabled.</p>
+                  </div>
+                  <div className="bg-bg-muted rounded-lg p-4 border border-border-default">
+                    <label className="text-sm text-text-secondary mb-2 block">Poster URL</label>
+                    <input
+                      value={posterUrl}
+                      onChange={(e) => setPosterUrl(e.target.value)}
+                      className="w-full bg-bg-muted border border-border-default rounded-lg px-4 py-2 text-text-primary"
+                      placeholder="Optional external poster URL"
+                    />
+                    <p className="text-xs text-text-muted mt-2">If left blank, the uploaded banner image will continue to serve as the poster.</p>
+                  </div>
                 </div>
 
                 <div className="bg-bg-muted rounded-lg p-4 border border-border-default">
@@ -2307,6 +2413,24 @@ export default function OrganizerDashboard() {
                           />
                         </div>
                         <div>
+                          <label className="text-sm text-text-secondary mb-1 block">Event Time Label</label>
+                          <input
+                            value={editEventTime}
+                            onChange={(e) => setEditEventTime(e.target.value)}
+                            className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
+                            placeholder="e.g. 2:00 PM onwards"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-text-secondary mb-1 block">Registration Deadline</label>
+                          <input
+                            type="datetime-local"
+                            value={editRegistrationDeadline}
+                            onChange={(e) => setEditRegistrationDeadline(e.target.value)}
+                            className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
+                          />
+                        </div>
+                        <div>
                           <label className="text-sm text-text-secondary mb-1 block">Start Date & Time</label>
                           <input
                             type="datetime-local"
@@ -2333,6 +2457,24 @@ export default function OrganizerDashboard() {
                             onChange={(e) => setEditMaxAttendees(e.target.value)}
                             className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
                             placeholder="Leave empty for unlimited"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-text-secondary mb-1 block">Payment QR URL</label>
+                          <input
+                            value={editPaymentQr}
+                            onChange={(e) => setEditPaymentQr(e.target.value)}
+                            className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
+                            placeholder="https://..."
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-text-secondary mb-1 block">Poster URL</label>
+                          <input
+                            value={editPosterUrl}
+                            onChange={(e) => setEditPosterUrl(e.target.value)}
+                            className="w-full bg-bg-muted border border-border-default rounded-lg px-3 py-2 text-text-primary"
+                            placeholder="Optional external poster URL"
                           />
                         </div>
                         <div className="flex items-center pt-7">
@@ -2477,27 +2619,68 @@ export default function OrganizerDashboard() {
                       <table className="w-full min-w-[720px] text-sm">
                         <thead className="bg-bg-muted border-b border-border-default">
                           <tr>
-                            <th className="text-left px-3 py-2 font-semibold text-text-primary">Student Email</th>
-                            <th className="text-left px-3 py-2 font-semibold text-text-primary">Amount Paid</th>
+                            <th className="text-left px-3 py-2 font-semibold text-text-primary">Student</th>
+                            <th className="text-left px-3 py-2 font-semibold text-text-primary">Amount</th>
+                            <th className="text-left px-3 py-2 font-semibold text-text-primary">Screenshot</th>
                             <th className="text-left px-3 py-2 font-semibold text-text-primary">Status</th>
                             <th className="text-left px-3 py-2 font-semibold text-text-primary">Timestamp</th>
+                            <th className="text-left px-3 py-2 font-semibold text-text-primary">Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {regs.length === 0 ? (
                             <tr>
-                              <td colSpan={4} className="px-3 py-8 text-center text-text-muted">
+                              <td colSpan={6} className="px-3 py-8 text-center text-text-muted">
                                 No participants yet
                               </td>
                             </tr>
                           ) : (
                             regs.map((registration) => (
                               <tr key={registration.id} className="border-t border-border-default">
-                                <td className="px-3 py-2 text-text-primary">{registration.student_email}</td>
+                                <td className="px-3 py-2 text-text-primary">
+                                  <div className="font-medium">{registration.student_name || registration.student_email}</div>
+                                  <div className="text-xs text-text-muted">{registration.student_email}</div>
+                                </td>
                                 <td className="px-3 py-2 text-text-primary">₹{registration.final_price}</td>
+                                <td className="px-3 py-2 text-text-secondary">
+                                  {registration.screenshot_url ? (
+                                    <a
+                                      href={registration.screenshot_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-primary hover:underline"
+                                    >
+                                      View
+                                    </a>
+                                  ) : (
+                                    <span className="text-text-muted">-</span>
+                                  )}
+                                </td>
                                 <td className="px-3 py-2 text-text-secondary">{registration.status || "registered"}</td>
                                 <td className="px-3 py-2 text-text-secondary">
                                   {new Date(registration.created_at).toLocaleString()}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {registration.status === "pending" ? (
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => handleReviewRegistration(event.id, registration.id, "approve")}
+                                        className="px-2 py-1 text-xs rounded bg-success text-text-inverse"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={() => handleReviewRegistration(event.id, registration.id, "reject")}
+                                        className="px-2 py-1 text-xs rounded bg-error text-text-inverse"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-text-muted">
+                                      {registration.qr_ticket_id ? "Ticket Issued" : "Reviewed"}
+                                    </span>
+                                  )}
                                 </td>
                               </tr>
                             ))
@@ -2568,6 +2751,32 @@ export default function OrganizerDashboard() {
                     </button>
                   </div>
 
+                  {FEATURE_FLAGS.CERTIFICATES && (
+                  <div className="bg-bg-card rounded-xl p-6 border border-border-default space-y-4">
+                    <h3 className="text-lg font-bold text-text-primary">Participant Certificates</h3>
+                    <p className="text-sm text-text-secondary">
+                      Send participation certificates to students marked present in attendance.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        const res = await fetch(`/api/organizer/events/${event.id}/certificates/send`, {
+                          method: "POST",
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                          toast.error(data.error || "Failed to send certificates");
+                          return;
+                        }
+                        toast.success(`Certificates sent: ${data.sent || 0}, skipped: ${data.skipped || 0}`);
+                      }}
+                      className="px-4 py-2 bg-primary text-text-inverse rounded-lg hover:bg-primaryHover"
+                    >
+                      Send Certificates
+                    </button>
+                  </div>
+                  )}
+
+                  {FEATURE_FLAGS.FEATURED_EVENT_BOOST && (
                   <div className="bg-bg-card rounded-xl p-6 border border-border-default space-y-4">
                     <h3 className="text-lg font-bold text-text-primary">Push Event (Boost Visibility)</h3>
                     <div className="text-sm text-text-secondary">Status: {getBoostStatusLabel(event)}</div>
@@ -2613,6 +2822,7 @@ export default function OrganizerDashboard() {
                       {boostSubmittingByEvent[event.id] ? "Submitting..." : "Pay & Push Event"}
                     </button>
                   </div>
+                  )}
 
                   {event.sponsorship_enabled && (
                     <div className="space-y-4">
@@ -2883,7 +3093,6 @@ export default function OrganizerDashboard() {
                       </div>
                     </div>
                   </div>
-
                   <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                     <h4 className="text-lg font-bold text-text-primary mb-4">Approved Volunteers for this Event ({approvedVolunteers.filter(v => v.event_id === event.id).length})</h4>
                     <div className="space-y-2">

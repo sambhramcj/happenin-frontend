@@ -28,6 +28,11 @@ type Event = {
   description: string;
   date: string;
   start_datetime?: string;
+  end_datetime?: string;
+  registration_deadline?: string | null;
+  payment_qr?: string | null;
+  poster_url?: string | null;
+  time?: string | null;
   location: string;
   venue?: string;
   price: string;
@@ -120,6 +125,8 @@ export default function AdminDashboard() {
   const [adminLogs, setAdminLogs] = useState<any[]>([]);
   const [reports, setReports] = useState<{ userReports: any[]; eventReports: any[] }>({ userReports: [], eventReports: [] });
   const [disputes, setDisputes] = useState<any[]>([]);
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
+  const [updatingFlag, setUpdatingFlag] = useState<string | null>(null);
 
   // Filters
   const [eventFilter, setEventFilter] = useState<"all" | "today" | "week" | "flagged">("all");
@@ -231,6 +238,65 @@ export default function AdminDashboard() {
     }
   }
 
+  async function fetchFeatureFlags() {
+    try {
+      const res = await fetch("/api/admin/feature-flags");
+      if (!res.ok) return;
+      const json = await res.json();
+      setFeatureFlags(json.flags || {});
+    } catch {
+      setFeatureFlags({});
+    }
+  }
+
+  async function toggleFeatureFlag(flagKey: string, enabled: boolean) {
+    try {
+      setUpdatingFlag(flagKey);
+      const res = await fetch("/api/admin/feature-flags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updates: { [flagKey]: enabled } }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update feature flag");
+      }
+      setFeatureFlags(data.flags || {});
+      toast.success(`Updated ${flagKey}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update feature flag");
+    } finally {
+      setUpdatingFlag(null);
+    }
+  }
+
+  async function updateEventModerationStatus(eventId: string, nextStatus: string) {
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update event status");
+      }
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === eventId
+            ? {
+                ...event,
+                status: data.event?.status || nextStatus,
+              }
+            : event
+        )
+      );
+      toast.success(`Event marked ${nextStatus}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update event status");
+    }
+  }
+
   useEffect(() => {
     if (status === "loading") return;
 
@@ -242,6 +308,7 @@ export default function AdminDashboard() {
     fetchAllData();
     fetchDashboardMetrics();
     fetchAnalyticsData();
+    fetchFeatureFlags();
   }, [session, status, router]);
 
   // Analytics
@@ -306,6 +373,11 @@ export default function AdminDashboard() {
       filtered = filtered.filter(e => {
         const eventDate = new Date(e.date);
         return eventDate >= now && eventDate <= weekFromNow;
+      });
+    } else if (eventFilter === "flagged") {
+      filtered = filtered.filter((e) => {
+        const status = (e.status || "active").toLowerCase();
+        return status === "pending" || status === "rejected" || status === "hidden";
       });
     }
 
@@ -398,6 +470,9 @@ export default function AdminDashboard() {
   const topEventsByRevenue = [...eventPerformance]
     .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
     .slice(0, 8);
+  const pendingEventModerations = events.filter((event) => (event.status || "active") === "pending").length;
+  const hiddenEvents = events.filter((event) => (event.status || "active") === "hidden").length;
+  const rejectedEvents = events.filter((event) => (event.status || "active") === "rejected").length;
 
   if (status === "loading") {
     return (
@@ -519,6 +594,30 @@ export default function AdminDashboard() {
               <div className="bg-bg-card rounded-xl p-6 border border-border-default">
                 <h3 className="text-lg font-semibold text-text-primary mb-4">User Growth (30 Days)</h3>
                 <UserGrowthChart data={userGrowthData} />
+              </div>
+            </section>
+
+            <section>
+              <div className="bg-bg-card rounded-xl p-6 border border-border-default">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Feature Flags</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Object.entries(featureFlags).length === 0 ? (
+                    <p className="text-text-muted text-sm">No feature flags loaded</p>
+                  ) : (
+                    Object.entries(featureFlags).map(([flag, enabled]) => (
+                      <label key={flag} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-bg-muted border border-border-default">
+                        <span className="text-sm text-text-primary">{flag}</span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(enabled)}
+                          disabled={updatingFlag === flag}
+                          onChange={(e) => toggleFeatureFlag(flag, e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
             </section>
 
@@ -711,6 +810,101 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            <div className="bg-bg-card rounded-xl border border-border-default p-6 space-y-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-lg font-semibold text-text-primary">Event Moderation Panel</h3>
+                  <p className="text-sm text-text-muted">Review publication status, QR-payment readiness, and visibility before events go live.</p>
+                </div>
+                <div className="flex flex-wrap gap-3 text-sm">
+                  <div className="px-3 py-2 rounded-lg bg-bg-muted border border-border-default text-text-secondary">
+                    Pending: <span className="font-semibold text-text-primary">{pendingEventModerations}</span>
+                  </div>
+                  <div className="px-3 py-2 rounded-lg bg-bg-muted border border-border-default text-text-secondary">
+                    Hidden: <span className="font-semibold text-text-primary">{hiddenEvents}</span>
+                  </div>
+                  <div className="px-3 py-2 rounded-lg bg-bg-muted border border-border-default text-text-secondary">
+                    Rejected: <span className="font-semibold text-text-primary">{rejectedEvents}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {events.slice(0, 12).map((event) => {
+                  const moderationStatus = event.status || "active";
+                  const regCount = getEventRegistrationCount(event.id);
+                  return (
+                    <div key={`moderation-${event.id}`} className="rounded-xl border border-border-default bg-bg-muted/40 p-4 space-y-4">
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h4 className="text-base font-semibold text-text-primary">{event.title}</h4>
+                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold border border-border-default bg-bg-card text-text-secondary capitalize">
+                              {moderationStatus}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-xs text-text-muted">
+                            <span>{event.organizer_email}</span>
+                            <span>{formatDate(event.start_datetime || event.date)}</span>
+                            <span>{event.location || event.venue || "TBA"}</span>
+                            <span>{formatCurrency(Number(event.price || 0))}</span>
+                            <span>{regCount} registrations</span>
+                          </div>
+                          <p className="text-sm text-text-secondary line-clamp-2">{event.description}</p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => updateEventModerationStatus(event.id, "active")}
+                            className="px-3 py-2 rounded-lg bg-primary text-text-inverse text-sm font-semibold hover:bg-primaryHover"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => updateEventModerationStatus(event.id, "pending")}
+                            className="px-3 py-2 rounded-lg border border-border-default text-text-primary text-sm font-semibold hover:bg-bg-card"
+                          >
+                            Hold
+                          </button>
+                          <button
+                            onClick={() => updateEventModerationStatus(event.id, "hidden")}
+                            className="px-3 py-2 rounded-lg border border-border-default text-text-primary text-sm font-semibold hover:bg-bg-card"
+                          >
+                            Hide
+                          </button>
+                          <button
+                            onClick={() => updateEventModerationStatus(event.id, "rejected")}
+                            className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
+                        <div className="rounded-lg bg-bg-card border border-border-default p-3">
+                          <div className="text-xs text-text-muted mb-1">Registration Deadline</div>
+                          <div className="text-text-primary font-medium">{formatDate(event.registration_deadline)}</div>
+                        </div>
+                        <div className="rounded-lg bg-bg-card border border-border-default p-3">
+                          <div className="text-xs text-text-muted mb-1">Event Time</div>
+                          <div className="text-text-primary font-medium">{event.time || "-"}</div>
+                        </div>
+                        <div className="rounded-lg bg-bg-card border border-border-default p-3">
+                          <div className="text-xs text-text-muted mb-1">QR Payment</div>
+                          <div className="text-text-primary font-medium">{event.payment_qr ? "Configured" : "Missing"}</div>
+                        </div>
+                        <div className="rounded-lg bg-bg-card border border-border-default p-3">
+                          <div className="text-xs text-text-muted mb-1">Poster</div>
+                          <div className="text-text-primary font-medium">{event.poster_url || event.banner_image ? "Available" : "Missing"}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="bg-bg-card rounded-xl overflow-hidden border border-border-default">
               <div className="px-6 py-4 border-b border-border-default">
                 <h3 className="text-lg font-semibold text-text-primary">Top Performing Events</h3>
@@ -784,9 +978,25 @@ export default function AdminDashboard() {
                           <span>{formatCurrency(Number(event.price || 0))}</span>
                         </div>
                       </div>
-                      <span className="px-3 py-1 bg-primarySoft text-primary rounded-full text-xs font-semibold border border-border-default">
+                      <span className="px-3 py-1 bg-primarySoft text-primary rounded-full text-xs font-semibold border border-border-default capitalize">
                         {event.status || "active"}
                       </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                      <div className="rounded-lg bg-bg-muted p-3 border border-border-default">
+                        <div className="text-xs text-text-muted mb-1">Registration Deadline</div>
+                        <div className="text-sm font-medium text-text-primary">{formatDate(event.registration_deadline)}</div>
+                      </div>
+                      <div className="rounded-lg bg-bg-muted p-3 border border-border-default">
+                        <div className="text-xs text-text-muted mb-1">Time</div>
+                        <div className="text-sm font-medium text-text-primary">{event.time || "-"}</div>
+                      </div>
+                      <div className="rounded-lg bg-bg-muted p-3 border border-border-default">
+                        <div className="text-xs text-text-muted mb-1">MVP Readiness</div>
+                        <div className="text-sm font-medium text-text-primary">
+                          {event.payment_qr ? "QR ready" : "QR missing"} · {event.poster_url || event.banner_image ? "Poster ready" : "Poster missing"}
+                        </div>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border-default">
                       <div>

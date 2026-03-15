@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { supabase } from "@/lib/supabase";
+import { getServerFeatureFlags } from "@/lib/serverFeatureFlags";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,11 @@ export async function POST(
   context: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.QR_ATTENDANCE) {
+      return NextResponse.json({ error: "QR attendance is currently disabled" }, { status: 503 });
+    }
+
     const { eventId } = await context.params;
 
     // 1. Verify user is authenticated
@@ -68,7 +74,25 @@ export async function POST(
       );
     }
 
-    // 6. Create attendance record
+    // 6. Prevent duplicate scans
+    const { data: existingAttendance } = await supabase
+      .from("attendance")
+      .select("id, scanned_at")
+      .eq("event_id", eventId)
+      .eq("registration_id", registrationId)
+      .maybeSingle();
+
+    if (existingAttendance) {
+      return NextResponse.json(
+        {
+          error: "Attendance already marked for this ticket",
+          scanned_at: existingAttendance.scanned_at,
+        },
+        { status: 409 }
+      );
+    }
+
+    // 7. Create attendance record
     const { data: attendance, error: insertError } = await supabase
       .from("attendance")
       .insert({
@@ -110,6 +134,11 @@ export async function GET(
   context: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.QR_ATTENDANCE) {
+      return NextResponse.json({ error: "QR attendance is currently disabled" }, { status: 503 });
+    }
+
     const { eventId } = await context.params;
 
     // 1. Verify user is authenticated

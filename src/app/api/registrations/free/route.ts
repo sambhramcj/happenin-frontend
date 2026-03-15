@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
+import { getServerFeatureFlags } from "@/lib/serverFeatureFlags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,11 @@ type TeamMember = {
 
 export async function POST(req: Request) {
   try {
+    const flags = await getServerFeatureFlags();
+    if (!flags.REGISTRATION) {
+      return NextResponse.json({ error: "Registrations are currently disabled" }, { status: 503 });
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

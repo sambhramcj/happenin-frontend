@@ -61,6 +61,13 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ event
       start_datetime: startDateTime,
       end_datetime: endDateTime,
       date: fallbackDate,
+      payment_qr: typeof body.payment_qr === "string" ? body.payment_qr : null,
+      poster_url: typeof body.poster_url === "string" ? body.poster_url : null,
+      registration_deadline:
+        typeof body.registration_deadline === "string"
+          ? new Date(body.registration_deadline).toISOString()
+          : null,
+      time: typeof body.time === "string" ? body.time : null,
       sponsorship_enabled: Boolean(body.sponsorship_enabled),
       updated_at: new Date().toISOString(),
     };

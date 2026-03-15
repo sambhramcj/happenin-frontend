@@ -26,7 +26,7 @@ export default function TermsPage() {
               Legal
             </span>
             <h1 className="text-3xl font-semibold text-slate-900 md:text-4xl">Terms &amp; Conditions</h1>
-            <p className="text-sm text-slate-500">Last updated: February 1, 2026</p>
+            <p className="text-sm text-slate-500">Last updated: March 15, 2026</p>
             <p className="max-w-3xl text-base text-slate-700">
               Welcome to Happenin. These Terms &amp; Conditions (“Terms”) govern your access to and use of the Happenin
               website, PWA, and any future mobile applications (collectively, the “Platform”).
@@ -65,7 +65,7 @@ export default function TermsPage() {
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">a) Students</h3>
                   <ul className="mt-2 list-disc space-y-1 pl-6">
-                    <li>Can browse events, register, make payments, volunteer, and receive certificates</li>
+                    <li>Can browse events, register, submit payment proof where required, volunteer, and receive certificates</li>
                     <li>Must complete mandatory profile details before registering for events</li>
                   </ul>
                 </div>
@@ -73,7 +73,7 @@ export default function TermsPage() {
                   <h3 className="text-base font-semibold text-slate-900">b) Organizers / Clubs</h3>
                   <ul className="mt-2 list-disc space-y-1 pl-6">
                     <li>Can create and manage events</li>
-                    <li>Can view registrations, volunteers, and attendance</li>
+                    <li>Can review registrations, volunteers, and attendance</li>
                     <li>Are responsible for the accuracy of event details and execution</li>
                   </ul>
                 </div>
@@ -88,9 +88,16 @@ export default function TermsPage() {
             <section className="rounded-2xl border border-slate-200 bg-white p-6">
               <h2 className="text-xl font-semibold text-slate-900">4. Event Registrations &amp; Payments</h2>
               <div className="mt-3 space-y-2 text-slate-700">
-                <p>All event payments are processed via third-party payment gateways.</p>
+                <p>
+                  Registration completion for paid events may require organizer verification of submitted payment proof,
+                  depending on the active payment mode in your deployment.
+                </p>
+                <p>
+                  Third-party payment gateway flows (for example, Razorpay) may be enabled or disabled by platform
+                  configuration.
+                </p>
                 <p>Happenin does not guarantee event quality, execution, or outcomes.</p>
-                <p>Once a payment is successful, registration is considered complete unless otherwise stated.</p>
+                <p>Registration is considered complete when the platform marks it approved/confirmed as per the active workflow.</p>
               </div>
               <div className="mt-4 text-slate-700">
                 <h3 className="text-base font-semibold text-slate-900">Refunds</h3>
